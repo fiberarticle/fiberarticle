@@ -178,7 +178,10 @@ class CollectionOut(BaseModel):
 class SearchIn(BaseModel):
     query: str = Field(min_length=3, max_length=500)
     year_from: int | None = None
+    year_to: int | None = None
     open_access_only: bool = False
+    full_text_only: bool = False
+    min_citations: int | None = Field(default=None, ge=0)
     answer: bool = True
 
 
