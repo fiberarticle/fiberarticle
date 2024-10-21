@@ -1,105 +1,15 @@
-"""Citation formatting and reference-list export.
-
-Formats a paper's metadata into common citation styles and serializes
-libraries to BibTeX and RIS for interoperability with Zotero, Mendeley,
-and LaTeX workflows.
+"""Reference-list interchange: BibTeX and RIS serialization plus a forgiving
+BibTeX parser. Presentation-quality citation formatting lives in
+citations.engine (CSL via citeproc-py); this module only handles data formats
+for Zotero, Mendeley, and LaTeX workflows.
 """
 
 import re
-
-STYLES = ["apa", "mla", "chicago", "ieee", "vancouver", "harvard"]
 
 
 def _surname(author: str) -> str:
     parts = author.strip().split()
     return parts[-1] if parts else author
-
-
-def _given(author: str) -> list[str]:
-    parts = author.strip().split()
-    return parts[:-1] if len(parts) > 1 else []
-
-
-def _initials(author: str, dotted: bool = True) -> str:
-    sep = ". " if dotted else " "
-    text = sep.join(p[0].upper() for p in _given(author))
-    return text + ("." if dotted and text else "")
-
-
-def format_citation(paper: dict, style: str) -> str:
-    authors: list[str] = paper.get("authors") or []
-    year = paper.get("year") or "n.d."
-    title = (paper.get("title") or "Untitled").rstrip(".")
-    venue = paper.get("venue")
-    doi = paper.get("doi")
-    url = paper.get("url")
-    locator = f"https://doi.org/{doi}" if doi else (url or "")
-
-    if style == "apa":
-        names = []
-        for a in authors[:20]:
-            initials = _initials(a)
-            names.append(f"{_surname(a)}, {initials}" if initials else _surname(a))
-        if not names:
-            author_str = ""
-        elif len(names) == 1:
-            author_str = names[0]
-        else:
-            author_str = ", ".join(names[:-1]) + f", & {names[-1]}"
-        venue_str = f" {venue}." if venue else ""
-        head = f"{author_str} " if author_str else ""
-        return f"{head}({year}). {title}.{venue_str} {locator}".strip()
-
-    if style == "mla":
-        if not authors:
-            author_str = ""
-        elif len(authors) == 1:
-            a = authors[0]
-            author_str = f"{_surname(a)}, {' '.join(_given(a))}".rstrip(", ")
-        else:
-            a = authors[0]
-            author_str = f"{_surname(a)}, {' '.join(_given(a))}, et al."
-        venue_str = f" {venue}," if venue else ""
-        head = f"{author_str} " if author_str else ""
-        return f'{head}"{title}."{venue_str} {year}, {locator}'.strip().rstrip(",")
-
-    if style == "chicago":
-        author_str = ", ".join(authors[:10])
-        venue_str = f" {venue}" if venue else ""
-        head = f"{author_str}. " if author_str else ""
-        return f'{head}"{title}."{venue_str} ({year}). {locator}'.strip()
-
-    if style == "ieee":
-        names = [
-            f"{_initials(a)} {_surname(a)}".strip() for a in authors[:6]
-        ]
-        author_str = ", ".join(n for n in names if n)
-        if len(authors) > 6:
-            author_str += " et al."
-        venue_str = f" {venue}," if venue else ""
-        head = f"{author_str}, " if author_str else ""
-        return f'{head}"{title},"{venue_str} {year}. {locator}'.strip()
-
-    if style == "vancouver":
-        names = [
-            f"{_surname(a)} {_initials(a, dotted=False)}".strip() for a in authors[:6]
-        ]
-        author_str = ", ".join(n for n in names if n)
-        if len(authors) > 6:
-            author_str += ", et al"
-        venue_str = f" {venue}." if venue else ""
-        head = f"{author_str}. " if author_str else ""
-        return f"{head}{title}.{venue_str} {year}. {locator}".strip()
-
-    # harvard
-    names = []
-    for a in authors[:10]:
-        initials = _initials(a)
-        names.append(f"{_surname(a)}, {initials}" if initials else _surname(a))
-    author_str = " and ".join([", ".join(names[:-1]), names[-1]]) if len(names) > 1 else (names[0] if names else "")
-    venue_str = f" {venue}." if venue else ""
-    head = f"{author_str} " if author_str else ""
-    return f"{head}({year}) '{title}'.{venue_str} Available at: {locator}".strip()
 
 
 def _bibtex_key(paper: dict) -> str:
