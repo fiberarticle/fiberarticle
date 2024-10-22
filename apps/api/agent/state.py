@@ -8,6 +8,12 @@ class ResearchState(TypedDict, total=False):
     user_id: str
     topic: str
     papers_per_run: int
+    # 'research' (default) or 'literature_review'
+    mode: str
+    # year_from/year_to/quartiles/open_access_only/min_citations from RunFilters
+    filters: dict[str, Any]
+    # User's inclusion/exclusion criteria applied during screening.
+    criteria: str
 
     plan: list[str]
     queries: list[str]
