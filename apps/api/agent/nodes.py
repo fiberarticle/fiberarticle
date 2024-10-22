@@ -186,6 +186,43 @@ class ResearchNodes:
 
         results = await asyncio.gather(*(run_source(n, f) for n, f in connectors))
         new_candidates = [p for source_results in results for p in source_results]
+
+        # Apply the run's hard filters before anything else sees the pool.
+        filters = state.get("filters") or {}
+        before = len(new_candidates)
+        if filters.get("year_from"):
+            new_candidates = [
+                p for p in new_candidates if (p.get("year") or 0) >= filters["year_from"]
+            ]
+        if filters.get("year_to"):
+            new_candidates = [
+                p for p in new_candidates if (p.get("year") or 9999) <= filters["year_to"]
+            ]
+        if filters.get("open_access_only"):
+            new_candidates = [
+                p for p in new_candidates
+                if p.get("is_open_access") or p.get("oa_pdf_url")
+            ]
+        if filters.get("min_citations"):
+            new_candidates = [
+                p for p in new_candidates
+                if (p.get("cited_by_count") or 0) >= filters["min_citations"]
+            ]
+        if filters.get("quartiles"):
+            from citations.quartiles import annotate_quartiles
+
+            await annotate_quartiles(new_candidates)
+            wanted = set(filters["quartiles"])
+            new_candidates = [
+                p for p in new_candidates if p.get("quartile") in wanted
+            ]
+        if len(new_candidates) != before:
+            await self._emit(
+                "search",
+                f"Filters removed {before - len(new_candidates)} records "
+                f"(years, open access, citations, journal quartile).",
+            )
+
         candidates = state.get("candidates", []) + new_candidates
         await self._emit(
             "search",
@@ -233,7 +270,7 @@ class ResearchNodes:
         await self._emit(
             "dedupe_rank",
             f"{len(unique)} unique papers after deduplication; keeping the top {len(kept)} "
-            "ranked by open-access availability and citation count.",
+            "ranked by topical relevance, then citations and open access.",
         )
         return {"candidates": kept}
 
@@ -263,6 +300,17 @@ class ResearchNodes:
             f"{i}. {p['title']}" + (f" ({(p.get('abstract') or '')[:200]})" if p.get("abstract") else "")
             for i, p in enumerate(candidates)
         )
+        criteria = (state.get("criteria") or "").strip()
+        criteria_rule = (
+            " Apply these inclusion/exclusion criteria strictly; exclude any "
+            f"paper that violates them: {criteria}."
+            if criteria
+            else ""
+        )
+        if criteria:
+            await self._emit(
+                "screen", f"Applying your screening criteria: {criteria[:200]}"
+            )
         kept_indexes: list[int] | None = None
         try:
             text = await self.llm.complete(
@@ -272,7 +320,8 @@ class ResearchNodes:
                         "content": (
                             "You screen papers for a literature review. Given a topic, research "
                             "questions, and a numbered candidate list, return the indexes of papers "
-                            f"directly relevant to the topic, best first, at most {limit}. "
+                            f"directly relevant to the topic, best first, at most {limit}."
+                            f"{criteria_rule} "
                             "Respond with ONLY a JSON array of integers."
                         ),
                     },
@@ -308,15 +357,24 @@ class ResearchNodes:
             f"Kept {len(kept)} papers, set aside {dropped}.",
         )
 
+        # Quartiles may be unset when no quartile filter ran earlier.
+        from citations.quartiles import annotate_quartiles
+
+        try:
+            await annotate_quartiles(kept)
+        except Exception:
+            pass
+
         papers: list[dict[str, Any]] = []
         for record in kept:
             row = await fetch_all(
                 """
                 INSERT INTO papers (
                     run_id, user_id, source, external_id, title, authors, year,
-                    venue, doi, url, abstract, is_open_access, oa_pdf_url
+                    venue, doi, url, abstract, is_open_access, oa_pdf_url,
+                    issn, quartile
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 self.run_id,
@@ -332,6 +390,8 @@ class ResearchNodes:
                 record.get("abstract"),
                 bool(record.get("is_open_access")),
                 record.get("oa_pdf_url"),
+                record.get("issn"),
+                record.get("quartile"),
             )
             paper = dict(record)
             paper["id"] = str(row[0]["id"])
@@ -547,19 +607,115 @@ class ResearchNodes:
         return {"coverage_ok": False, "loops": loops + 1}
 
     # ---------------------------------------------------------- synthesize
+    async def _review_themes(self, state: ResearchState) -> list[str]:
+        """Identify 3-4 cross-cutting themes for a literature review."""
+        papers = state.get("papers", [])
+        digest = "\n".join(
+            f"[{i + 1}] {p['title']}" for i, p in enumerate(papers[:40])
+        )
+        try:
+            text = await self.llm.complete(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You organize a literature review. From the paper list, "
+                            "identify 3 to 4 cross-cutting THEMES (short noun phrases, "
+                            "5-10 words) that group the papers meaningfully. Respond "
+                            "with ONLY a JSON array of strings."
+                        ),
+                    },
+                    {"role": "user", "content": f"Topic: {state['topic']}\n\n{digest}"},
+                ],
+                max_tokens=400,
+            )
+            parsed = _parse_json_array(text)
+            if parsed:
+                return [str(t) for t in parsed][:4]
+        except Exception as exc:
+            await self._emit("synthesize", f"Theme detection failed: {exc}", type="warning")
+        return []
+
+    def _review_section_plan(self, topic: str, themes: list[str]) -> list[tuple[str, str, str]]:
+        """(heading, retrieval query, extra instruction) for a literature review."""
+        plan: list[tuple[str, str, str]] = [
+            (
+                "Overview and scope",
+                topic,
+                "Introduce the review: define the field, state what the reviewed "
+                "literature covers, and how the review is organized. 2-3 paragraphs.",
+            )
+        ]
+        for theme in themes:
+            plan.append(
+                (
+                    theme,
+                    f"{theme} in the context of {topic}",
+                    "Synthesize the papers on this theme comparatively: what "
+                    "converges, what differs, and why. Do not summarize paper by "
+                    "paper; argue across them. 2-4 paragraphs.",
+                )
+            )
+        plan.extend(
+            [
+                (
+                    "Methodological approaches",
+                    f"methods, study designs, and datasets used for {topic}",
+                    "Compare the methodological choices across the literature: "
+                    "designs, datasets, metrics, and their strengths and weaknesses.",
+                ),
+                (
+                    "Contradictions and open debates",
+                    f"disagreements, conflicting findings, and debates about {topic}",
+                    "Surface where the literature disagrees or reports conflicting "
+                    "results, and what might explain the conflicts.",
+                ),
+                (
+                    "Research gaps and future directions",
+                    f"limitations, gaps, and future work for {topic}",
+                    "Identify what the literature has not answered and lay out "
+                    "concrete, evidence-grounded directions for future research.",
+                ),
+            ]
+        )
+        return plan
+
     async def synthesize(self, state: ResearchState) -> dict:
         await self._stage("synthesize")
+        from prefs import language_instruction
+
+        language = await language_instruction(self.user_id)
         papers = state.get("papers", [])
-        plan = state.get("plan", [state["topic"]])
+        review_mode = state.get("mode") == "literature_review"
         reference_key = "\n".join(
             f"[{i + 1}] {p['title']} ({p.get('year') or 'n.d.'})" for i, p in enumerate(papers)
         )
         paper_index = {p["id"]: i + 1 for i, p in enumerate(papers)}
         sections: list[dict[str, str]] = []
 
-        for question in plan:
-            await self._emit("synthesize", f"Writing section: {question}")
-            vector = await embed_query(question)
+        if review_mode:
+            await self._emit(
+                "synthesize",
+                "Structuring a thematic literature review: overview, themes, "
+                "methods, debates, and gaps.",
+            )
+            themes = await self._review_themes(state)
+            for theme in themes:
+                await self._emit("synthesize", f"Theme identified: {theme}")
+            section_plan = self._review_section_plan(state["topic"], themes)
+        else:
+            section_plan = [
+                (
+                    question,
+                    question,
+                    "2-4 paragraphs, measured academic tone.",
+                )
+                for question in state.get("plan", [state["topic"]])
+            ]
+
+        for heading, query, instruction in section_plan:
+            await self._emit("synthesize", f"Writing section: {heading}")
+            vector = await embed_query(query)
             rows = await fetch_all(
                 """
                 SELECT paper_id, content
@@ -587,14 +743,15 @@ class ResearchNodes:
                             "content": (
                                 "You write one section of an academic literature review. "
                                 "Use ONLY the provided evidence excerpts. Cite with bracketed "
-                                "numbers like [3] matching the reference key. 2-4 paragraphs, "
-                                "measured academic tone, no headings."
+                                "numbers like [3] matching the reference key. No headings. "
+                                + instruction
+                                + language
                             ),
                         },
                         {
                             "role": "user",
                             "content": (
-                                f"Section question: {question}\n\n"
+                                f"Section: {heading}\n\n"
                                 f"Reference key:\n{reference_key}\n\n"
                                 f"Evidence excerpts:\n{evidence}"
                             ),
@@ -602,7 +759,7 @@ class ResearchNodes:
                     ],
                     max_tokens=900,
                 )
-                sections.append({"heading": question, "body": body.strip()})
+                sections.append({"heading": heading, "body": body.strip()})
                 await self._emit(
                     "synthesize",
                     f"Section drafted ({len(body):,} characters) with evidence from {len(rows)} chunks.",
@@ -618,12 +775,43 @@ class ResearchNodes:
         sections = state.get("sections", [])
         await self._emit("report", "Assembling the final report and reference list.")
 
-        lines: list[str] = [f"# {state['topic']}", ""]
+        review_mode = state.get("mode") == "literature_review"
+        title = (
+            f"# Literature review: {state['topic']}"
+            if review_mode
+            else f"# {state['topic']}"
+        )
+        lines: list[str] = [title, ""]
         for section in sections:
             lines.append(f"## {section['heading']}")
             lines.append("")
             lines.append(section["body"])
             lines.append("")
+
+        if review_mode and papers:
+            # Synthesis matrix: the reviewed evidence at a glance.
+            findings = {}
+            for finding in state.get("findings", []):
+                match = re.match(r"\[(\d+)\]\s*(.+)", finding)
+                if match:
+                    findings[int(match.group(1))] = match.group(2)
+            lines.append("## Synthesis matrix")
+            lines.append("")
+            lines.append("| # | Paper | Year | Journal quartile | Citations | Full text | Key finding |")
+            lines.append("|---|-------|------|------------------|-----------|-----------|-------------|")
+            for i, paper in enumerate(papers, 1):
+                cells = [
+                    f"[{i}]",
+                    (paper.get("title") or "")[:80].replace("|", "/"),
+                    str(paper.get("year") or "n.d."),
+                    paper.get("quartile") or "-",
+                    str(paper.get("cited_by_count") or 0),
+                    "yes" if paper.get("full_text_parsed") else "abstract",
+                    (findings.get(i) or "-")[:140].replace("|", "/"),
+                ]
+                lines.append("| " + " | ".join(cells) + " |")
+            lines.append("")
+
         lines.append("## References")
         lines.append("")
         for i, paper in enumerate(papers, 1):
