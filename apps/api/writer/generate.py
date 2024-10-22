@@ -14,6 +14,7 @@ import uuid
 
 from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import ResolvedLlm, resolve_llm
+from prefs import language_instruction
 from rag.embeddings import embed_query
 
 logger = logging.getLogger("fiberarticle.writer")
@@ -113,6 +114,7 @@ async def _write_section(
     instructions: str,
     papers: list[dict],
     paper_index: dict[str, int],
+    language: str = "",
 ) -> str:
     rows = await _retrieve_evidence(run_id, user_id, query.format(topic=topic))
     evidence = "\n\n".join(
@@ -136,6 +138,7 @@ async def _write_section(
                     "invent citations. Do not include the section heading in "
                     "your output. Plain paragraphs only, no markdown headings. "
                     + instructions
+                    + language
                 ),
             },
             {
@@ -195,6 +198,7 @@ async def generate_document(document_id: str, run_id: str, user_id: str) -> None
         paper_index = {str(p["id"]): i + 1 for i, p in enumerate(papers)}
 
         llm = await resolve_llm(user_id)
+        language = await language_instruction(user_id)
 
         title = await _generate_title(llm, topic)
         await execute(
@@ -215,6 +219,7 @@ async def generate_document(document_id: str, run_id: str, user_id: str) -> None
                 instructions,
                 papers,
                 paper_index,
+                language,
             )
             sections.append(
                 {
@@ -259,6 +264,7 @@ async def run_edit_command(
     user_id: str, command: str, heading: str, content: str
 ) -> str:
     llm = await resolve_llm(user_id)
+    language = await language_instruction(user_id)
     text = await llm.complete(
         [
             {
@@ -267,6 +273,7 @@ async def run_edit_command(
                     "You edit one section of an academic paper. "
                     + EDIT_COMMANDS[command]
                     + " Respond with ONLY the revised section text, no headings, no preamble."
+                    + language
                 ),
             },
             {
