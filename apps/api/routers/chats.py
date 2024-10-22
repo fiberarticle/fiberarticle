@@ -194,6 +194,9 @@ async def send_message(
         if conversation["scope"] == "paper"
         else "the user's research library"
     )
+    from prefs import language_instruction
+
+    language = await language_instruction(user_id)
     messages = [
         {
             "role": "system",
@@ -201,7 +204,7 @@ async def send_message(
                 f"You answer questions about {scope_line} using ONLY the numbered "
                 "excerpts provided. Cite every claim with bracketed numbers like "
                 "[2] matching the excerpts. If the excerpts do not contain the "
-                "answer, say so honestly. Be concise and precise."
+                "answer, say so honestly. Be concise and precise." + language
             ),
         },
         *[{"role": h["role"], "content": h["content"]} for h in history],
