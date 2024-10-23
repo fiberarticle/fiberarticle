@@ -111,6 +111,51 @@ function groupByStage(events: RunEvent[]): StageGroup[] {
   return groups;
 }
 
+function MarkdownTable({ block }: { block: string }) {
+  const rows = block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("|"));
+  if (rows.length < 2) return null;
+  const parse = (line: string) =>
+    line
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  const header = parse(rows[0]);
+  const body = rows
+    .slice(1)
+    .filter((line) => !/^\|[\s\-|:]+\|$/.test(line))
+    .map(parse);
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-muted/60">
+          <tr>
+            {header.map((cell, i) => (
+              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((cells, r) => (
+            <tr key={r} className="border-t border-border align-top">
+              {cells.map((cell, c) => (
+                <td key={c} className="px-3 py-2 leading-5">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportView({ markdown }: { markdown: string }) {
   const blocks = markdown.split(/\n{2,}/);
   return (
@@ -132,6 +177,9 @@ function ReportView({ markdown }: { markdown: string }) {
             </h2>
           );
         }
+        if (trimmed.startsWith("|")) {
+          return <MarkdownTable key={i} block={trimmed} />;
+        }
         return (
           <p key={i} className="whitespace-pre-wrap text-[15px] leading-7">
             {trimmed}
@@ -141,6 +189,32 @@ function ReportView({ markdown }: { markdown: string }) {
     </div>
   );
 }
+
+const templateMenu: {
+  value: DocumentTemplate;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "generic",
+    label: "Generic manuscript",
+    description: "Clean single-column article",
+  },
+  { value: "ieee", label: "IEEE", description: "Two-column IEEEtran" },
+  { value: "apa", label: "APA 7", description: "Author-date manuscript" },
+  { value: "acm", label: "ACM", description: "acmart proceedings format" },
+  {
+    value: "elsevier",
+    label: "Elsevier",
+    description: "elsarticle submission format",
+  },
+  {
+    value: "springer",
+    label: "Springer Nature",
+    description: "sn-jnl journal format",
+  },
+  { value: "neurips", label: "NeurIPS", description: "Conference preprint" },
+];
 
 export function RunView({ runId }: { runId: string }) {
   const router = useRouter();
@@ -287,13 +361,18 @@ export function RunView({ runId }: { runId: string }) {
       <div>
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
-            <ArrowLeft /> Dashboard
+            <ArrowLeft /> Home
           </Button>
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
           {run.topic}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2.5">
+          {run.mode === "literature_review" && (
+            <Badge variant="leaf">
+              <BookOpenCheck className="size-3" /> literature review
+            </Badge>
+          )}
           <Badge variant={statusVariant[run.status]}>
             {run.status === "completed" ? (
               <>
@@ -342,17 +421,21 @@ export function RunView({ runId }: { runId: string }) {
                   <FilePlus2 /> Generate article
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="start" className="w-64">
                 <DropdownMenuLabel>Journal template</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={() => onGenerateDocument("generic")}>
-                  Generic manuscript
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onGenerateDocument("ieee")}>
-                  IEEE
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onGenerateDocument("apa")}>
-                  APA 7
-                </DropdownMenuItem>
+                {templateMenu.map((t) => (
+                  <DropdownMenuItem
+                    key={t.value}
+                    onSelect={() => onGenerateDocument(t.value)}
+                  >
+                    <span className="flex flex-col">
+                      <span>{t.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t.description}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -457,6 +540,7 @@ export function RunView({ runId }: { runId: string }) {
                         (paper.authors.length > 4 ? " et al." : ""),
                       paper.year ? `(${paper.year})` : null,
                       paper.venue,
+                      paper.quartile ? `· ${paper.quartile} journal` : null,
                     ]
                       .filter(Boolean)
                       .join(" ") +
