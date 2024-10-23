@@ -11,6 +11,7 @@ import {
   Search,
   Settings2,
 } from "lucide-react";
+import { CompassArt } from "@/components/art";
 import {
   PromptInput,
   PromptInputAction,
@@ -183,6 +184,15 @@ export function Dashboard({ userName }: { userName: string }) {
           </div>
         </PromptInput>
 
+        <p className="text-center text-xs text-muted-foreground">
+          Need a formal thematic review with screening criteria and a synthesis
+          matrix? Use the dedicated{" "}
+          <Link href="/review" className="font-medium text-primary hover:underline">
+            Literature review
+          </Link>{" "}
+          agent.
+        </p>
+
         {starting && (
           <div className="text-center">
             <TextShimmer className="text-sm">Starting your research run</TextShimmer>
@@ -216,8 +226,8 @@ export function Dashboard({ userName }: { userName: string }) {
             <Skeleton className="h-16 w-full rounded-2xl" />
           </div>
         ) : runs.length === 0 ? (
-          <Card className="flex flex-col items-center gap-1 border-dashed bg-transparent p-8 text-center shadow-none">
-            <FileText className="size-5 text-muted-foreground" />
+          <Card className="flex flex-col items-center gap-2 border-dashed bg-transparent p-8 text-center shadow-none">
+            <CompassArt className="w-36" />
             <p className="text-sm text-muted-foreground">
               No runs yet. Your research history will appear here.
             </p>
