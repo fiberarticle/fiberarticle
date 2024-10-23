@@ -150,3 +150,64 @@
 .fa-serif {
   font-family: var(--font-serif);
 }
+
+/* Minimal scrollbars: thin, rounded, light grey on a transparent track. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 28%, transparent)
+    transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 28%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Illustration motion: gentle float and a one-time stroke draw-in. */
+@keyframes fa-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes fa-draw {
+  from { stroke-dashoffset: 60; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fa-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.fa-art-float {
+  animation: fa-float 5s ease-in-out infinite;
+}
+.fa-art-draw {
+  stroke-dasharray: 60;
+  animation: fa-draw 1.4s ease-out forwards;
+}
+.fa-art-pulse {
+  animation: fa-pulse-soft 3.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fa-art-float,
+  .fa-art-draw,
+  .fa-art-pulse {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
