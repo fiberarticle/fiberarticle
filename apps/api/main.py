@@ -70,6 +70,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Without this the browser hides the export filename (Content-Disposition)
+    # from the frontend, which then falls back to a generic name.
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(me.router)
