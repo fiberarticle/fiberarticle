@@ -149,9 +149,37 @@ class DocumentListItem(BaseModel):
     updated_at: datetime
 
 
+EditCommand = Literal[
+    "rewrite",
+    "expand",
+    "condense",
+    "academic_tone",
+    "improve",
+    "simplify",
+    "humanize",
+    "tone",
+    "translate",
+    "custom",
+]
+
+EditTone = Literal["academic", "formal", "confident", "friendly", "persuasive"]
+
+
 class SectionEditIn(BaseModel):
     section_id: str
-    command: Literal["rewrite", "expand", "condense", "academic_tone"]
+    command: EditCommand
+    # Free-form author instruction; required when command == "custom".
+    instruction: str | None = Field(default=None, max_length=2000)
+    # Required when command == "tone".
+    tone: EditTone | None = None
+    # Language code from prefs.LANGUAGES; required when command == "translate".
+    language: str | None = Field(default=None, min_length=2, max_length=20)
+    # Selection mode: revise only this passage. The server returns the
+    # replacement without persisting; the editor splices it in locally and
+    # autosaves. Contexts anchor the passage boundaries for the model.
+    selected_text: str | None = Field(default=None, min_length=1, max_length=8000)
+    context_before: str = Field(default="", max_length=300)
+    context_after: str = Field(default="", max_length=300)
 
 
 class SectionEditOut(BaseModel):
