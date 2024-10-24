@@ -16,19 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QuartileBadge } from "@/components/quartile-badge";
+import { StylePicker } from "@/components/style-picker";
 import { apiFetch, ApiError } from "@/lib/api";
-import type { Collection, PaperDetail } from "@/lib/types";
+import type { CitationStyle, Collection, PaperDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const citationStyles = ["apa", "mla", "chicago", "ieee", "vancouver", "harvard"];
 
 export function PaperView({ paperId }: { paperId: string }) {
   const router = useRouter();
@@ -107,14 +100,16 @@ export function PaperView({ paperId }: { paperId: string }) {
     }
   }
 
-  async function onCopyCitation(style: string) {
+  async function onCopyCitation(style?: string) {
+    // No style: the user's default citation style from Settings.
     try {
-      const data = await apiFetch<{ citation: string }>(
-        `/v1/papers/${paperId}/citation?style=${style}`
+      const params = style ? `?style=${encodeURIComponent(style)}` : "";
+      const data = await apiFetch<{ citation: string; style_title: string }>(
+        `/v1/papers/${paperId}/citation${params}`
       );
       await navigator.clipboard.writeText(data.citation);
-      setCopiedStyle(style);
-      setTimeout(() => setCopiedStyle(null), 1500);
+      setCopiedStyle(data.style_title ?? style ?? "default");
+      setTimeout(() => setCopiedStyle(null), 2500);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not copy the citation.");
     }
@@ -160,6 +155,7 @@ export function PaperView({ paperId }: { paperId: string }) {
           {paper.venue ? ` · ${paper.venue}` : ""}
         </p>
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <QuartileBadge quartile={paper.quartile} />
           <Badge>{paper.source}</Badge>
           {paper.full_text_parsed ? (
             <Badge variant="leaf">full text indexed ({paper.chunk_count} chunks)</Badge>
@@ -191,22 +187,18 @@ export function PaperView({ paperId }: { paperId: string }) {
         >
           <Scroll /> {paper.summary ? "Refresh summary" : "Summarize"}
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Copy /> Cite
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Copy citation as</DropdownMenuLabel>
-            {citationStyles.map((style) => (
-              <DropdownMenuItem key={style} onSelect={() => onCopyCitation(style)}>
-                {copiedStyle === style ? <Check /> : null}
-                {style.toUpperCase()}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" size="sm" onClick={() => onCopyCitation()}>
+          {copiedStyle ? <Check /> : <Copy />}
+          {copiedStyle ? `Copied (${copiedStyle})` : "Cite"}
+        </Button>
+        <StylePicker
+          value=""
+          onSelect={(style: CitationStyle) => onCopyCitation(style.id)}
+        >
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            More styles
+          </Button>
+        </StylePicker>
         {paper.url && (
           <a href={paper.url} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm">
