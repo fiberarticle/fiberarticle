@@ -521,7 +521,18 @@ class ResearchNodes:
             chunks = chunk_text(text)
             if not chunks:
                 continue
-            vectors = await embed_texts(chunks)
+            try:
+                vectors = await embed_texts(chunks)
+            except Exception as exc:
+                # A broken embedding runtime must not kill the run: synthesis
+                # falls back to abstracts when no chunks are indexed.
+                await self._emit(
+                    "chunk_embed",
+                    f"Embedding is unavailable ({exc}). Skipping full-text "
+                    "indexing; synthesis will use abstracts instead.",
+                    type="warning",
+                )
+                break
             for content, vector in zip(chunks, vectors):
                 await execute(
                     """
@@ -715,19 +726,24 @@ class ResearchNodes:
 
         for heading, query, instruction in section_plan:
             await self._emit("synthesize", f"Writing section: {heading}")
-            vector = await embed_query(query)
-            rows = await fetch_all(
-                """
-                SELECT paper_id, content
-                FROM chunks
-                WHERE run_id = %s AND user_id = %s
-                ORDER BY embedding <=> %s::vector
-                LIMIT 6
-                """,
-                self.run_id,
-                self.user_id,
-                str(vector),
-            )
+            try:
+                vector = await embed_query(query)
+                rows = await fetch_all(
+                    """
+                    SELECT paper_id, content
+                    FROM chunks
+                    WHERE run_id = %s AND user_id = %s
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT 6
+                    """,
+                    self.run_id,
+                    self.user_id,
+                    str(vector),
+                )
+            except Exception:
+                # No retrieval without embeddings; the abstract fallback
+                # below still produces a grounded section.
+                rows = []
             evidence = "\n\n".join(
                 f"[{paper_index.get(str(r['paper_id']), '?')}] {r['content'][:900]}" for r in rows
             )
