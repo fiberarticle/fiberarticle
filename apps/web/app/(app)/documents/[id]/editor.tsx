@@ -245,12 +245,14 @@ function SectionEditor({
   }, [editor, disabled]);
 
   // Apply external content changes (AI results, streamed sections) without
-  // clobbering the user's caret during normal typing.
+  // clobbering the user's caret during normal typing. emitUpdate must stay
+  // false: a programmatic sync is not a user edit, and letting it emit marks
+  // the document dirty (phantom "unsaved changes" on untouched documents).
   React.useEffect(() => {
     if (!editor) return;
     const current = getMarkdown(editor);
     if (value !== current) {
-      editor.commands.setContent(value);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
