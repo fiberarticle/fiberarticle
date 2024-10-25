@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowUp, BookOpen, Check, FileText, Plus, Quote, SlidersHorizontal } from "lucide-react";
 import {
   PromptInput,
@@ -288,6 +289,7 @@ function FiltersPopover({
 }
 
 export function Ask() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [pending, setPending] = useState(false);
@@ -295,9 +297,25 @@ export function Ask() {
   const [response, setResponse] = useState<SearchResponse | null>(null);
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [addingIndex, setAddingIndex] = useState<number | null>(null);
+  const autoRan = useRef(false);
 
-  async function onSearch() {
-    const trimmed = query.trim();
+  // Deep link from the dashboard AI Assistant: /ask?q=<question> runs
+  // the search immediately.
+  useEffect(() => {
+    if (autoRan.current) return;
+    const q = (searchParams.get("q") ?? "").trim();
+    if (q.length < 3) return;
+    autoRan.current = true;
+    setQuery(q);
+    runSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  function onSearch() {
+    return runSearch(query.trim());
+  }
+
+  async function runSearch(trimmed: string) {
     if (trimmed.length < 3) {
       setError("Ask a fuller question so the search has something to work with.");
       return;
@@ -427,7 +445,9 @@ export function Ask() {
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-[15px] leading-7">
-              {response.answer}
+              {/* The answer is rendered as plain text; strip stray markdown
+                  bold markers some models emit despite instructions. */}
+              {response.answer.replace(/\*\*/g, "")}
             </p>
             {response.sub_queries.length > 0 && (
               <p className="mt-3 text-xs text-muted-foreground">
