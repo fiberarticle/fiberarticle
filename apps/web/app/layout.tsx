@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Newsreader } from "next/font/google";
+import { Bricolage_Grotesque, Faster_One, Newsreader } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -12,6 +12,12 @@ const newsreader = Newsreader({
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-newsreader",
+});
+
+const fasterOne = Faster_One({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-faster-one",
 });
 
 export const metadata: Metadata = {
@@ -30,7 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${bricolage.variable} ${newsreader.variable}`}>
+      <body
+        className={`${bricolage.variable} ${newsreader.variable} ${fasterOne.variable}`}
+      >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>
