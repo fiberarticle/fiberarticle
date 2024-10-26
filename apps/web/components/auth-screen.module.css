@@ -1,0 +1,493 @@
+/* Full-screen split auth: black brand panel left, sand form panel right.
+   Fixed palette by design (independent of the app light/dark theme). */
+
+.shell {
+  min-height: 100svh;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+  background: #f8f5f0;
+  font-family: var(--font-bricolage), "Segoe UI", sans-serif;
+}
+
+.card {
+  width: 100vw;
+  min-height: 100svh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.topFade {
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  position: absolute;
+  background: linear-gradient(to top, transparent, rgba(0, 0, 0, 0.42));
+  pointer-events: none;
+}
+
+.stripeLayer {
+  display: flex;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  z-index: 2;
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  pointer-events: none;
+}
+
+.stripe {
+  height: 100%;
+  z-index: 2;
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    #000000 69%,
+    rgba(255, 255, 255, 0.19)
+  );
+  opacity: 0.3;
+  overflow: hidden;
+}
+
+.warmMist {
+  position: absolute;
+  z-index: 1;
+  left: -190px;
+  bottom: -220px;
+  width: 980px;
+  height: 700px;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 24% 72%,
+      rgba(242, 85, 51, 0.92) 0%,
+      rgba(242, 85, 51, 0.64) 24%,
+      rgba(242, 85, 51, 0.36) 44%,
+      rgba(242, 85, 51, 0.18) 60%,
+      rgba(242, 85, 51, 0.06) 72%,
+      rgba(242, 85, 51, 0) 84%
+    ),
+    radial-gradient(
+      ellipse at 42% 82%,
+      rgba(242, 85, 51, 0.32) 0%,
+      rgba(242, 85, 51, 0.17) 38%,
+      rgba(242, 85, 51, 0.08) 58%,
+      rgba(242, 85, 51, 0) 78%
+    );
+  filter: blur(24px);
+  clip-path: ellipse(78% 68% at 34% 70%);
+}
+
+.orangeBlob {
+  width: 18.5rem;
+  height: 18.5rem;
+  background: #f25533;
+  position: absolute;
+  z-index: 1;
+  border-radius: 9999px;
+  bottom: -78px;
+  left: -54px;
+  filter: blur(22px);
+  opacity: 0.9;
+}
+
+/* One smooth white glow hugging the bottom edge: a clean light source,
+   no clip-path spikes. */
+.whiteGlow {
+  position: absolute;
+  z-index: 1;
+  left: 30px;
+  bottom: -96px;
+  width: 27rem;
+  height: 11.5rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    ellipse at 50% 55%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.55) 45%,
+    rgba(255, 255, 255, 0) 75%
+  );
+  filter: blur(28px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.leftPanel {
+  background: #000000;
+  color: #ffffff;
+  padding: clamp(20px, 2.8vw, 36px) clamp(20px, 3.2vw, 40px) clamp(56px, 6vw, 88px);
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.leftContent {
+  width: 100%;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.leftBrand {
+  margin: 0;
+  z-index: 10;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leftBrandLogo {
+  display: block;
+  width: 78px;
+  height: 78px;
+  object-fit: contain;
+}
+
+.leftBrandWord {
+  font-family: var(--font-bricolage), "Segoe UI", sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 3vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  /* Left-to-right gradient in the logo's f colors (amber into brown). */
+  background: linear-gradient(90deg, #fca91e 0%, #d98b28 55%, #b3782d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.leftDescription {
+  margin: 0;
+  width: 100%;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-faster-one), "Faster One", cursive;
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(2.2rem, 3.05vw, 3.1rem);
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+  word-spacing: 0.08em;
+  z-index: 10;
+  position: relative;
+}
+
+/* One statement per line, never wrapped mid-phrase. */
+.descLine {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Brand-color highlights on the key phrases. */
+.hlAmber {
+  color: #fca91e;
+}
+
+.hlGreen {
+  color: #50c158;
+}
+
+.hlPink {
+  color: #ff7db1;
+}
+
+.rightPanel {
+  padding: clamp(36px, 5vw, 84px) clamp(30px, 4.2vw, 76px);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f5f0;
+  color: #211d18;
+  z-index: 99;
+}
+
+.rightContent {
+  width: min(100%, 520px);
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: clamp(1.92rem, 2.85vw, 2.45rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.subHeading {
+  margin: 8px 0 0;
+  text-align: left;
+  opacity: 0.82;
+  font-size: clamp(1rem, 1.18vw, 1.1rem);
+  line-height: 1.4;
+  max-width: 40ch;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  letter-spacing: 0.01em;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.forgotLink {
+  font-size: 0.82rem;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.forgotLink:hover {
+  color: #211d18;
+  text-decoration: underline;
+}
+
+.input {
+  font-size: 1rem;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  outline: none;
+  background: #ffffff;
+  color: #000000;
+  font-family: inherit;
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 40px #ffffff inset;
+  -webkit-text-fill-color: #000000;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.passwordWrap {
+  position: relative;
+}
+
+.passwordWrap .input {
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eyeBtn:hover {
+  color: #000000;
+}
+
+.input:focus {
+  border-color: #b3782d;
+  box-shadow: 0 0 0 1px #b3782d;
+}
+
+.inputError {
+  border-color: #ef4444;
+}
+
+.errorText {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Radix Theme wrapper: layout-neutral, only styles its buttons. */
+.themeScope {
+  width: 100%;
+  min-height: 0;
+  font-family: inherit;
+}
+
+.primaryButton {
+  width: 100%;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.googleButton {
+  width: 100%;
+  min-height: 46px;
+  font-size: 0.98rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.orRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.orLine {
+  flex: 1;
+  height: 1px;
+  background: #d8d2c6;
+}
+
+.loginRow {
+  margin-top: 6px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.loginLinkButton {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #211d18;
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .card {
+    flex-direction: row;
+  }
+
+  .stripeLayer {
+    width: 50%;
+  }
+
+  .leftPanel {
+    width: 50%;
+    min-height: 100svh;
+  }
+
+  .rightPanel {
+    width: 50%;
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .warmMist {
+    left: -96px;
+    bottom: -144px;
+    width: 560px;
+    height: 400px;
+    filter: blur(14px);
+    clip-path: ellipse(82% 70% at 34% 70%);
+  }
+
+  .leftPanel {
+    min-height: 42vh;
+    justify-content: flex-start;
+    padding: 28px 24px 34px;
+  }
+
+  .leftContent {
+    margin-top: 6px;
+    gap: 12px;
+  }
+
+  .leftDescription {
+    font-size: 1.4rem;
+    line-height: 1.6;
+  }
+
+  .leftBrandLogo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .rightPanel {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 28px 24px 36px;
+  }
+
+  .rightContent {
+    width: 100%;
+    gap: 22px;
+    margin-top: 0;
+  }
+
+  .nameRow {
+    grid-template-columns: 1fr;
+  }
+}
