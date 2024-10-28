@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { bearer, jwt, magicLink } from "better-auth/plugins";
+import { bearer, jwt } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 
@@ -46,17 +46,5 @@ export const auth = betterAuth({
         },
       }
     : {}),
-  plugins: [
-    magicLink({
-      sendMagicLink: async ({ email, url }) => {
-        await sendEmail({
-          to: email,
-          subject: "Your Fiberarticle sign-in link",
-          text: `Sign in to Fiberarticle using the link below. The link expires in five minutes.\n\n${url}\n\nIf you did not request this, you can safely ignore this email.`,
-        });
-      },
-    }),
-    jwt(),
-    bearer(),
-  ],
+  plugins: [jwt(), bearer()],
 });
