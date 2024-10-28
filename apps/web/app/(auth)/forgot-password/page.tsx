@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import "@radix-ui/themes/styles.css";
+import { Button, Theme } from "@radix-ui/themes";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Callout } from "@/components/ui/callout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Wordmark } from "@/components/wordmark";
+import { useState } from "react";
+import type { FormEvent } from "react";
+
+import { AuthShell } from "@/components/auth-screen";
 import { authClient } from "@/lib/auth-client";
+
+import styles from "@/components/auth-screen.module.css";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState("");
   const [pending, setPending] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setEmailError("");
     setPending(true);
     const { error } = await authClient.requestPasswordReset({
       email,
@@ -32,61 +40,78 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center px-6 py-4">
-        <Wordmark />
-      </header>
-      <div className="flex flex-1 items-center justify-center px-4 pb-20">
-        <div className="w-full max-w-sm">
-    <Card>
-      <CardHeader>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Reset your password
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email and we will send you a reset link.
+    <AuthShell>
+      <div className={styles.header}>
+        <h3 className={styles.heading}>
+          <span>Reset your password</span>
+        </h3>
+        <p className={styles.subHeading}>
+          Enter your email and we will send you a reset link
         </p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {error && <Callout tone="error">{error}</Callout>}
+      </div>
 
-        {sent ? (
-          <Callout tone="info">
-            If an account exists for {email}, a reset link is on its way.
-          </Callout>
-        ) : (
-          <form onSubmit={onSubmit} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@university.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" loading={pending}>
+      {sent ? (
+        <p role="status" className={styles.noticeText}>
+          If an account exists for {email}, a reset link is on its way. Check
+          your inbox.
+        </p>
+      ) : (
+        <form className={styles.form} onSubmit={onSubmit} noValidate>
+          <div className={styles.field}>
+            <label htmlFor="email" className={styles.label}>
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              placeholder="enter your email"
+              className={`${styles.input} ${emailError ? styles.inputError : ""}`}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              aria-invalid={!!emailError}
+              aria-describedby="email-error"
+            />
+            {emailError && (
+              <p id="email-error" className={styles.errorText}>
+                {emailError}
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <p role="alert" className={styles.errorText}>
+              {error}
+            </p>
+          )}
+
+          <Theme
+            appearance="light"
+            accentColor="brown"
+            grayColor="sand"
+            radius="large"
+            hasBackground={false}
+            className={styles.themeScope}
+          >
+            <Button
+              type="submit"
+              variant="classic"
+              color="brown"
+              radius="large"
+              size="3"
+              className={styles.primaryButton}
+              loading={pending}
+            >
               Send reset link
             </Button>
-          </form>
-        )}
+          </Theme>
+        </form>
+      )}
 
-        <p className="text-center text-sm">
-          <Link
-            href="/sign-in"
-            className="font-medium text-primary hover:underline"
-          >
-            Back to sign in
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
-        </div>
+      <div className={styles.loginRow}>
+        <Link href="/sign-in" className={styles.loginLinkButton}>
+          Back to sign in
+        </Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }
