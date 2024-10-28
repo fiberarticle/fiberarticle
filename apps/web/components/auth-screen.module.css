@@ -367,6 +367,13 @@
   margin-top: 4px;
 }
 
+.noticeText {
+  color: #2f7a3d;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* Radix Theme wrapper: layout-neutral, only styles its buttons. */
 .themeScope {
   width: 100%;
