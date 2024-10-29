@@ -151,6 +151,7 @@ async def list_documents(user_id: str = CurrentUser) -> list[DocumentListItem]:
             title=r["title"],
             template=r["template"],
             status=r["status"],
+            pinned=bool(r.get("pinned")),
             section_count=len(r["sections"] or []),
             created_at=r["created_at"],
             updated_at=r["updated_at"],
@@ -170,7 +171,9 @@ async def update_document(
     document_id: str, body: DocumentUpdate, user_id: str = CurrentUser
 ) -> DocumentOut:
     row = await _get_owned_document(document_id, user_id)
-    if row["status"] == "generating":
+    # Content edits must wait for generation (the writer owns the sections),
+    # but sidebar rename/pin is metadata-only and always safe.
+    if row["status"] == "generating" and body.sections is not None:
         raise HTTPException(409, "Wait for generation to finish before editing.")
 
     title = body.title if body.title is not None else row["title"]
@@ -188,12 +191,13 @@ async def update_document(
     )
     if citation_style and catalog.entry(citation_style) is None:
         raise HTTPException(422, "Unknown citation style.")
+    pinned = body.pinned if body.pinned is not None else bool(row.get("pinned"))
 
     await execute(
         """
         UPDATE documents
         SET title = %s, template = %s, sections = %s, authors = %s,
-            citation_style = %s, updated_at = now()
+            citation_style = %s, pinned = %s, updated_at = now()
         WHERE id = %s
         """,
         title.strip() or row["title"],
@@ -201,6 +205,7 @@ async def update_document(
         jsonb(sections),
         jsonb(authors),
         citation_style,
+        pinned,
         document_id,
     )
     updated = await _get_owned_document(document_id, user_id)
