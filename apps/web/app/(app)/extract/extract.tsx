@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Download, Plus, Trash2, X } from "lucide-react";
 import { ExtractArt } from "@/components/art";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
@@ -27,6 +28,8 @@ const defaultColumns: ExtractionColumn[] = [
 ];
 
 export function Extract() {
+  const searchParams = useSearchParams();
+  const deepLinkId = searchParams.get("id");
   const [extractions, setExtractions] = React.useState<Extraction[] | null>(null);
   const [papers, setPapers] = React.useState<PaperDetail[]>([]);
   const [active, setActive] = React.useState<Extraction | null>(null);
@@ -59,6 +62,13 @@ export function Extract() {
     load();
   }, [load]);
 
+  // Deep link from the sidebar history: /extract?id=<id> opens that table.
+  React.useEffect(() => {
+    if (!deepLinkId || extractions === null) return;
+    const match = extractions.find((e) => e.id === deepLinkId);
+    if (match) setActive(match);
+  }, [deepLinkId, extractions]);
+
   // Poll while any table is running so cells stream in.
   React.useEffect(() => {
     if (!extractions?.some((e) => e.status === "running")) return;
@@ -81,7 +91,8 @@ export function Extract() {
       const created = await apiFetch<Extraction>("/v1/extractions", {
         method: "POST",
         body: JSON.stringify({
-          name: name.trim() || `Extraction ${new Date().toLocaleDateString()}`,
+          // Blank name: the API generates an AI title in the background.
+          name: name.trim(),
           paper_ids: [...selected],
           columns,
         }),
