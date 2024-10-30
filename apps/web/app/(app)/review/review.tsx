@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, BookOpenCheck, ChevronRight, ListFilter } from "lucide-react";
+import { ArrowUp, BookOpenCheck, ChevronRight, FunnelPlus } from "lucide-react";
 import { ReviewArt } from "@/components/art";
 import { quartileChipClass } from "@/components/quartile-badge";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
@@ -150,7 +150,7 @@ export function Review() {
             onClick={() => setShowFilters((v) => !v)}
             className="flex w-fit cursor-pointer items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ListFilter className="size-4" />
+            <FunnelPlus className="size-4" />
             Filters
             {activeFilterCount > 0 && (
               <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
@@ -284,7 +284,9 @@ export function Review() {
               <Link key={run.id} href={`/runs/${run.id}`}>
                 <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{run.topic}</p>
+                    <p className="truncate text-sm font-medium">
+                      {run.title || run.topic}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {new Date(run.created_at).toLocaleString()}
                       {run.paper_count > 0 && ` · ${run.paper_count} papers`}
