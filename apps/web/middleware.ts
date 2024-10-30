@@ -10,6 +10,8 @@ const protectedPrefixes = [
   "/ask",
   "/assistant",
   "/extract",
+  "/researcher",
+  "/review",
 ];
 
 export function middleware(request: NextRequest) {
@@ -44,5 +46,7 @@ export const config = {
     "/ask/:path*",
     "/assistant/:path*",
     "/extract/:path*",
+    "/researcher/:path*",
+    "/review/:path*",
   ],
 };
