@@ -140,7 +140,8 @@ export function Dashboard({ userName }: { userName: string }) {
         setStarting(false);
         return;
       }
-      router.push(`/ask?q=${encodeURIComponent(trimmed)}`);
+      // The Assistant page creates the chat and sends this question.
+      router.push(`/assistant?q=${encodeURIComponent(trimmed)}`);
       return;
     }
 
@@ -215,7 +216,7 @@ export function Dashboard({ userName }: { userName: string }) {
         {llmNotConfigured && (
           <Callout tone="info">
             Choose how Fiberarticle should think before your first run.{" "}
-            <Link href="/settings">Configure the LLM in Settings</Link>.
+            <Link href="?settings=llm">Configure the LLM in Settings</Link>.
           </Callout>
         )}
         {error && <Callout tone="error">{error}</Callout>}
@@ -230,13 +231,6 @@ export function Dashboard({ userName }: { userName: string }) {
           attachments={attachments}
           onAttach={onAttach}
           onRemoveAttachment={onRemoveAttachment}
-          footerRight={
-            mode !== "assistant" && llmConfig?.caps ? (
-              <span className="text-xs text-muted-foreground">
-                up to {llmConfig.caps.papers_per_run} papers/run
-              </span>
-            ) : null
-          }
         />
 
         {mode === "article" && (
