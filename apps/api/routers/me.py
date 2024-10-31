@@ -1,8 +1,12 @@
+import json
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 
 import prefs as prefs_service
 from citations.catalog import style_title
-from db import execute, fetch_one
+from db import execute, fetch_all, fetch_one
 from models import CAPS, LlmConfigIn, LlmConfigOut, PreferencesIn, PreferencesOut
 from security import CurrentUser, encrypt_secret
 
@@ -13,14 +17,16 @@ _DEFAULT_CAPS = CAPS["fiberarticle_ai"]
 
 def _to_out(row: dict | None) -> LlmConfigOut:
     if row is None:
+        # Zero-setup default: managed Fiberarticle AI with the fast model.
+        # Mirrors resolve_llm so the UI never shows an "unconfigured" state.
         return LlmConfigOut(
-            mode=None,
+            mode="fiberarticle_ai",
             provider=None,
             model=None,
             base_url=None,
             has_key=False,
             caps=_DEFAULT_CAPS,
-            reasoning=True,
+            reasoning=False,
         )
     return LlmConfigOut(
         mode=row["mode"],
@@ -29,7 +35,7 @@ def _to_out(row: dict | None) -> LlmConfigOut:
         base_url=row["base_url"],
         has_key=row["encrypted_key"] is not None,
         caps=CAPS.get(row["mode"], _DEFAULT_CAPS),
-        reasoning=row["reasoning"] if row["reasoning"] is not None else True,
+        reasoning=bool(row["reasoning"]),
     )
 
 
@@ -72,6 +78,76 @@ async def list_languages() -> list[dict]:
 async def get_llm_config(user_id: str = CurrentUser) -> LlmConfigOut:
     row = await fetch_one("SELECT * FROM llm_config WHERE user_id = %s", user_id)
     return _to_out(row)
+
+
+def _rows_for_export(rows: list[dict], drop: tuple[str, ...] = ()) -> list[dict]:
+    return [
+        {k: v for k, v in row.items() if k not in drop and k != "user_id"}
+        for row in rows
+    ]
+
+
+@router.get("/export")
+async def export_data(user_id: str = CurrentUser) -> Response:
+    """Data portability: everything the user owns, as one JSON download.
+
+    Vector embeddings are omitted (huge, derivable); encrypted API keys are
+    never exported.
+    """
+    data = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "preferences": await prefs_service.get_prefs(user_id),
+        "runs": _rows_for_export(
+            await fetch_all("SELECT * FROM runs WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+        "papers": _rows_for_export(
+            await fetch_all("SELECT * FROM papers WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+        "documents": _rows_for_export(
+            await fetch_all("SELECT * FROM documents WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+        "collections": _rows_for_export(
+            await fetch_all("SELECT * FROM collections WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+        "conversations": _rows_for_export(
+            await fetch_all("SELECT * FROM conversations WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+        "chat_messages": _rows_for_export(
+            await fetch_all("SELECT * FROM chat_messages WHERE user_id = %s ORDER BY id", user_id)
+        ),
+        "extractions": _rows_for_export(
+            await fetch_all("SELECT * FROM extractions WHERE user_id = %s ORDER BY created_at", user_id)
+        ),
+    }
+    return Response(
+        content=json.dumps(data, ensure_ascii=False, indent=2, default=str),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": 'attachment; filename="fiberarticle-export.json"'
+        },
+    )
+
+
+@router.delete("", status_code=204)
+async def delete_account_data(user_id: str = CurrentUser) -> None:
+    """Right to erasure: purge every row the user owns. The web app deletes
+    the Better Auth user afterwards; this endpoint only owns the API data."""
+    # Cascades cover children (papers/chunks/events via runs, chunks via
+    # papers, messages via conversations); the direct deletes make the
+    # erasure complete even for rows without a parent.
+    for query in (
+        "DELETE FROM extractions WHERE user_id = %s",
+        "DELETE FROM conversations WHERE user_id = %s",
+        "DELETE FROM chat_messages WHERE user_id = %s",
+        "DELETE FROM documents WHERE user_id = %s",
+        "DELETE FROM runs WHERE user_id = %s",
+        "DELETE FROM papers WHERE user_id = %s",
+        "DELETE FROM chunks WHERE user_id = %s",
+        "DELETE FROM collections WHERE user_id = %s",
+        "DELETE FROM user_prefs WHERE user_id = %s",
+        "DELETE FROM llm_config WHERE user_id = %s",
+    ):
+        await execute(query, user_id)
 
 
 @router.put("/llm-config", response_model=LlmConfigOut)
