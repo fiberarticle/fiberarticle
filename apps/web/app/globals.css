@@ -235,11 +235,7 @@
   pointer-events: none;
 }
 
-/* Illustration motion: gentle float and a one-time stroke draw-in. */
-@keyframes fa-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
+/* Illustration motion: a one-time stroke draw-in and a soft pulse. */
 @keyframes fa-draw {
   from { stroke-dashoffset: 60; }
   to { stroke-dashoffset: 0; }
@@ -247,9 +243,6 @@
 @keyframes fa-pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
-}
-.fa-art-float {
-  animation: fa-float 5s ease-in-out infinite;
 }
 .fa-art-draw {
   stroke-dasharray: 60;
@@ -259,7 +252,6 @@
   animation: fa-pulse-soft 3.2s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fa-art-float,
   .fa-art-draw,
   .fa-art-pulse {
     animation: none;
