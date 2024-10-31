@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUp,
-  Brain,
   ChevronRight,
   FileText,
   Library,
+  Lightbulb,
   Paperclip,
   Search,
 } from "lucide-react";
@@ -323,7 +323,7 @@ export function Assistant() {
                     <div className="mb-1">
                       <ChainOfThought>
                         <ChainOfThoughtStep isLast>
-                          <ChainOfThoughtTrigger leftIcon={<Brain />} status="done">
+                          <ChainOfThoughtTrigger leftIcon={<Lightbulb />} status="done">
                             Reasoning
                             <span className="ml-1.5 text-xs text-muted-foreground">
                               {message.steps.length}{" "}
@@ -403,11 +403,7 @@ export function Assistant() {
               }
             }}
             rows={1}
-            placeholder={
-              active?.scope === "paper"
-                ? "Ask about this paper..."
-                : "Ask across your whole library..."
-            }
+            placeholder="Ask follow ups..."
             className="max-h-40 flex-1 resize-none border-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
           <Button
