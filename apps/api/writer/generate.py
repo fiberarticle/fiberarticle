@@ -77,6 +77,11 @@ _SECTION_PLAN: list[tuple[str, str, str]] = [
     ),
 ]
 
+# Exposed so the API can report real "n of m sections" progress.
+PLANNED_SECTION_COUNT = len(_SECTION_PLAN)
+
+_active_tasks: dict[str, asyncio.Task] = {}
+
 
 async def _retrieve_evidence(
     run_id: str, user_id: str, query: str, limit: int = 6
@@ -212,36 +217,57 @@ async def generate_document(document_id: str, run_id: str, user_id: str) -> None
             document_id,
         )
 
-        sections: list[dict] = []
-        for heading, query, instructions in _SECTION_PLAN:
-            content = await _write_section(
-                llm,
-                run_id,
-                user_id,
-                topic,
-                heading,
-                query,
-                instructions,
-                papers,
-                paper_index,
-                language,
+        # Sections only depend on retrieval and the paper list, never on each
+        # other, so write them concurrently. The semaphore keeps concurrency
+        # polite toward free-tier providers; the lock serializes persistence
+        # so the editor can stream sections in as each one lands.
+        slots: list[dict | None] = [None] * len(_SECTION_PLAN)
+        semaphore = asyncio.Semaphore(3)
+        persist_lock = asyncio.Lock()
+
+        async def write_one(index: int, heading: str, query: str, instructions: str) -> None:
+            async with semaphore:
+                content = await _write_section(
+                    llm,
+                    run_id,
+                    user_id,
+                    topic,
+                    heading,
+                    query,
+                    instructions,
+                    papers,
+                    paper_index,
+                    language,
+                )
+            slots[index] = {
+                "id": str(uuid.uuid4()),
+                "heading": heading,
+                "content": content,
+            }
+            async with persist_lock:
+                done = [slot for slot in slots if slot is not None]
+                await execute(
+                    "UPDATE documents SET sections = %s, updated_at = now() WHERE id = %s",
+                    jsonb(done),
+                    document_id,
+                )
+
+        await asyncio.gather(
+            *(
+                write_one(i, heading, query, instructions)
+                for i, (heading, query, instructions) in enumerate(_SECTION_PLAN)
             )
-            sections.append(
-                {
-                    "id": str(uuid.uuid4()),
-                    "heading": heading,
-                    "content": content,
-                }
-            )
-            # Persist progress after each section so the editor can stream it in.
-            await execute(
-                "UPDATE documents SET sections = %s, updated_at = now() WHERE id = %s",
-                jsonb(sections),
-                document_id,
-            )
+        )
 
         await execute(
             "UPDATE documents SET status = 'ready', updated_at = now() WHERE id = %s",
+            document_id,
+        )
+    except asyncio.CancelledError:
+        # User pressed Stop: keep whatever sections landed and leave the
+        # document editable instead of destroying the work.
+        await execute(
+            "UPDATE documents SET status = 'ready', updated_at = now() WHERE id = %s AND status = 'generating'",
             document_id,
         )
     except Exception as exc:
@@ -251,10 +277,23 @@ async def generate_document(document_id: str, run_id: str, user_id: str) -> None
             str(exc),
             document_id,
         )
+    finally:
+        _active_tasks.pop(document_id, None)
 
 
 def start_generation(document_id: str, run_id: str, user_id: str) -> None:
-    asyncio.create_task(generate_document(document_id, run_id, user_id))
+    task = asyncio.create_task(generate_document(document_id, run_id, user_id))
+    _active_tasks[document_id] = task
+
+
+def cancel_generation(document_id: str) -> bool:
+    """Cancel the in-process generation task. Returns False when no task is
+    live (already finished, or lost to an API restart)."""
+    task = _active_tasks.get(document_id)
+    if task is None or task.done():
+        return False
+    task.cancel()
+    return True
 
 
 EDIT_COMMANDS = {
