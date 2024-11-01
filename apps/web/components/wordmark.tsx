@@ -31,12 +31,18 @@ export function Wordmark({
       className={cn("flex items-center gap-2 no-underline", className)}
     >
       <FiberMark />
-      {/* Same amber-into-brown gradient as the sign-in brand title. */}
+      {/* Exactly the sign-in brand title gradient: amber on the left
+          flowing to brown on the right. Inline style guarantees the same
+          rendering as the auth page's CSS. */}
       <span
         className={cn(
-          "bg-[linear-gradient(90deg,#fca91e_0%,#d98b28_55%,#b3782d_100%)] bg-clip-text text-lg font-bold tracking-tight text-transparent",
+          "bg-clip-text text-lg font-bold tracking-tight text-transparent",
           textClassName
         )}
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, #fca91e 0%, #d98b28 55%, #b3782d 100%)",
+        }}
       >
         Fiberarticle
       </span>
