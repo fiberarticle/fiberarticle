@@ -94,6 +94,8 @@ export interface DocumentDetail {
   title: string;
   template: DocumentTemplate;
   status: "generating" | "ready" | "failed";
+  /** Planned section count while generating; written count once done. */
+  total_sections: number;
   sections: DocumentSection[];
   authors: string[];
   citation_style: string | null;
@@ -117,38 +119,6 @@ export interface PaperDetail extends Paper {
   chunk_count: number;
   run_id: string | null;
   created_at: string;
-}
-
-export interface Collection {
-  id: string;
-  name: string;
-  paper_count: number;
-  created_at: string;
-}
-
-export interface SearchResultPaper {
-  source: string;
-  external_id: string | null;
-  title: string;
-  authors: string[];
-  year: number | null;
-  venue: string | null;
-  doi: string | null;
-  url: string | null;
-  abstract: string | null;
-  is_open_access: boolean;
-  oa_pdf_url: string | null;
-  cited_by_count: number;
-  issn: string | null;
-  quartile: Quartile | null;
-}
-
-export interface SearchResponse {
-  results: SearchResultPaper[];
-  answer: string | null;
-  answer_sources: number[];
-  sub_queries: string[];
-  in_library_dois: string[];
 }
 
 export interface Conversation {
@@ -206,6 +176,8 @@ export interface Extraction {
   name: string;
   status: "running" | "ready" | "failed";
   pinned: boolean;
+  /** How many papers this extraction covers (rows grow toward this). */
+  total_papers: number;
   columns: ExtractionColumn[];
   rows: ExtractionRow[];
   error: string | null;
