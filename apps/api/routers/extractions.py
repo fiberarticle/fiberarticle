@@ -33,6 +33,7 @@ def _extraction_out(row: dict) -> ExtractionOut:
         name=row["name"],
         status=row["status"],
         pinned=bool(row.get("pinned")),
+        total_papers=len(row["paper_ids"] or []),
         columns=[ExtractionColumn(**c) for c in row["columns"]],
         rows=row["rows"] or [],
         error=row["error"],
