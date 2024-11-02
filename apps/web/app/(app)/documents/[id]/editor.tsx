@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   ArrowUp,
   Bold as BoldIcon,
+  BookMarked,
   Check,
   ChevronDown,
   ChevronRight,
@@ -43,6 +44,7 @@ import {
   SourceContent,
   SourceTrigger,
 } from "@/components/prompt-kit/source";
+import { StylePicker } from "@/components/style-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -192,6 +194,10 @@ function SectionEditor({
       },
     },
     onUpdate: ({ editor }) => {
+      // A read-only editor (generation, AI busy) can still emit update
+      // events from programmatic syncs; those are not user edits and must
+      // not mark the document dirty.
+      if (!editor.isEditable) return;
       onChange(getMarkdown(editor));
     },
     onFocus: ({ editor }) => onFocusEditor(editor),
@@ -241,7 +247,10 @@ function SectionEditor({
   }, [editor]);
 
   React.useEffect(() => {
-    editor?.setEditable(!disabled);
+    // emitUpdate must stay false: setEditable fires an update event by
+    // default, which would mark untouched documents dirty every time
+    // generation or an AI edit toggles the disabled state.
+    editor?.setEditable(!disabled, false);
   }, [editor, disabled]);
 
   // Apply external content changes (AI results, streamed sections) without
@@ -627,6 +636,22 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     return () => clearInterval(interval);
   }, [doc?.status, load]);
 
+  // Real elapsed time while generating: free-tier model calls can take
+  // minutes, and a static label reads as stuck.
+  const [genElapsed, setGenElapsed] = React.useState("");
+  React.useEffect(() => {
+    if (doc?.status !== "generating") return;
+    const start = new Date(doc.created_at).getTime();
+    const update = () => {
+      const total = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      const minutes = Math.floor(total / 60);
+      setGenElapsed(minutes > 0 ? `${minutes}m ${total % 60}s` : `${total}s`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [doc?.status, doc?.created_at]);
+
   // Autosave: persist quietly shortly after the last change so edits are
   // never lost to navigation. The Save button remains as an instant flush.
   React.useEffect(() => {
@@ -680,6 +705,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
             template: doc.template,
             sections: doc.sections,
             authors: doc.authors,
+            citation_style: doc.citation_style,
           }),
         }
       );
@@ -879,6 +905,28 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     setNotice("Section removed.");
   }
 
+  const [stopping, setStopping] = React.useState(false);
+
+  async function onStopGeneration() {
+    setStopping(true);
+    setError(null);
+    try {
+      // Non-destructive: sections written so far are kept and editable.
+      const updated = await apiFetch<DocumentDetail>(
+        `/v1/documents/${documentId}/cancel`,
+        { method: "POST" }
+      );
+      setDoc(updated);
+      setNotice("Generation stopped. The sections written so far are kept.");
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "Could not stop the generation."
+      );
+    } finally {
+      setStopping(false);
+    }
+  }
+
   async function onDelete() {
     if (!doc) return;
     if (!window.confirm("Delete this document? This cannot be undone.")) return;
@@ -962,9 +1010,25 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
           </Link>
           <div className="flex items-center gap-2">
             {generating ? (
-              <TextShimmer className="text-xs">
-                Writing your article section by section
-              </TextShimmer>
+              <>
+                <TextShimmer className="text-xs">
+                  {`Writing section ${Math.min(
+                    doc.sections.length + 1,
+                    doc.total_sections
+                  )} of ${doc.total_sections}`}
+                </TextShimmer>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {genElapsed}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={stopping}
+                  onClick={onStopGeneration}
+                >
+                  <X /> Stop
+                </Button>
+              </>
             ) : (
               <>
                 <span className="text-xs text-muted-foreground">
@@ -999,6 +1063,19 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
             )}
           </div>
         </div>
+
+        {generating && (
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(to_right,var(--classic-accent-from),var(--classic-accent-to))] transition-[width] duration-700"
+              style={{
+                width: `${Math.round(
+                  (doc.sections.length / Math.max(doc.total_sections, 1)) * 100
+                )}%`,
+              }}
+            />
+          </div>
+        )}
 
         {!generating && <FormatToolbar editor={activeEditor} />}
 
@@ -1064,6 +1141,26 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
                 </option>
               ))}
             </select>
+            {/* Per-document citation style; falls back to the global
+                preference from Settings when unset. */}
+            <StylePicker
+              value={doc.citation_style ?? ""}
+              onSelect={(style) =>
+                mutate((d) => ({ ...d, citation_style: style.id }))
+              }
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={generating}
+                className="max-w-56"
+              >
+                <BookMarked />
+                <span className="truncate">
+                  {doc.citation_style ?? "Citation style: default"}
+                </span>
+              </Button>
+            </StylePicker>
             <Badge>{doc.references.length} references</Badge>
           </div>
 
