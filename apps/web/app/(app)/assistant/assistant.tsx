@@ -59,6 +59,7 @@ export function Assistant() {
   const [error, setError] = React.useState<string | null>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const followUpRef = React.useRef<HTMLTextAreaElement>(null);
   const startedForPaper = React.useRef(false);
   // Set while the first message of a fresh chat is in flight so the
   // thread loader does not clobber the optimistic message with [].
@@ -150,6 +151,16 @@ export function Assistant() {
     thinkSeconds >= 60
       ? `${Math.floor(thinkSeconds / 60)}m ${thinkSeconds % 60}s`
       : `${thinkSeconds}s`;
+
+  // Compact chat bar: grows with the message, capped well before it
+  // dominates the screen, then scrolls internally.
+  const FOLLOW_UP_MAX_HEIGHT = 160;
+  React.useLayoutEffect(() => {
+    const el = followUpRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, FOLLOW_UP_MAX_HEIGHT)}px`;
+  }, [input]);
 
   function onAttach(files: File[]) {
     setError(null);
@@ -428,6 +439,7 @@ export function Assistant() {
 
         <div className="mt-2 flex items-end gap-2 rounded-3xl border border-border bg-card p-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)] focus-within:border-ring">
           <textarea
+            ref={followUpRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -438,7 +450,7 @@ export function Assistant() {
             }}
             rows={1}
             placeholder="Ask follow ups..."
-            className="max-h-40 flex-1 resize-none border-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+            className="fa-textarea-scroll max-h-40 flex-1 resize-none overflow-y-auto border-none bg-transparent px-2 py-1.5 text-sm leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground"
           />
           <Button
             size="icon"
@@ -479,7 +491,7 @@ export function Assistant() {
           <PromptInputTextarea
             placeholder="Ask a question about the papers in your library..."
             aria-label="Message for Assistant"
-            className="min-h-24 px-5 pt-5"
+            className="min-h-32 px-5 pt-5"
           />
           {attachments.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2 px-4">
