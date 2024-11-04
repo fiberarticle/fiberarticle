@@ -3,7 +3,7 @@
 import * as React from "react";
 import {
   ArrowUp,
-  BookOpenCheck,
+  ClipboardCheck,
   Check,
   FileText,
   HatGlasses,
@@ -117,7 +117,7 @@ export const AGENTS: AgentDef[] = [
     label: "Literature Reviewer",
     tagline: "Thematic review with synthesis matrix",
     placeholder: "Describe the topic for a thematic literature review...",
-    icon: BookOpenCheck,
+    icon: ClipboardCheck,
     accent: "#50c158",
     rotate: 2.5,
     drop: 0,
@@ -380,7 +380,7 @@ export function AgentComposer({
               placeholder={agent.placeholder}
               aria-label={`Message for ${agent.label}`}
               disabled={disabled}
-              className="min-h-24 px-5 pt-5"
+              className="min-h-32 px-5 pt-5"
             />
             {attachments.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2 px-4">
