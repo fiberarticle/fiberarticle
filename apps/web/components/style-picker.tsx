@@ -32,9 +32,6 @@ export function StylePicker({
   const [query, setQuery] = React.useState("");
   const [styles, setStyles] = React.useState<CitationStyle[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [highlighted, setHighlighted] = React.useState<string | null>(null);
-  const [preview, setPreview] = React.useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = React.useState(false);
 
   // Debounced catalog search.
   React.useEffect(() => {
@@ -55,36 +52,14 @@ export function StylePicker({
     return () => clearTimeout(timer);
   }, [query, open]);
 
-  // Live preview of the highlighted (or selected) style.
-  const previewTarget = highlighted ?? value;
-  React.useEffect(() => {
-    if (!open || !previewTarget) return;
-    let cancelled = false;
-    setPreviewLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const data = await apiFetch<{ preview: string }>(
-          "/v1/citations/preview",
-          {
-            method: "POST",
-            body: JSON.stringify({ style: previewTarget }),
-          }
-        );
-        if (!cancelled) setPreview(data.preview);
-      } catch {
-        if (!cancelled) setPreview(null);
-      } finally {
-        if (!cancelled) setPreviewLoading(false);
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [previewTarget, open]);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
+    >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent align="start" className="w-[26rem] max-w-[90vw] p-3">
         <div className="relative">
@@ -104,7 +79,15 @@ export function StylePicker({
           </p>
         )}
 
-        <div className="mt-1.5 flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+        <div
+          className="mt-1.5 flex max-h-64 flex-col gap-0.5 overflow-y-auto"
+          // The picker portals outside the Settings dialog, whose modal
+          // scroll-lock swallows wheel events over portaled content. Scroll
+          // the list ourselves so the mouse wheel works, not just the bar.
+          onWheel={(e) => {
+            e.currentTarget.scrollTop += e.deltaY;
+          }}
+        >
           {loading && styles.length === 0 && (
             <div className="flex flex-col gap-1.5 p-1">
               <Skeleton className="h-8 w-full" />
@@ -123,14 +106,7 @@ export function StylePicker({
               <button
                 key={style.id}
                 type="button"
-                onMouseEnter={() => setHighlighted(style.id)}
-                onFocus={() => setHighlighted(style.id)}
-                onClick={() => {
-                  onSelect(style);
-                  setOpen(false);
-                  setQuery("");
-                  setHighlighted(null);
-                }}
+                onClick={() => onSelect(style)}
                 className={cn(
                   "flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent",
                   selected && "bg-accent"
@@ -150,20 +126,6 @@ export function StylePicker({
           })}
         </div>
 
-        <div className="mt-2 rounded-xl border border-border bg-muted/40 p-2.5">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Preview
-          </p>
-          {previewLoading ? (
-            <Skeleton className="h-4 w-full" />
-          ) : preview ? (
-            <p className="text-xs leading-5 text-foreground/90">{preview}</p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Hover a style to preview a sample reference.
-            </p>
-          )}
-        </div>
         {valueTitle && (
           <p className="mt-2 px-1 text-[11px] text-muted-foreground">
             Current: {valueTitle}
