@@ -634,7 +634,7 @@ export function Sidebar({
                   collapsed && "justify-center px-0"
                 )}
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--primary)_20%,transparent)] text-xs font-semibold text-primary">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--primary)_20%,transparent)] text-sm font-semibold text-primary">
                   {userName.slice(0, 1).toUpperCase()}
                 </span>
                 {!collapsed && (
