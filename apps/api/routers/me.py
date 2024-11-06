@@ -106,9 +106,6 @@ async def export_data(user_id: str = CurrentUser) -> Response:
         "documents": _rows_for_export(
             await fetch_all("SELECT * FROM documents WHERE user_id = %s ORDER BY created_at", user_id)
         ),
-        "collections": _rows_for_export(
-            await fetch_all("SELECT * FROM collections WHERE user_id = %s ORDER BY created_at", user_id)
-        ),
         "conversations": _rows_for_export(
             await fetch_all("SELECT * FROM conversations WHERE user_id = %s ORDER BY created_at", user_id)
         ),
@@ -143,7 +140,6 @@ async def delete_account_data(user_id: str = CurrentUser) -> None:
         "DELETE FROM runs WHERE user_id = %s",
         "DELETE FROM papers WHERE user_id = %s",
         "DELETE FROM chunks WHERE user_id = %s",
-        "DELETE FROM collections WHERE user_id = %s",
         "DELETE FROM user_prefs WHERE user_id = %s",
         "DELETE FROM llm_config WHERE user_id = %s",
     ):
