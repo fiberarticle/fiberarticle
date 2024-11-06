@@ -33,6 +33,7 @@ import {
   SourceTrigger,
 } from "@/components/prompt-kit/source";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
+import { StarBorder } from "@/components/star-border";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -412,7 +413,13 @@ export function Assistant() {
           </div>
         </div>
 
-        <div className="mt-2 flex items-end gap-2 rounded-3xl border border-border bg-card p-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)] focus-within:border-ring">
+        <StarBorder
+          radius={24}
+          borderWidth={1.5}
+          lightWidth={140}
+          className="mt-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+        >
+        <div className="flex items-end gap-2 rounded-[22px] bg-card p-2">
           <textarea
             ref={followUpRef}
             value={input}
@@ -437,6 +444,7 @@ export function Assistant() {
             <ArrowUp />
           </Button>
         </div>
+        </StarBorder>
       </div>
     );
   }
@@ -449,18 +457,22 @@ export function Assistant() {
         What do you want to know?
       </h1>
       <p className="-mt-3 text-center text-sm text-muted-foreground">
-        Ask across your library or upload a paper first. Every answer cites the
-        exact passages it used.
+        Upload a paper first or ask directly. Every answer cites the exact
+        passages it used.
       </p>
 
       {error && <Callout tone="error">{error}</Callout>}
 
+      <StarBorder
+        radius={26}
+        className="w-full shadow-[0_24px_60px_-26px_rgba(0,0,0,0.65)]"
+      >
       <PromptInput
         isLoading={starting}
         value={draft}
         onValueChange={setDraft}
         onSubmit={onStartChat}
-        className="w-full rounded-[26px] border-2 border-[color-mix(in_oklab,var(--border)_78%,var(--muted-foreground))] bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--card)_88%,white),color-mix(in_oklab,var(--card)_97%,white)_50%)] shadow-[inset_0_1.5px_0_var(--classic-highlight),0_24px_60px_-26px_rgba(0,0,0,0.65)]"
+        className="w-full rounded-[24px] border-0 bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--card)_88%,white),color-mix(in_oklab,var(--card)_97%,white)_50%)] shadow-[inset_0_1.5px_0_var(--classic-highlight)]"
       >
         <div className="flex flex-col">
           <PromptInputTextarea
@@ -525,6 +537,7 @@ export function Assistant() {
           </PromptInputActions>
         </div>
       </PromptInput>
+      </StarBorder>
 
       {starting && (
         <div className="text-center">
