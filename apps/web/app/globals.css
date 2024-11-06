@@ -151,6 +151,48 @@
   font-family: var(--font-serif);
 }
 
+/* StarBorder (components/star-border.tsx): the light dot lapping the rim.
+   The light also drifts through the Fiberarticle agent palette (amber,
+   pink, green, blue) as it moves. @property makes the color var
+   interpolable; browsers without it fall back to static amber. */
+@property --light-color {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #fca91e;
+}
+@keyframes fa-star-travel {
+  to {
+    offset-distance: 100%;
+  }
+}
+@keyframes fa-star-colors {
+  0%,
+  100% {
+    --light-color: #fca91e;
+  }
+  25% {
+    --light-color: #ff7db1;
+  }
+  50% {
+    --light-color: #50c158;
+  }
+  75% {
+    --light-color: #4f90e4;
+  }
+}
+.fa-star-travel {
+  --light-color: #fca91e;
+  animation:
+    fa-star-travel var(--star-duration, 6s) linear infinite,
+    fa-star-colors calc(var(--star-duration, 6s) * 1.5) linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fa-star-travel {
+    animation: none;
+    display: none;
+  }
+}
+
 /* Minimal scrollbars: thin, rounded, light grey on a transparent track. */
 * {
   scrollbar-width: thin;
