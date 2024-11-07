@@ -31,8 +31,10 @@ export default async function AppLayout({
           emailVerified={session.user.emailVerified}
         />
       </Suspense>
+      {/* No max-width here: every page centers itself, and pages with a
+          side panel (run report) need the full panel width to share. */}
       <main className="min-w-0 flex-1 overflow-y-auto rounded-tl-[44px] border-l border-t border-border bg-background shadow-[-6px_0_24px_rgba(0,0,0,0.05)]">
-        <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
+        <div className="px-6 py-8">{children}</div>
       </main>
     </div>
   );
