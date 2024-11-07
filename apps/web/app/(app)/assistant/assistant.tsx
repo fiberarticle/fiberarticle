@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUp,
+  Check,
   ChevronRight,
+  Copy,
   FileText,
   Library,
   Lightbulb,
@@ -43,6 +45,22 @@ import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import type { ChatMessage, Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+/** "25 July 2026 10:33 PM" - full date so old messages stay unambiguous. */
+function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${date} ${time}`;
+}
+
 export function Assistant() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,6 +81,18 @@ export function Assistant() {
   // Set while the first message of a fresh chat is in flight so the
   // thread loader does not clobber the optimistic message with [].
   const sendingFirstFor = React.useRef<string | null>(null);
+  // Which message's copy icon shows the "copied" check right now.
+  const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
+
+  async function onCopyMessage(key: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);
+    } catch {
+      // Clipboard unavailable (permissions): silently do nothing.
+    }
+  }
 
   // The open conversation is fully URL-driven: /assistant?chat=<id>.
   const activeId = chatIdParam;
@@ -260,6 +290,13 @@ export function Assistant() {
     if (!trimmed || !activeId || sending) return;
     setSending(true);
     setError(null);
+    // Attached files (picked or pasted) go into the paper pool first so the
+    // agent is forced to consult them for this question.
+    const uploadedIds = await uploadAttachments();
+    if (uploadedIds === null) {
+      setSending(false);
+      return;
+    }
     setMessages((prev) => [
       ...prev,
       {
@@ -275,7 +312,13 @@ export function Assistant() {
     try {
       const updated = await apiFetch<ChatMessage[]>(
         `/v1/chats/${activeId}/messages`,
-        { method: "POST", body: JSON.stringify({ content: trimmed }) }
+        {
+          method: "POST",
+          body: JSON.stringify({
+            content: trimmed,
+            search_library_first: uploadedIds.length > 0,
+          }),
+        }
       );
       setMessages(updated);
       loadConversations();
@@ -288,11 +331,23 @@ export function Assistant() {
     }
   }
 
+  /** Ctrl+V with files on the clipboard attaches them instead of pasting. */
+  function onPasteFiles(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData?.files ?? []);
+    if (files.length > 0) {
+      e.preventDefault();
+      onAttach(files);
+    }
+  }
+
   // ------------------------------------------------------------ chat view
   if (activeId) {
     return (
-      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col">
-        <div className="mb-3 flex items-center gap-2">
+      // No inner scroll container: the inset panel itself scrolls, so the
+      // only scrollbar sits at the panel's right edge (Claude style). The
+      // header and the reply bar stick to the panel's top and bottom.
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col">
+        <div className="sticky top-0 z-20 -mt-8 flex items-center gap-2 bg-background pb-3 pt-8">
           <Button
             variant="ghost"
             size="sm"
@@ -304,7 +359,7 @@ export function Assistant() {
           {active && (
             <>
               <Badge variant={active.scope === "paper" ? "default" : "leaf"}>
-                {active.scope === "paper" ? "Paper" : "Library"}
+                {active.scope === "paper" ? "Paper" : "Chat"}
               </Badge>
               <span className="truncate text-sm font-medium">{active.title}</span>
             </>
@@ -317,7 +372,7 @@ export function Assistant() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto pr-1">
+        <div className="flex-1">
           <div className="flex flex-col gap-4 pb-4">
             {messages.length === 0 && !sending && (
               <p className="py-8 text-center text-sm text-muted-foreground">
@@ -358,7 +413,7 @@ export function Assistant() {
                                     )}
                                     <span>
                                       {step.tool === "library_search"
-                                        ? "Searched your library"
+                                        ? "Searched your papers"
                                         : "Searched the literature"}
                                       {step.input ? `: "${step.input}"` : ""}
                                     </span>
@@ -397,6 +452,32 @@ export function Assistant() {
                     ))}
                   </div>
                 )}
+                {/* Sent time plus a bare copy icon: no border, no background. */}
+                <div
+                  className={cn(
+                    "mt-1 flex items-center gap-1.5",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatMessageTime(message.created_at)}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Copy message"
+                    title="Copy message"
+                    onClick={() =>
+                      onCopyMessage(`${message.id}-${i}`, message.content)
+                    }
+                    className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {copiedKey === `${message.id}-${i}` ? (
+                      <Check className="size-3 text-success" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
             {sending && (
@@ -413,38 +494,79 @@ export function Assistant() {
           </div>
         </div>
 
+        <div className="sticky bottom-0 z-20 -mb-8 bg-background pb-4 pt-2">
         <StarBorder
           radius={24}
           borderWidth={1.5}
           lightWidth={140}
-          className="mt-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          className="shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
         >
-        <div className="flex items-end gap-2 rounded-[22px] bg-card p-2">
-          <textarea
-            ref={followUpRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onSend();
-              }
-            }}
-            rows={1}
-            placeholder="Ask follow ups..."
-            className="fa-textarea-scroll max-h-40 flex-1 resize-none overflow-y-auto border-none bg-transparent px-2 py-1.5 text-sm leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground"
-          />
-          <Button
-            size="icon"
-            className="rounded-full"
-            disabled={!input.trim() || sending}
-            onClick={onSend}
-            aria-label="Send"
-          >
-            <ArrowUp />
-          </Button>
+        <div className="flex flex-col rounded-[22px] bg-card p-2">
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2 px-1">
+              {attachments.map((file, index) => (
+                <AttachmentBadge
+                  key={`${file.name}-${file.size}-${index}`}
+                  file={file}
+                  onRemove={() =>
+                    setAttachments((prev) => prev.filter((_, i) => i !== index))
+                  }
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.md"
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) onAttach(files);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="mb-0.5 rounded-full"
+              type="button"
+              aria-label="Attach files"
+              disabled={sending || uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip />
+            </Button>
+            <textarea
+              ref={followUpRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onPaste={onPasteFiles}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onSend();
+                }
+              }}
+              rows={1}
+              placeholder="Ask follow ups..."
+              className="fa-textarea-scroll max-h-40 flex-1 resize-none overflow-y-auto border-none bg-transparent px-2 py-1.5 text-sm leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground"
+            />
+            <Button
+              size="icon"
+              className="rounded-full"
+              disabled={!input.trim() || sending}
+              onClick={onSend}
+              aria-label="Send"
+            >
+              <ArrowUp />
+            </Button>
+          </div>
         </div>
         </StarBorder>
+        </div>
       </div>
     );
   }
@@ -476,9 +598,10 @@ export function Assistant() {
       >
         <div className="flex flex-col">
           <PromptInputTextarea
-            placeholder="Ask a question about the papers in your library..."
+            placeholder="Ask a question about your papers or any research topic..."
             aria-label="Message for Assistant"
             className="min-h-32 px-5 pt-5"
+            onPaste={onPasteFiles}
           />
           {attachments.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2 px-4">
@@ -543,7 +666,7 @@ export function Assistant() {
         <div className="text-center">
           <TextShimmer className="text-sm">
             {uploading
-              ? "Adding your papers to the library"
+              ? "Adding your papers"
               : "Starting your chat"}
           </TextShimmer>
         </div>
@@ -560,8 +683,7 @@ export function Assistant() {
           </div>
         ) : conversations.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No conversations yet. Ask a question above, or open a paper and
-            choose Chat.
+            No conversations yet. Ask a question above to get started.
           </p>
         ) : (
           <div className="flex flex-col gap-2">
