@@ -386,6 +386,14 @@ export function AgentComposer({
               aria-label={`Message for ${agent.label}`}
               disabled={disabled}
               className="min-h-32 px-5 pt-5"
+              onPaste={(e) => {
+                // Ctrl+V with files on the clipboard attaches them.
+                const files = Array.from(e.clipboardData?.files ?? []);
+                if (files.length > 0 && onAttach) {
+                  e.preventDefault();
+                  onAttach(files);
+                }
+              }}
             />
             {attachments.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2 px-4">
