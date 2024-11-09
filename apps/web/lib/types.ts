@@ -187,6 +187,23 @@ export interface DocumentListItem {
   updated_at: string;
 }
 
+export interface Bibliography {
+  style: string;
+  numeric: boolean;
+  entries: string[];
+}
+
+export interface DocumentChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface DocumentChatResult {
+  reply: string;
+  changed: boolean;
+  document: DocumentDetail;
+}
+
 export interface Preferences {
   citation_style: string;
   citation_style_title: string;
