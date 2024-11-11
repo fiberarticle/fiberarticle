@@ -12,12 +12,15 @@
  */
 
 import * as React from "react";
-import { Extension, Node } from "@tiptap/core";
+import { Extension, getHTMLFromFragment, Node } from "@tiptap/core";
+import Heading from "@tiptap/extension-heading";
+import Paragraph from "@tiptap/extension-paragraph";
 import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from "@tiptap/react";
+import { Fragment } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
@@ -187,6 +190,72 @@ export const TitleBlock = Node.create({
     ];
   },
 });
+
+/* ------------------------------------------------------------------
+   Alignment-aware Markdown serialization. Markdown has no syntax for text
+   alignment, so an explicitly aligned block is stored as one single-line
+   HTML block ("<p style=\"text-align: center\">...</p>") that round-trips
+   through the parser and that every exporter understands. Level-2 headings
+   always stay as "## " lines because they delimit sections. */
+
+const EXPLICIT_ALIGNMENTS = new Set(["left", "center", "right"]);
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+function nodeInnerHtml(node: any): string {
+  return getHTMLFromFragment(
+    Fragment.from(node.content),
+    node.type.schema
+  ).replace(/\n/g, " ");
+}
+
+export const MdParagraph = Paragraph.extend({
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          const align = node.attrs.textAlign;
+          if (EXPLICIT_ALIGNMENTS.has(align)) {
+            state.write(
+              `<p style="text-align: ${align}">${nodeInnerHtml(node)}</p>`
+            );
+            state.closeBlock(node);
+          } else {
+            state.renderInline(node);
+            state.closeBlock(node);
+          }
+        },
+        parse: {},
+      },
+    };
+  },
+});
+
+export const MdHeading = Heading.extend({
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          const level = node.attrs.level;
+          const align = node.attrs.textAlign;
+          if (level >= 3 && EXPLICIT_ALIGNMENTS.has(align)) {
+            state.write(
+              `<h${level} style="text-align: ${align}">${nodeInnerHtml(node)}</h${level}>`
+            );
+            state.closeBlock(node);
+          } else {
+            state.write(state.repeat("#", level) + " ");
+            state.renderInline(node);
+            state.closeBlock(node);
+          }
+        },
+        parse: {},
+      },
+    };
+  },
+});
+
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /* ------------------------------------------------------------------ */
 
