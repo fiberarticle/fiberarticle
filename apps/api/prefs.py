@@ -66,14 +66,22 @@ async def set_prefs(
     return {"citation_style": style, "ai_language": language}
 
 
+# House writing style, appended to every prose-generating prompt.
+STYLE_RULES = (
+    " Never use em dashes or en dashes anywhere in your writing; use commas, "
+    "colons, or parentheses instead. Never use emojis."
+)
+
+
 async def language_instruction(user_id: str) -> str:
-    """Sentence appended to system prompts. Empty for English variants."""
+    """House style rules plus the user's writing language, appended to
+    system prompts. The style rules always apply."""
     prefs = await get_prefs(user_id)
     language = prefs["ai_language"]
     if language.startswith("en"):
-        return ""
+        return STYLE_RULES
     name = LANGUAGES.get(language, language)
-    return (
+    return STYLE_RULES + (
         f" Write all prose in {name}. Keep technical terms, paper titles, and "
         "citation markers exactly as they are."
     )
