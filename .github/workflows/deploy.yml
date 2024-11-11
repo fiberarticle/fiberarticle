@@ -66,15 +66,16 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ubuntu@"$VM_HOST" '
             set -e
-            rm -rf /opt/fiberarticle-web-next /opt/fiberarticle-web-old
-            mkdir -p /opt/fiberarticle-web-next
-            tar -xzf /tmp/web-bundle.tar.gz -C /opt/fiberarticle-web-next
+            sudo rm -rf /opt/fiberarticle-web-next /opt/fiberarticle-web-old
+            sudo mkdir -p /opt/fiberarticle-web-next
+            sudo tar -xzf /tmp/web-bundle.tar.gz -C /opt/fiberarticle-web-next
+            sudo chown -R ubuntu:ubuntu /opt/fiberarticle-web-next
             rm /tmp/web-bundle.tar.gz
             sudo systemctl stop fiberarticle-web
-            mv /opt/fiberarticle-web /opt/fiberarticle-web-old
-            mv /opt/fiberarticle-web-next /opt/fiberarticle-web
+            sudo mv /opt/fiberarticle-web /opt/fiberarticle-web-old
+            sudo mv /opt/fiberarticle-web-next /opt/fiberarticle-web
             sudo systemctl start fiberarticle-web
-            rm -rf /opt/fiberarticle-web-old
+            sudo rm -rf /opt/fiberarticle-web-old
           '
 
       - name: Update API code
