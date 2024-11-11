@@ -11,7 +11,13 @@ import re
 import zipfile
 
 from export.citations import _bibtex_key, to_bibtex
-from export.md import decode_data_image, isolate_images, span_props
+from export.md import (
+    aligned_block,
+    decode_data_image,
+    html_inline_segments,
+    isolate_images,
+    span_props,
+)
 from latex.templates import LatexTemplate, template_for, vendored_files
 
 _CITE_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
@@ -157,6 +163,33 @@ def _bib_keys(papers: list[dict]) -> list[str]:
     return keys
 
 
+def _segments_latex(
+    segments: list[tuple[str, frozenset]], keys: list[str]
+) -> str:
+    """LaTeX from pre-parsed (text, marks) segments (aligned blocks)."""
+    pieces: list[str] = []
+    for seg_text, marks in segments:
+        if not seg_text:
+            continue
+        tokens: dict[str, str] = {}
+
+        def stash(match: re.Match) -> str:
+            numbers = [int(n) for n in match.group(1).replace(" ", "").split(",")]
+            valid = [keys[n - 1] for n in numbers if 1 <= n <= len(keys)]
+            if not valid:
+                return match.group(0)
+            token = f"@@CITE{len(tokens)}@@"
+            tokens[token] = "\\cite{" + ",".join(valid) + "}"
+            return token
+
+        piece = _CITE_RE.sub(stash, seg_text)
+        piece = escape_latex(piece)
+        for token, cite in tokens.items():
+            piece = piece.replace(token, cite)
+        pieces.append(_wrap_marks(piece, marks))
+    return "".join(pieces)
+
+
 def _convert_inline(text: str, keys: list[str]) -> str:
     """Escape prose, turn [n] markers into \\cite{...}, and apply inline marks."""
     pieces: list[str] = []
@@ -258,6 +291,29 @@ def _convert_body(
             flush_list()
             flush_quote()
             blocks.append("\\newpage")
+            continue
+
+        aligned = aligned_block(line)
+        if aligned:
+            flush_list()
+            flush_quote()
+            tag, align, inner = aligned
+            content_tex = _segments_latex(html_inline_segments(inner), keys)
+            if tag.startswith("h"):
+                # Heading alignment stays with the document class.
+                blocks.append(f"\\subsection*{{{content_tex}}}")
+            else:
+                environment = {
+                    "center": "center",
+                    "right": "flushright",
+                    "left": "flushleft",
+                }.get(align)
+                if environment:
+                    blocks.append(
+                        f"\\begin{{{environment}}}\n{content_tex}\n\\end{{{environment}}}"
+                    )
+                else:
+                    blocks.append(content_tex)
             continue
 
         image_match = _IMAGE_LINE_RE.match(line)
