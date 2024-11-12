@@ -2,7 +2,12 @@
 the user's library and live scholarly search as tools, with the reasoning
 steps and passage-level citations stored alongside every answer."""
 
+import asyncio
+import json
+import logging
+
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from agent.assistant import AssistantAgent
 from db import execute, fetch_all, fetch_one, jsonb
@@ -16,6 +21,8 @@ from models import (
     ConversationUpdate,
 )
 from security import CurrentUser
+
+logger = logging.getLogger("fiberarticle.chats")
 
 router = APIRouter(prefix="/v1/chats", tags=["chats"])
 
@@ -197,6 +204,174 @@ async def list_messages(
         )
         for r in rows
     ]
+
+
+async def _finish_exchange(
+    conversation_id: str,
+    user_id: str,
+    conversation: dict,
+    question: str,
+    answer: str,
+    citations: list,
+    steps: list,
+    had_history: bool,
+) -> None:
+    """Persist the assistant reply and freshen the conversation metadata."""
+    await execute(
+        "INSERT INTO chat_messages (conversation_id, user_id, role, content, citations, steps) VALUES (%s, %s, 'assistant', %s, %s, %s)",
+        conversation_id,
+        user_id,
+        answer,
+        jsonb(citations),
+        jsonb(steps) if steps else None,
+    )
+    title_update = (
+        question[:110]
+        if conversation["title"] in ("New chat", "Library chat")
+        else None
+    )
+    await execute(
+        "UPDATE conversations SET updated_at = now(), title = COALESCE(%s, title) WHERE id = %s",
+        title_update,
+        conversation_id,
+    )
+    if not had_history:
+        schedule_title("conversation", conversation_id, user_id, question)
+
+
+@router.post("/{conversation_id}/messages/stream")
+async def send_message_stream(
+    conversation_id: str, body: ChatMessageIn, user_id: str = CurrentUser
+) -> StreamingResponse:
+    """Same exchange as POST /messages, but as an SSE stream: every agent
+    step is sent the moment it happens (live chain of thought), and closing
+    the stream stops the agent (the stop button)."""
+    conversation = await _get_owned_conversation(conversation_id, user_id)
+    try:
+        llm = await resolve_llm(user_id)
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+
+    history = await fetch_all(
+        "SELECT role, content FROM chat_messages WHERE conversation_id = %s ORDER BY id DESC LIMIT %s",
+        conversation_id,
+        _HISTORY_LIMIT,
+    )
+    history = list(reversed(history))
+
+    # The question is saved before the agent starts, so stopping the
+    # response never loses what the user asked.
+    await execute(
+        "INSERT INTO chat_messages (conversation_id, user_id, role, content) VALUES (%s, %s, 'user', %s)",
+        conversation_id,
+        user_id,
+        body.content,
+    )
+
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def on_step(step: dict) -> None:
+        await queue.put(step)
+
+    agent = AssistantAgent(llm, user_id, dict(conversation), on_step=on_step)
+    runner = asyncio.create_task(
+        agent.run(
+            body.content, history, search_library_first=body.search_library_first
+        )
+    )
+
+    def frame(event: str, payload: dict) -> str:
+        return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    async def persist_stopped() -> None:
+        try:
+            await _finish_exchange(
+                conversation_id,
+                user_id,
+                dict(conversation),
+                body.content,
+                "You stopped this response.",
+                [],
+                list(agent.steps),
+                had_history=bool(history),
+            )
+        except Exception:
+            logger.exception("could not persist the stopped assistant reply")
+
+    async def generate():
+        finished = False
+        try:
+            while True:
+                if runner.done() and queue.empty():
+                    break
+                try:
+                    step = await asyncio.wait_for(queue.get(), timeout=0.3)
+                    yield frame("step", step)
+                except asyncio.TimeoutError:
+                    continue
+            result = runner.result()
+            answer = (result["answer"] or "").strip()
+            if not answer:
+                yield frame(
+                    "error",
+                    {"detail": "The model returned an empty answer. Try again."},
+                )
+                finished = True
+                return
+            await _finish_exchange(
+                conversation_id,
+                user_id,
+                dict(conversation),
+                body.content,
+                answer,
+                result["citations"],
+                result["steps"],
+                had_history=bool(history),
+            )
+            # The exchange is persisted: from here on a client disconnect
+            # must never trigger the stopped-reply fallback, or the real
+            # answer would get a duplicate "stopped" row after it.
+            finished = True
+            rows = await fetch_all(
+                "SELECT * FROM chat_messages WHERE conversation_id = %s ORDER BY id",
+                conversation_id,
+            )
+            yield frame(
+                "done",
+                {
+                    "messages": [
+                        {
+                            "id": r["id"],
+                            "role": r["role"],
+                            "content": r["content"],
+                            "citations": r["citations"],
+                            "steps": r.get("steps"),
+                            "created_at": r["created_at"].isoformat(),
+                        }
+                        for r in rows
+                    ]
+                },
+            )
+        except Exception as exc:
+            finished = True
+            logger.exception("assistant stream failed")
+            yield frame("error", {"detail": f"The assistant failed: {exc}"})
+        finally:
+            if not finished:
+                # The client closed the stream (stop button): cancel the
+                # agent and keep the steps done so far, honestly labeled.
+                # The write runs as its own task because this scope is
+                # being cancelled right now.
+                runner.cancel()
+                asyncio.create_task(persist_stopped())
+            elif not runner.done():
+                runner.cancel()
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/{conversation_id}/messages", response_model=list[ChatMessageOut])
