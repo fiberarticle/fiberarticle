@@ -5,7 +5,7 @@ import logging
 
 from agent.events import emit
 from agent.graph import build_graph
-from db import execute
+from db import execute, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from models import CAPS
 
@@ -27,6 +27,40 @@ async def _set_status(run_id: str, status: str, error: str | None = None) -> Non
     )
 
 
+def _sanitize_state(state: dict) -> dict:
+    """A JSON-safe copy of the pipeline state for the resume snapshot.
+
+    Papers can carry raw PDF bytes between fetch and parse; those never go
+    to the database (a resumed run just refetches them)."""
+    clean: dict = {}
+    for key, value in state.items():
+        if key in ("run_id", "user_id"):
+            continue
+        if key in ("papers", "candidates") and isinstance(value, list):
+            clean[key] = [
+                {k: v for k, v in item.items() if not isinstance(v, (bytes, bytearray))}
+                if isinstance(item, dict)
+                else item
+                for item in value
+            ]
+        elif not isinstance(value, (bytes, bytearray)):
+            clean[key] = value
+    return clean
+
+
+async def _save_snapshot(run_id: str, state: dict) -> None:
+    try:
+        await execute(
+            "UPDATE runs SET snapshot = %s, updated_at = now() WHERE id = %s",
+            jsonb(_sanitize_state(state)),
+            run_id,
+        )
+    except Exception:
+        # A snapshot is a convenience for resume, never worth killing a
+        # healthy run over.
+        logger.exception("run %s snapshot save failed", run_id)
+
+
 async def _execute(
     run_id: str,
     user_id: str,
@@ -35,6 +69,8 @@ async def _execute(
     filters: dict | None = None,
     criteria: str | None = None,
     seed_paper_ids: list[str] | None = None,
+    entry_stage: str = "plan",
+    resume_state: dict | None = None,
 ) -> None:
     try:
         llm = await resolve_llm(user_id)
@@ -43,23 +79,40 @@ async def _execute(
         if filters and filters.get("max_papers"):
             papers_per_run = min(papers_per_run, int(filters["max_papers"]))
         await _set_status(run_id, "running")
-        graph = build_graph(run_id, user_id, llm)
-        await asyncio.wait_for(
-            graph.ainvoke(
-                {
-                    "run_id": run_id,
-                    "user_id": user_id,
-                    "topic": topic,
-                    "papers_per_run": papers_per_run,
-                    "mode": mode,
-                    "filters": filters or {},
-                    "criteria": criteria or "",
-                    "seed_paper_ids": seed_paper_ids or [],
-                },
-                {"recursion_limit": 60},
-            ),
-            timeout=_RUN_TIMEOUT_SECONDS,
-        )
+        graph = build_graph(run_id, user_id, llm, entry=entry_stage)
+        # A snapshot's own seed list wins over the caller's: the snapshot
+        # reflects what the run actually ingested before it failed.
+        seeds = (resume_state or {}).get("seed_paper_ids") or seed_paper_ids or []
+        initial: dict = {
+            **(resume_state or {}),
+            "run_id": run_id,
+            "user_id": user_id,
+            "topic": topic,
+            "papers_per_run": papers_per_run,
+            "mode": mode,
+            "filters": filters or {},
+            "criteria": criteria or "",
+            "seed_paper_ids": seeds,
+        }
+        if entry_stage != "plan":
+            await emit(
+                run_id,
+                user_id,
+                entry_stage,
+                f"Resuming the run from the \"{entry_stage}\" stage.",
+            )
+
+        async def stream() -> None:
+            # stream_mode="values" yields the merged state after every
+            # completed stage; each one becomes the resume snapshot.
+            async for state in graph.astream(
+                initial, {"recursion_limit": 60}, stream_mode="values"
+            ):
+                await _save_snapshot(run_id, state)
+
+        await asyncio.wait_for(stream(), timeout=_RUN_TIMEOUT_SECONDS)
+        # A finished run needs no resume point; free the storage.
+        await execute("UPDATE runs SET snapshot = NULL WHERE id = %s", run_id)
         await _set_status(run_id, "completed")
     except asyncio.CancelledError:
         # User pressed Stop: keep everything found so far, mark cancelled.
@@ -106,6 +159,39 @@ def start_run(
         _execute(run_id, user_id, topic, mode, filters, criteria, seed_paper_ids)
     )
     _active_tasks[run_id] = task
+
+
+def resume_run(
+    run_id: str,
+    user_id: str,
+    topic: str,
+    mode: str,
+    filters: dict | None,
+    criteria: str | None,
+    seed_paper_ids: list[str] | None,
+    entry_stage: str,
+    resume_state: dict | None,
+) -> None:
+    """Continue a failed run from the stage it died in, with its saved state."""
+    task = asyncio.create_task(
+        _execute(
+            run_id,
+            user_id,
+            topic,
+            mode,
+            filters,
+            criteria,
+            seed_paper_ids=seed_paper_ids or [],
+            entry_stage=entry_stage,
+            resume_state=resume_state,
+        )
+    )
+    _active_tasks[run_id] = task
+
+
+def is_run_active(run_id: str) -> bool:
+    task = _active_tasks.get(run_id)
+    return task is not None and not task.done()
 
 
 def cancel_run(run_id: str) -> bool:
