@@ -223,6 +223,16 @@ function buildBody(sections: DocumentSection[]): string {
 
 const SECTION_HEADING_RE = /^##(?!#)\s+(.*)$/;
 
+/* Section titles must be plain text. Older saves could leak font <span>
+   markup into the "## " line; strip any HTML so stored headings and the
+   Contents list stay clean (this also self-heals such documents on save). */
+function plainHeadingText(raw: string): string {
+  if (!raw.includes("<")) return raw.trim();
+  const el = document.createElement("div");
+  el.innerHTML = raw;
+  return (el.textContent || "").trim();
+}
+
 function splitSections(
   markdown: string,
   prev: DocumentSection[]
@@ -232,7 +242,7 @@ function splitSections(
   for (const line of markdown.split("\n")) {
     const m = SECTION_HEADING_RE.exec(line);
     if (m) {
-      drafts.push({ heading: m[1].trim() || "Section", body: [] });
+      drafts.push({ heading: plainHeadingText(m[1]) || "Section", body: [] });
     } else {
       (drafts.length ? drafts[drafts.length - 1].body : preamble).push(line);
     }
