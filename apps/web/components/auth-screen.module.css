@@ -139,7 +139,10 @@
   margin-top: 0;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 18px;
+  /* Query container for the tagline: its font scales with THIS box (the
+     panel's content width), never with the viewport. */
+  container-type: inline-size;
 }
 
 .leftBrand {
@@ -153,8 +156,10 @@
 
 .leftBrandLogo {
   display: block;
-  width: 78px;
-  height: 78px;
+  /* Same container scale as the tagline, so logo, wordmark, and tagline
+     shrink together and keep their proportions on every panel width. */
+  width: clamp(36px, 8.2cqw, 66px);
+  height: clamp(36px, 8.2cqw, 66px);
   object-fit: contain;
 }
 
@@ -162,7 +167,9 @@
   font-family: var(--font-bricolage), "Segoe UI", sans-serif;
   font-style: normal;
   font-weight: 700;
-  font-size: clamp(2.2rem, 3vw, 3rem);
+  /* Container-scaled with the logo and tagline. vw line = fallback. */
+  font-size: clamp(1.1rem, 2.2vw, 2.55rem);
+  font-size: clamp(1.1rem, 5cqw, 2.55rem);
   line-height: 1;
   letter-spacing: -0.02em;
   /* Left-to-right gradient in the logo's f colors (brown into amber). */
@@ -180,7 +187,14 @@
   font-family: var(--font-faster-one), "Faster One", cursive;
   font-style: normal;
   font-weight: 400;
-  font-size: clamp(2.2rem, 3.05vw, 3.1rem);
+  /* The lines are nowrap, so the font must be sized against the panel the
+     text actually lives in, not the viewport (the old 3.05vw clamp tracked
+     the full window while the panel is only half of it, clipping the
+     longest line on many devices). cqw = 1% of .leftContent's width, so
+     "Performs literature reviews." always fits. The vw line is a fallback
+     for browsers without container-query units. */
+  font-size: clamp(0.85rem, 2.5vw, 3.1rem);
+  font-size: clamp(0.85rem, 5cqw, 3.1rem);
   line-height: 1.5;
   letter-spacing: 0;
   text-align: left;
@@ -206,6 +220,66 @@
 
 .hlPink {
   color: #ff7db1;
+}
+
+/* Decorative Lottie in the empty lower half of the brand panel. Above the
+   stripes/fade layers (z=2), below the brand text (z=10). Hidden on the
+   stacked mobile layout where the panel has no spare room. */
+/* Comfortable hero size; the side fades on .animSearch (not raw scale)
+   sell the endless-stream illusion, so the artwork never has to dominate
+   the composition to feel bigger than the panel. */
+.leftAnimation {
+  position: absolute;
+  left: 50%;
+  bottom: 13%;
+  transform: translateX(-50%);
+  width: min(84%, 620px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Vertical crop to the artwork band (y 20-96% of the 1000x600 canvas,
+   measured from rendered pixels) plus a horizontal fade: the papers
+   dissolve into the dark before the canvas edge, so the rectangular asset
+   boundary never shows and the stream reads as continuing offscreen. */
+.animSearch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 456;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 16%,
+    #000 84%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 16%,
+    #000 84%,
+    transparent 100%
+  );
+}
+
+/* Inline width/height 100% on the player div needs !important overrides:
+   restore the full canvas geometry inside the cropped window. */
+.animSearch > * {
+  position: absolute !important;
+  left: 0;
+  top: -26.3% !important;
+  width: 100% !important;
+  height: 131.6% !important;
+}
+
+@media (max-width: 767.98px) {
+  .leftAnimation {
+    display: none;
+  }
 }
 
 .rightPanel {
@@ -473,13 +547,9 @@
   }
 
   .leftDescription {
-    font-size: 1.4rem;
+    /* cqw sizing from the base rule keeps scaling here; only the leading
+       changes on phones. (The old fixed 1.4rem clipped under ~480px.) */
     line-height: 1.6;
-  }
-
-  .leftBrandLogo {
-    width: 44px;
-    height: 44px;
   }
 
   .rightPanel {
