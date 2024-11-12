@@ -10,6 +10,7 @@
     "db:migrate": "prisma db push"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.19.10",
     "@prisma/client": "^6.16.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.11",
