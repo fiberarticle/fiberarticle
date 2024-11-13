@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from db import execute, fetch_all, fetch_one
-from library.service import (
+from ingest.service import (
     MAX_PDF_BYTES,
     ingest_pdf_bytes,
     ingest_text,
