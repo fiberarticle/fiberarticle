@@ -124,7 +124,7 @@ export interface Conversation {
 }
 
 export interface ChatCitation {
-  /** null for sources found live on the web rather than in the library. */
+  /** null for sources found live on the web rather than among your papers. */
   paper_id: string | null;
   title: string;
   quote: string;
