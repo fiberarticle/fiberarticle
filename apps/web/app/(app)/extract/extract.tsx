@@ -27,9 +27,11 @@ const defaultColumns: ExtractionColumn[] = [
   { name: "Key result", description: "The single most important quantitative or qualitative result" },
 ];
 
-export function Extract() {
+export function Extract({ tableId }: { tableId?: string }) {
   const searchParams = useSearchParams();
-  const deepLinkId = searchParams.get("id");
+  // Path param (/extract/<id>) is the canonical deep link; the legacy
+  // ?id= query form still resolves for old links.
+  const deepLinkId = tableId ?? searchParams.get("id");
   const [extractions, setExtractions] = React.useState<Extraction[] | null>(null);
   const [papers, setPapers] = React.useState<PaperDetail[]>([]);
   const [active, setActive] = React.useState<Extraction | null>(null);
