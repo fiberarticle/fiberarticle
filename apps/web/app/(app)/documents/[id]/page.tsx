@@ -1,12 +1,12 @@
-import { DocumentEditor } from "./editor";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Document" };
-
-export default async function DocumentPage({
+// Legacy URL kept for old links: /documents/<id> forwards to the
+// feature-named /article-writer/<id>.
+export default async function LegacyDocumentPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <DocumentEditor documentId={id} />;
+  redirect(`/article-writer/${id}`);
 }
