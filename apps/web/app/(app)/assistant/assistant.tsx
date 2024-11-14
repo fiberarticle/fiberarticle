@@ -43,7 +43,8 @@ import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
-import type { ChatMessage, Conversation } from "@/lib/types";
+import { streamChatMessage, type SseHandle } from "@/lib/sse";
+import type { ChatMessage, ChatStep, Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface ChatContext {
@@ -127,6 +128,32 @@ function MessageText({ content }: { content: string }) {
   );
 }
 
+/** One chain-of-thought line: a tool action with its icon, or a thought. */
+function StepLine({ step }: { step: ChatStep }) {
+  if (step.type === "action") {
+    return (
+      <span className="flex items-start gap-1.5">
+        {step.tool === "library_search" ? (
+          <Library className="mt-0.5 size-3.5 shrink-0" />
+        ) : step.tool === "web_search" ? (
+          <Globe className="mt-0.5 size-3.5 shrink-0" />
+        ) : (
+          <Search className="mt-0.5 size-3.5 shrink-0" />
+        )}
+        <span>
+          {step.tool === "library_search"
+            ? "Searched your papers"
+            : step.tool === "web_search"
+              ? "Searched the web"
+              : "Searched the literature"}
+          {step.input ? `: "${step.input}"` : ""}
+        </span>
+      </span>
+    );
+  }
+  return <>{step.text}</>;
+}
+
 /** "25 July 2026 10:33 PM" - full date so old messages stay unambiguous. */
 function formatMessageTime(iso: string): string {
   const d = new Date(iso);
@@ -143,20 +170,30 @@ function formatMessageTime(iso: string): string {
   return `${date} ${time}`;
 }
 
-export function Assistant() {
+export function Assistant({ chatId }: { chatId?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const chatIdParam = searchParams.get("chat");
+  // Path param (/assistant/<id>) is the canonical deep link; the legacy
+  // ?chat= query form still resolves for old links.
+  const chatIdParam = chatId ?? searchParams.get("chat");
 
   const [conversations, setConversations] = React.useState<Conversation[] | null>(null);
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [draft, setDraft] = React.useState("");
   const [input, setInput] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  // Which conversation the in-flight exchange belongs to: the live steps,
+  // spinner, and stop button only render inside that chat.
+  const [sendingFor, setSendingFor] = React.useState<string | null>(null);
   const [starting, setStarting] = React.useState(false);
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Chain of thought streamed live for the exchange currently in flight.
+  const [liveSteps, setLiveSteps] = React.useState<ChatStep[]>([]);
+  const [liveOpen, setLiveOpen] = React.useState(true);
+  // Handle of the open SSE stream; closing it is the stop button.
+  const streamRef = React.useRef<SseHandle | null>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const followUpRef = React.useRef<HTMLTextAreaElement>(null);
@@ -181,6 +218,12 @@ export function Assistant() {
   // The open conversation is fully URL-driven: /assistant?chat=<id>.
   const activeId = chatIdParam;
   const active = conversations?.find((c) => c.id === activeId) ?? null;
+  // Live ref of the open chat, so stream callbacks that finish minutes
+  // later can never write another conversation's messages on screen.
+  const activeIdRef = React.useRef(activeId);
+  React.useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
 
   const loadConversations = React.useCallback(async () => {
     try {
@@ -226,7 +269,7 @@ export function Assistant() {
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, sending]);
+  }, [messages.length, sending, liveSteps.length]);
 
   // Refresh the context meter when the chat opens and after every exchange.
   React.useEffect(() => {
@@ -277,7 +320,7 @@ export function Assistant() {
     });
   }
 
-  /** Upload every attachment into the library so the chat can read them.
+  /** Upload every attachment into the user's paper pool so the chat can read them.
    * Returns the created paper ids, or null if any upload failed. */
   async function uploadAttachments(): Promise<string[] | null> {
     if (attachments.length === 0) return [];
@@ -321,9 +364,79 @@ export function Assistant() {
     return uploaded;
   }
 
-  /** Create a library chat and send the question in one go. When files were
-   * attached, the agent is told to search the library first so the freshly
-   * uploaded documents are always consulted. */
+  /** One streamed exchange: agent steps arrive live, the final message
+   * list lands in one go. Resolves when the stream is over, however it
+   * ended (answer, stop, or failure). */
+  function runExchange(
+    chatId: string,
+    content: string,
+    searchLibraryFirst: boolean
+  ): Promise<void> {
+    setLiveSteps([]);
+    setLiveOpen(true);
+    return new Promise((resolve) => {
+      // Every message write is gated on the chat still being the one on
+      // screen; a reply that lands after switching chats must not replace
+      // the other conversation's thread.
+      const isCurrent = () => activeIdRef.current === chatId;
+      const refresh = (delayMs: number) => {
+        // The server persists the stopped/failed exchange on its own time;
+        // a short delay keeps this read after that write.
+        setTimeout(() => {
+          if (isCurrent()) {
+            apiFetch<ChatMessage[]>(`/v1/chats/${chatId}/messages`)
+              .then((msgs) => {
+                if (isCurrent()) setMessages(msgs);
+              })
+              .catch(() => {});
+          }
+          loadConversations();
+        }, delayMs);
+      };
+      const finish = () => {
+        streamRef.current = null;
+        setLiveSteps([]);
+        resolve();
+      };
+      streamRef.current = streamChatMessage(
+        chatId,
+        { content, search_library_first: searchLibraryFirst },
+        {
+          onStep: (step) => {
+            if (isCurrent()) setLiveSteps((prev) => [...prev, step]);
+          },
+          onDone: (msgs) => {
+            if (isCurrent()) setMessages(msgs);
+            loadConversations();
+            finish();
+          },
+          onError: (message) => {
+            if (isCurrent()) {
+              setError(message);
+              setInput((current) => current || content);
+            }
+            // Server truth: the question (and maybe a reply) may or may
+            // not have been saved depending on where it failed.
+            refresh(300);
+            finish();
+          },
+          onAbort: () => {
+            refresh(400);
+            finish();
+          },
+        }
+      );
+    });
+  }
+
+  /** The stop button: closing the stream cancels the agent server-side. */
+  function onStopResponse() {
+    streamRef.current?.close();
+  }
+
+  /** Create a chat and send the question in one go. When files were
+   * attached, the agent is told to search the user's papers first so the
+   * freshly uploaded documents are always consulted. */
   async function startChatWith(trimmed: string, searchLibraryFirst = false) {
     try {
       const created = await apiFetch<Conversation>("/v1/chats", {
@@ -342,26 +455,17 @@ export function Assistant() {
         },
       ]);
       setSending(true);
+      setSendingFor(created.id);
       setDraft("");
       loadConversations();
-      router.push(`/assistant?chat=${created.id}`);
-      const updated = await apiFetch<ChatMessage[]>(
-        `/v1/chats/${created.id}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            content: trimmed,
-            search_library_first: searchLibraryFirst,
-          }),
-        }
-      );
-      setMessages(updated);
-      loadConversations();
+      router.push(`/assistant/${created.id}`);
+      await runExchange(created.id, trimmed, searchLibraryFirst);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not start the chat.");
     } finally {
       sendingFirstFor.current = null;
       setSending(false);
+      setSendingFor(null);
       setStarting(false);
     }
   }
@@ -404,26 +508,10 @@ export function Assistant() {
       },
     ]);
     setInput("");
-    try {
-      const updated = await apiFetch<ChatMessage[]>(
-        `/v1/chats/${activeId}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            content: trimmed,
-            search_library_first: uploadedIds.length > 0,
-          }),
-        }
-      );
-      setMessages(updated);
-      loadConversations();
-    } catch (e) {
-      setMessages((prev) => prev.filter((m) => m.id !== -1));
-      setInput(trimmed);
-      setError(e instanceof ApiError ? e.message : "The message failed to send.");
-    } finally {
-      setSending(false);
-    }
+    setSendingFor(activeId);
+    await runExchange(activeId, trimmed, uploadedIds.length > 0);
+    setSending(false);
+    setSendingFor(null);
   }
 
   /** Ctrl+V with files on the clipboard attaches them instead of pasting. */
@@ -501,27 +589,7 @@ export function Assistant() {
                           <ChainOfThoughtContent>
                             {message.steps.map((step, si) => (
                               <ChainOfThoughtItem key={si}>
-                                {step.type === "action" ? (
-                                  <span className="flex items-start gap-1.5">
-                                    {step.tool === "library_search" ? (
-                                      <Library className="mt-0.5 size-3.5 shrink-0" />
-                                    ) : step.tool === "web_search" ? (
-                                      <Globe className="mt-0.5 size-3.5 shrink-0" />
-                                    ) : (
-                                      <Search className="mt-0.5 size-3.5 shrink-0" />
-                                    )}
-                                    <span>
-                                      {step.tool === "library_search"
-                                        ? "Searched your papers"
-                                        : step.tool === "web_search"
-                                          ? "Searched the web"
-                                          : "Searched the literature"}
-                                      {step.input ? `: "${step.input}"` : ""}
-                                    </span>
-                                  </span>
-                                ) : (
-                                  step.text
-                                )}
+                                <StepLine step={step} />
                               </ChainOfThoughtItem>
                             ))}
                           </ChainOfThoughtContent>
@@ -587,14 +655,49 @@ export function Assistant() {
                 </div>
               </div>
             ))}
-            {sending && (
-              <div className="flex items-center gap-2 self-start">
-                <TextShimmer className="text-sm">
-                  Thinking, searching, and reading sources
-                </TextShimmer>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {thinkElapsed}
-                </span>
+            {sending && sendingFor === activeId && (
+              <div className="max-w-[85%] self-start">
+                {/* The chain of thought streams in live, Claude style:
+                    each step appears the moment the agent takes it. */}
+                {liveSteps.length > 0 && (
+                  <div className="mb-2">
+                    <ChainOfThought>
+                      <ChainOfThoughtStep
+                        isLast
+                        open={liveOpen}
+                        onOpenChange={setLiveOpen}
+                      >
+                        <ChainOfThoughtTrigger
+                          leftIcon={<Lightbulb />}
+                          status="active"
+                        >
+                          <TextShimmer>Reasoning</TextShimmer>
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            {liveSteps.length}{" "}
+                            {liveSteps.length === 1 ? "step" : "steps"}
+                          </span>
+                        </ChainOfThoughtTrigger>
+                        <ChainOfThoughtContent>
+                          {liveSteps.map((step, si) => (
+                            <ChainOfThoughtItem key={si}>
+                              <StepLine step={step} />
+                            </ChainOfThoughtItem>
+                          ))}
+                        </ChainOfThoughtContent>
+                      </ChainOfThoughtStep>
+                    </ChainOfThought>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <TextShimmer className="text-sm">
+                    {liveSteps.length > 0
+                      ? "Working on the answer"
+                      : "Thinking, searching, and reading sources"}
+                  </TextShimmer>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {thinkElapsed}
+                  </span>
+                </div>
               </div>
             )}
             <div ref={bottomRef} />
@@ -664,11 +767,24 @@ export function Assistant() {
             <Button
               size="icon"
               className="rounded-full"
-              disabled={!input.trim() || sending}
-              onClick={onSend}
-              aria-label="Send"
+              disabled={
+                sending ? sendingFor !== activeId : !input.trim()
+              }
+              onClick={
+                sending && sendingFor === activeId ? onStopResponse : onSend
+              }
+              aria-label={
+                sending && sendingFor === activeId ? "Stop response" : "Send"
+              }
+              title={
+                sending && sendingFor === activeId ? "Stop response" : "Send"
+              }
             >
-              <ArrowUp />
+              {sending && sendingFor === activeId ? (
+                <span className="size-3 rounded-xs bg-primary-foreground" />
+              ) : (
+                <ArrowUp />
+              )}
             </Button>
           </div>
         </div>
@@ -772,9 +888,10 @@ export function Assistant() {
             <Button
               size="icon"
               className="rounded-2xl"
-              disabled={!draft.trim() || starting}
-              onClick={onStartChat}
-              aria-label="Send"
+              disabled={starting ? false : !draft.trim()}
+              onClick={starting ? onStopResponse : onStartChat}
+              aria-label={starting ? "Stop response" : "Send"}
+              title={starting ? "Stop response" : "Send"}
             >
               {starting ? (
                 <span className="size-3 rounded-xs bg-primary-foreground" />
@@ -816,7 +933,7 @@ export function Assistant() {
               <button
                 key={c.id}
                 type="button"
-                onClick={() => router.push(`/assistant?chat=${c.id}`)}
+                onClick={() => router.push(`/assistant/${c.id}`)}
                 className="w-full text-left"
               >
                 <Card className="flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-accent">
