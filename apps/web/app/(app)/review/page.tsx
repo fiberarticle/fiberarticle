@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
-import { Review } from "./review";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Literature review | Fiberarticle",
-};
-
-export default function ReviewPage() {
-  return <Review />;
+// Legacy URL kept for old links: the Literature Reviewer now lives at
+// /literature-reviewer.
+export default function LegacyReviewPage() {
+  redirect("/literature-reviewer");
 }
