@@ -10,6 +10,8 @@ const protectedPrefixes = [
   "/extract",
   "/researcher",
   "/review",
+  "/literature-reviewer",
+  "/article-writer",
 ];
 
 export function middleware(request: NextRequest) {
@@ -44,5 +46,7 @@ export const config = {
     "/extract/:path*",
     "/researcher/:path*",
     "/review/:path*",
+    "/literature-reviewer/:path*",
+    "/article-writer/:path*",
   ],
 };
