@@ -49,7 +49,9 @@ import type {
 import { cn } from "@/lib/utils";
 
 const OPEN_SECTIONS_KEY = "fa-sidebar-open";
-const MAX_VISIBLE_ITEMS = 20;
+// The sidebar shows only the newest few per feature; the full history
+// lives on the feature's own page, reached through the More link.
+const MAX_VISIBLE_ITEMS = 3;
 
 type SectionKey = "researcher" | "review" | "writer" | "assistant" | "extract";
 
@@ -317,8 +319,13 @@ function Section({
   ) => void;
 }) {
   const Icon = def.icon;
-  const pinned = items.filter((i) => i.pinned);
-  const recent = items.filter((i) => !i.pinned).slice(0, MAX_VISIBLE_ITEMS);
+  // Pinned rows take the visible spots first; the newest unpinned rows
+  // fill whatever remains of the cap. Everything else sits behind More.
+  const pinned = items.filter((i) => i.pinned).slice(0, MAX_VISIBLE_ITEMS);
+  const recent = items
+    .filter((i) => !i.pinned)
+    .slice(0, Math.max(0, MAX_VISIBLE_ITEMS - pinned.length));
+  const hasMore = items.length > pinned.length + recent.length;
 
   const row = (item: HistoryItem) => (
     <HistoryRow
@@ -414,6 +421,14 @@ function Section({
                 </>
               )}
               {recent.map(row)}
+              {hasMore && (
+                <Link
+                  href={def.landing}
+                  className="rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  More
+                </Link>
+              )}
             </>
           )}
         </div>
