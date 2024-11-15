@@ -8,10 +8,10 @@
 
 import { LibraryBig } from "lucide-react";
 
-/** A big library: the Researcher page. */
+/** A shelf of books: the Researcher page. */
 export function ResearcherArt({ className }: { className?: string }) {
   return (
-    <div className={className} role="img" aria-label="Library">
+    <div className={className} role="img" aria-label="Shelf of books">
       <div className="flex h-28 items-center justify-center">
         <LibraryBig
           className="size-20 text-muted-foreground"
