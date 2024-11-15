@@ -98,7 +98,8 @@ const runsSection = (
       id: r.id,
       title: r.title || r.topic,
       pinned: r.pinned,
-      href: `/runs/${r.id}`,
+      // URLs speak the feature's name: /researcher/<id>, /literature-reviewer/<id>.
+      href: `${landing}/${r.id}`,
     })),
   rename: (id, title) => patch(`/v1/runs/${id}`, { title }),
   pin: (id, pinned) => patch(`/v1/runs/${id}`, { pinned }),
@@ -120,7 +121,7 @@ const SECTIONS: SectionDef[] = [
     "Literature Reviewer",
     ClipboardCheck,
     "#50c158",
-    "/review",
+    "/literature-reviewer",
     "literature_review"
   ),
   {
@@ -128,13 +129,13 @@ const SECTIONS: SectionDef[] = [
     label: "Article Writer",
     icon: SquarePen,
     accent: "#ff7db1",
-    landing: "/documents",
+    landing: "/article-writer",
     load: async () =>
       (await apiFetch<DocumentListItem[]>("/v1/documents")).map((d) => ({
         id: d.id,
         title: d.title,
         pinned: d.pinned,
-        href: `/documents/${d.id}`,
+        href: `/article-writer/${d.id}`,
       })),
     rename: (id, title) =>
       apiFetch(`/v1/documents/${id}`, {
@@ -161,7 +162,7 @@ const SECTIONS: SectionDef[] = [
         id: c.id,
         title: c.title,
         pinned: c.pinned,
-        href: `/assistant?chat=${c.id}`,
+        href: `/assistant/${c.id}`,
       })),
     rename: (id, title) => patch(`/v1/chats/${id}`, { title }),
     pin: (id, pinned) => patch(`/v1/chats/${id}`, { pinned }),
@@ -178,7 +179,7 @@ const SECTIONS: SectionDef[] = [
         id: e.id,
         title: e.name,
         pinned: e.pinned,
-        href: `/extract?id=${e.id}`,
+        href: `/extract/${e.id}`,
       })),
     rename: (id, name) => patch(`/v1/extractions/${id}`, { name }),
     pin: (id, pinned) => patch(`/v1/extractions/${id}`, { pinned }),
@@ -433,15 +434,15 @@ export function Sidebar({
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(false);
 
-  // The active row is matched on path plus the query params we use for
-  // deep links (assistant chats, extraction tables).
+  // The active row is matched on the path; legacy query-param deep links
+  // (?chat=, ?id=) map onto the same path-shaped hrefs the rows use now.
   const chatParam = searchParams.get("chat");
   const idParam = searchParams.get("id");
   const activeHref =
     pathname === "/assistant" && chatParam
-      ? `/assistant?chat=${chatParam}`
+      ? `/assistant/${chatParam}`
       : pathname === "/extract" && idParam
-        ? `/extract?id=${idParam}`
+        ? `/extract/${idParam}`
         : pathname;
 
   const [openSections, setOpenSections] = React.useState<
