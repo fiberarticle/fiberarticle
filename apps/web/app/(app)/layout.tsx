@@ -17,8 +17,10 @@ export default async function AppLayout({
 
   return (
     // Inset shell: the sidebar sits flat on the window background and the
-    // content floats as a raised panel with one big top-left corner.
-    <div className="flex h-screen bg-sidebar">
+    // content floats as a raised panel with one big top-left corner. On
+    // phones the sidebar becomes a top bar plus slide-in drawer (inside
+    // Sidebar) and the panel spans the full width below the bar.
+    <div className="flex h-svh bg-sidebar">
       {/* Suspense: the sidebar and settings dialog read useSearchParams for
           deep links (assistant chats, extraction tables, ?settings=<tab>). */}
       <Suspense>
@@ -33,8 +35,8 @@ export default async function AppLayout({
       </Suspense>
       {/* No max-width here: every page centers itself, and pages with a
           side panel (run report) need the full panel width to share. */}
-      <main className="min-w-0 flex-1 overflow-y-auto rounded-tl-[44px] border-l border-t border-border bg-background shadow-[-6px_0_24px_rgba(0,0,0,0.05)]">
-        <div className="px-6 py-8">{children}</div>
+      <main className="mt-14 min-w-0 flex-1 overflow-y-auto overflow-x-hidden rounded-t-[28px] border-t border-border bg-background shadow-[-6px_0_24px_rgba(0,0,0,0.05)] md:mt-0 md:rounded-t-none md:rounded-tl-[44px] md:border-l">
+        <div className="px-4 py-6 sm:px-6 sm:py-8">{children}</div>
       </main>
     </div>
   );
