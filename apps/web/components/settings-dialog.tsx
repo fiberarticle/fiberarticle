@@ -790,12 +790,13 @@ export function SettingsDialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-1/2 z-50 flex h-[min(600px,85vh)] w-[min(860px,92vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_80px_rgba(0,0,0,0.35)] outline-none"
+          className="fixed left-1/2 top-1/2 z-50 flex h-[min(640px,92svh)] w-[min(860px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_24px_80px_rgba(0,0,0,0.35)] outline-none sm:h-[min(600px,85vh)] sm:w-[min(860px,92vw)] sm:flex-row"
           aria-describedby={undefined}
         >
-          {/* Left rail */}
-          <div className="flex w-48 shrink-0 flex-col gap-0.5 border-r border-border bg-sidebar p-3 sm:w-56">
-            <p className="px-2 pb-2 pt-1 text-xs font-medium text-muted-foreground">
+          {/* Tab rail: a horizontal scrollable bar on phones, the classic
+              left rail from sm up. */}
+          <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-sidebar p-2 sm:w-56 sm:flex-col sm:gap-0.5 sm:border-b-0 sm:border-r sm:p-3">
+            <p className="hidden px-2 pb-2 pt-1 text-xs font-medium text-muted-foreground sm:block">
               Settings
             </p>
             {TABS.map((t) => {
@@ -807,7 +808,7 @@ export function SettingsDialog({
                   type="button"
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors [&_svg]:size-4",
+                    "flex shrink-0 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-left text-sm transition-colors [&_svg]:size-4",
                     active
                       ? "bg-[color-mix(in_oklab,var(--primary)_12%,transparent)] font-medium text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
