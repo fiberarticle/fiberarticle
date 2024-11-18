@@ -177,7 +177,7 @@ export function Extract({ tableId }: { tableId?: string }) {
                 </p>
                 <div className="flex flex-col gap-2">
                   {columns.map((col, i) => (
-                    <div key={i} className="flex gap-2">
+                    <div key={i} className="flex flex-col gap-2 sm:flex-row">
                       <Input
                         value={col.name}
                         onChange={(e) =>
@@ -188,30 +188,32 @@ export function Extract({ tableId }: { tableId?: string }) {
                           )
                         }
                         placeholder="Column name"
-                        className="max-w-44"
+                        className="sm:max-w-44"
                       />
-                      <Input
-                        value={col.description}
-                        onChange={(e) =>
-                          setColumns((prev) =>
-                            prev.map((c, ci) =>
-                              ci === i ? { ...c, description: e.target.value } : c
+                      <div className="flex flex-1 gap-2">
+                        <Input
+                          value={col.description}
+                          onChange={(e) =>
+                            setColumns((prev) =>
+                              prev.map((c, ci) =>
+                                ci === i ? { ...c, description: e.target.value } : c
+                              )
                             )
-                          )
-                        }
-                        placeholder="What should be extracted?"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Remove column"
-                        disabled={columns.length <= 1}
-                        onClick={() =>
-                          setColumns((prev) => prev.filter((_, ci) => ci !== i))
-                        }
-                      >
-                        <X />
-                      </Button>
+                          }
+                          placeholder="What should be extracted?"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Remove column"
+                          disabled={columns.length <= 1}
+                          onClick={() =>
+                            setColumns((prev) => prev.filter((_, ci) => ci !== i))
+                          }
+                        >
+                          <X />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -325,7 +327,7 @@ export function Extract({ tableId }: { tableId?: string }) {
         {active && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   {active.name}{" "}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
