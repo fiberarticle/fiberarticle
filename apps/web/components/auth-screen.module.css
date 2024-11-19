@@ -576,4 +576,46 @@
   .nameRow {
     grid-template-columns: 1fr;
   }
+
+  /* Right-side form is more compact on phones: the desktop floor sizes read
+     oversized on a narrow screen. Inputs stay at 16px so iOS does not zoom
+     the page when a field is focused. */
+  .heading {
+    font-size: 1.6rem;
+  }
+
+  .subHeading {
+    font-size: 0.95rem;
+    margin-top: 6px;
+  }
+
+  .label {
+    font-size: 0.88rem;
+  }
+
+  .form {
+    gap: 14px;
+  }
+
+  .input {
+    min-height: 46px;
+    font-size: 1rem;
+    padding: 11px 13px;
+  }
+
+  .primaryButton {
+    min-height: 46px;
+    font-size: 0.98rem;
+  }
+
+  .googleButton {
+    min-height: 44px;
+    font-size: 0.94rem;
+  }
+
+  .subHeading,
+  .orRow,
+  .loginRow {
+    font-size: 0.9rem;
+  }
 }
