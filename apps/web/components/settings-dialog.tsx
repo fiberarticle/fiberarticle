@@ -517,10 +517,12 @@ function AccountPanel({
     setSaved(true);
   }
 
+  // Verification is by six digit code, so this sends a fresh code rather
+  // than a callback link; the user finishes on /verify-email.
   async function onSendVerification() {
-    await authClient.sendVerificationEmail({
+    await authClient.emailOtp.sendVerificationOtp({
       email: userEmail,
-      callbackURL: "/dashboard?settings=account",
+      type: "email-verification",
     });
     setVerifySent(true);
   }
@@ -639,7 +641,14 @@ function AccountPanel({
         {!emailVerified &&
           (verifySent ? (
             <span className="text-xs text-muted-foreground">
-              Verification email sent. Check your inbox.
+              Code sent. Check your inbox, then{" "}
+              <a
+                className="underline underline-offset-2"
+                href={`/verify-email?email=${encodeURIComponent(userEmail)}`}
+              >
+                enter it here
+              </a>
+              .
             </span>
           ) : (
             <Button
@@ -648,7 +657,7 @@ function AccountPanel({
               className="w-fit"
               onClick={onSendVerification}
             >
-              Resend verification email
+              Send verification code
             </Button>
           ))}
       </div>
