@@ -50,32 +50,64 @@ One thing to keep in mind while reading these numbers. SYNERGY does not
 redistribute the original inclusion and exclusion criteria, so this measures the
 topic only path. It is a lower bound on what the criteria based stage can do.
 
-## 2. Citation grounding (RQ2, Table 3)
+## 2. Citation grounding (RQ2, Tables 3 and 4)
 
 Generate a few documents in the application before running this. The script
 reads every document that is `ready` and linked to a run, pulls the citation
 markers out of each section, checks whether each marker resolves to a real
 reference, and then asks a judge model whether the cited passage actually
-supports the sentence.
+supports the sentence. It also writes the ungrounded control, which is the same
+model writing the same sections with the evidence block withheld, and judges
+both arms with one judge so the comparison is fair.
 
 ```
-apps\api\venv\Scripts\python.exe evaluations\run_eval.py --stage citations --sample 2
+apps\api\venv\Scripts\python.exe evaluations\citation_support.py --user <id>
 ```
 
-For the control, which is the same model writing the same sections with the
-evidence block withheld:
+Useful options:
 
-```
-apps\api\venv\Scripts\python.exe evaluations\ungrounded_control.py --user <id>
-```
+- `--reuse` judges the saved control text instead of paying to write it again.
+  The control is stored under `data/ungrounded/`, so a change to the judge does
+  not mean regenerating the whole thing.
+- `--judge-keys <file>` reads API keys, one per line, and rotates them when one
+  is rate limited. Keep that file outside this repository. It is used only for
+  the judge, never for writing the control.
+- `--judge-model` sets the judging model, applied to both arms.
+- `--concurrency` sets how many judge calls run at once. Three is safe on a
+  free tier, and six drew rate limit errors.
 
-The support numbers in the paper come from a model judge. A judge model grading
-output from its own family is weak evidence on its own, so the honest next step
-is to take a random subsample of the judged sentences, label them by hand
-without looking at the verdict, and report the agreement. I have not done this
-yet and the paper says so plainly.
+Every verdict is appended to `data/ungrounded/verdicts_*.jsonl` as soon as it
+arrives, so an interrupted run resumes instead of starting over. If any sentence
+never gets a verdict, the script refuses to write `results.json` and exits with
+code 3, because a partial sample that looks complete is worse than no sample.
 
-## 3. Index ablation (RQ3, Table 4)
+Three things this script fixes that the older `run_eval.py --stage citations`
+got wrong, all of which changed the answer:
+
+- It judges every cited sentence, not two per section. The sample went from 50
+  and 56 sentences to 230 and 287, and the support difference moved from p equal
+  to 0.052 to p equal to 0.00005.
+- It shows the judge the passages of the cited paper nearest the claim, not
+  whichever three happened to be stored first. Judging a claim taken from a
+  results section against a title page understates support in every condition.
+- It never records a failed model call as an unsupported citation. The older
+  scripts returned `NOT_SUPPORTED` when the judge replied with something
+  unreadable, which quietly turned a provider problem into evidence against the
+  system.
+
+The script also replays the retrieval each section actually received, using the
+query templates from the application itself, so it can report whether the cited
+paper was even in the evidence window at the time. That is the split reported in
+Table 4 of the paper.
+
+The support numbers still come from a model judge. A judge model grading output
+from its own family is weak evidence, and using a different family, as we now
+do, helps but does not settle it. The honest next step is to take a random
+subsample of the judged sentences, label them by hand without looking at the
+verdict, and report the agreement. I have not done this yet and the paper says
+so plainly.
+
+## 3. Index ablation (RQ3, Table 5)
 
 This replays search queries that real runs actually issued, first against one
 index at a time and then against all four together.
@@ -89,7 +121,7 @@ arXiv one after another trips its rate limiter and returns nothing, which then
 shows up as that index contributing zero papers. That is an artefact and not a
 finding, and I nearly published it as one.
 
-## 4. Staged graph against bounded tool loop (RQ4, Table 5)
+## 4. Staged graph against bounded tool loop (RQ4, Table 6)
 
 This puts the same four research questions through both architectures.
 
@@ -120,7 +152,7 @@ Papers are keyed on DOI wherever one exists, so the same paper reached through
 two different indexes is counted once. This also creates five runs in the
 account.
 
-## 6. Cost and latency (RQ5, Table 6)
+## 6. Cost and latency (RQ5, Table 7)
 
 This one needs no new runs. It reads the run event log, which already has a
 timestamp on every stage.
