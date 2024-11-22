@@ -50,7 +50,7 @@ One thing to keep in mind while reading these numbers. SYNERGY does not
 redistribute the original inclusion and exclusion criteria, so this measures the
 topic only path. It is a lower bound on what the criteria based stage can do.
 
-## 2. Citation grounding (RQ2, Tables 3 and 4)
+## 2. Citation grounding (RQ2, Tables 4 and 5)
 
 Generate a few documents in the application before running this. The script
 reads every document that is `ready` and linked to a run, pulls the citation
@@ -107,7 +107,33 @@ subsample of the judged sentences, label them by hand without looking at the
 verdict, and report the agreement. I have not done this yet and the paper says
 so plainly.
 
-## 3. Index ablation (RQ3, Table 5)
+## 3. Does supplying the criteria help? (Section 7.1, Table 3)
+
+SYNERGY publishes eligibility criteria for many of its reviews, as a quoted
+block in `datasets.toml`. It does not publish them for the five Cohen subsets,
+but it does for Nelson_2002, which is also the review this system screens
+worst. That makes it the one place where the claim that missing criteria
+explain the weak screening result can actually be tested.
+
+```
+apps\api\venv\Scripts\python.exe evaluations\criteria_ablation.py --judge-keys <file>
+```
+
+It screens the same 366 records twice, once on the topic alone and once with
+the published criteria supplied, using the same prompt and the same model for
+both arms. The criteria text lives beside the records in
+`data/screening/Nelson_2002.criteria.txt`, extracted from the collection.
+
+The result went against the explanation it was meant to support. Recall fell
+from 0.575 to 0.463 while precision rose from 0.359 to 0.385. Supplying the
+criteria made the stage more cautious rather than more accurate. That is
+reported in the paper as evidence against our own argument, not left out.
+
+Both arms share one model, so the difference between them is sound. The model
+is not the one used for Table 2, because that endpoint was out of quota when
+this was run, so the levels here should not be compared with Table 2.
+
+## 4. Index ablation (RQ3, Table 6)
 
 This replays search queries that real runs actually issued, first against one
 index at a time and then against all four together.
@@ -121,7 +147,7 @@ arXiv one after another trips its rate limiter and returns nothing, which then
 shows up as that index contributing zero papers. That is an artefact and not a
 finding, and I nearly published it as one.
 
-## 4. Staged graph against bounded tool loop (RQ4, Table 6)
+## 5. Staged graph against bounded tool loop (RQ4, Table 7)
 
 This puts the same four research questions through both architectures.
 
@@ -139,7 +165,7 @@ as well. A retry is a call the provider served and a cost the user pays, and
 hiding it would flatter whichever arm retries more. Each question is saved as
 soon as it finishes, so a rerun skips whatever is already stored.
 
-## 5. Reproducibility (Section 7.6)
+## 6. Reproducibility (Section 7.6)
 
 This runs one topic five times with every setting held constant and reports the
 mean pairwise Jaccard overlap of the selected paper sets.
@@ -152,7 +178,7 @@ Papers are keyed on DOI wherever one exists, so the same paper reached through
 two different indexes is counted once. This also creates five runs in the
 account.
 
-## 6. Cost and latency (RQ5, Table 7)
+## 7. Cost and latency (RQ5, Table 8)
 
 This one needs no new runs. It reads the run event log, which already has a
 timestamp on every stage.
