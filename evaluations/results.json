@@ -2808,567 +2808,3685 @@
     ],
     "unresolved_markers": 0,
     "sentences_cited": 233,
-    "citation_density": 0.6695,
-    "judged": 50,
-    "support_rate": 0.38,
+    "citation_density": 0.5914,
+    "arm": "retrieval grounded",
+    "judged": 230,
+    "supported": 73,
+    "partial": 62,
+    "unsupported": 95,
+    "support_rate": 0.3174,
     "support_rate_ci95": [
-      0.2586,
-      0.5185
+      0.2607,
+      0.3801
     ],
+    "partial_rate": 0.2696,
+    "unsupported_rate": 0.413,
+    "unsupported_rate_ci95": [
+      0.3513,
+      0.4776
+    ],
+    "in_context_checked": 230,
+    "cited_paper_in_context": 125,
+    "in_context_rate": 0.5435,
+    "in_context_rate_ci95": [
+      0.4789,
+      0.6066
+    ],
+    "support_rate_when_in_context": 0.416,
+    "n_when_in_context": 125,
+    "support_rate_when_not_in_context": 0.2,
+    "n_when_not_in_context": 105,
     "verdicts": [
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 39,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 40,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 2,
+        "cited_paper_in_context": false,
         "verdict": "PARTIAL"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 31,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 2,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
         "marker": 3,
-        "verdict": "PARTIAL"
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
         "marker": 6,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 32,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 1,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 6,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
         "marker": 1,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
         "marker": 39,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 15,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 15,
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 1,
+        "cited_paper_in_context": true,
         "verdict": "PARTIAL"
       },
       {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 17,
-        "verdict": "PARTIAL"
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 30,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
       },
       {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 19,
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 40,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 2,
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 30,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 32,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 4,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 20,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 31,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 5,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 31,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 7,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 39,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 39,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 31,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 39,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 40,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 6,
+        "cited_paper_in_context": true,
         "verdict": "NOT_SUPPORTED"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
+        "section": "Introduction",
+        "marker": 15,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 19,
+        "section": "Introduction",
+        "marker": 15,
+        "cited_paper_in_context": true,
         "verdict": "PARTIAL"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 15,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
         "marker": 5,
-        "verdict": "PARTIAL"
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
         "marker": 12,
+        "cited_paper_in_context": true,
         "verdict": "NOT_SUPPORTED"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 5,
-        "verdict": "PARTIAL"
+        "section": "Introduction",
+        "marker": 27,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
       },
       {
         "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 5,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 2,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 9,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 9,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 2,
+        "section": "Introduction",
+        "marker": 12,
+        "cited_paper_in_context": true,
         "verdict": "NOT_SUPPORTED"
       },
       {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 2,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 2,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 36,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 4,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 36,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 33,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
         "marker": 3,
+        "cited_paper_in_context": false,
         "verdict": "PARTIAL"
       },
       {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 5,
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 17,
+        "cited_paper_in_context": false,
         "verdict": "SUPPORTED"
       },
       {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 4,
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 19,
+        "cited_paper_in_context": false,
         "verdict": "SUPPORTED"
       },
       {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 4,
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 7,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 10,
+        "cited_paper_in_context": false,
         "verdict": "PARTIAL"
       },
       {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 21,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 12,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 13,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 18,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 37,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 23,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
         "marker": 33,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 2,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 12,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 10,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 25,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 19,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 5,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 5,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 16,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 21,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 12,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 5,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 12,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 15,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 33,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 1,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 25,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 13,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 17,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 40,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 21,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 5,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 5,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 6,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 4,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 13,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 13,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 6,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 19,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 28,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 27,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 5,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 22,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 37,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 9,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 22,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 5,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 15,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 15,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 13,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 4,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 19,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 25,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 13,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 22,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 29,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 10,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 37,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 24,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 2,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 7,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 17,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 22,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 8,
+        "cited_paper_in_context": false,
         "verdict": "NOT_SUPPORTED"
       },
       {
         "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 4,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 19,
+        "section": "Abstract",
+        "marker": 36,
+        "cited_paper_in_context": true,
         "verdict": "SUPPORTED"
       },
       {
         "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 17,
+        "section": "Abstract",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 4,
+        "cited_paper_in_context": true,
         "verdict": "PARTIAL"
       },
       {
         "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 9,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 26,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 36,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 33,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
         "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 36,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 26,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 1,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 16,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 23,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 38,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 33,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 10,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 15,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 24,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 5,
+        "cited_paper_in_context": false,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 16,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 11,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 23,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 9,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 33,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 26,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 28,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 10,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 26,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 9,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 14,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 31,
+        "cited_paper_in_context": false,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 17,
+        "cited_paper_in_context": false,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 19,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 4,
+        "cited_paper_in_context": true,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 26,
+        "cited_paper_in_context": true,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 31,
+        "cited_paper_in_context": false,
         "verdict": "PARTIAL"
       }
-    ],
-    "_elapsed_seconds": 851.6
+    ]
   },
   "citations_ungrounded": {
     "documents": 4,
-    "markers_total": 778,
+    "markers_total": 730,
     "marker_validity": 1.0,
     "marker_validity_ci95": [
-      0.9951,
+      0.9948,
       1.0
     ],
     "unresolved_markers": 0,
-    "sentences_cited": 315,
-    "citation_density": 0.63,
-    "judged": 56,
-    "support_rate": 0.1964,
+    "sentences_cited": 296,
+    "citation_density": 0.6338,
+    "arm": "ungrounded control",
+    "judged": 287,
+    "supported": 45,
+    "partial": 115,
+    "unsupported": 127,
+    "support_rate": 0.1568,
     "support_rate_ci95": [
-      0.1134,
-      0.3184
+      0.1193,
+      0.2034
+    ],
+    "partial_rate": 0.4007,
+    "unsupported_rate": 0.4425,
+    "unsupported_rate_ci95": [
+      0.3862,
+      0.5004
     ],
     "verdicts": [
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Abstract",
         "marker": 3,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 7,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 11,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 2,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 2,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 3,
+        "cited_paper_in_context": null,
         "verdict": "PARTIAL"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 1,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 21,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Abstract",
         "marker": 2,
-        "verdict": "NOT_SUPPORTED"
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Abstract",
         "marker": 8,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 2,
+        "cited_paper_in_context": null,
         "verdict": "NOT_SUPPORTED"
       },
       {
         "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 2,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 3,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
-        "marker": 23,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 17,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 2,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 12,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 21,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 10,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 22,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
         "marker": 19,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 10,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 2,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 7,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 13,
+        "cited_paper_in_context": null,
         "verdict": "NOT_SUPPORTED"
       },
       {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 2,
+        "cited_paper_in_context": null,
         "verdict": "PARTIAL"
       },
       {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 13,
-        "verdict": "PARTIAL"
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
       },
       {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 15,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 3,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 9,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 13,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 3,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 5,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 3,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
-        "marker": 13,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 3,
+        "cited_paper_in_context": null,
         "verdict": "SUPPORTED"
       },
       {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 3,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 3,
-        "verdict": "SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 6,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 10,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 10,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 37,
-        "verdict": "NOT_SUPPORTED"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
-        "marker": 1,
-        "verdict": "PARTIAL"
-      },
-      {
-        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
         "marker": 7,
+        "cited_paper_in_context": null,
         "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 30,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 40,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 27,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 19,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 24,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Related Work",
+        "marker": 36,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Methodology",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 40,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Results",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 27,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 39,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 30,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 24,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 36,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Discussion",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "bfc5180d-6ce9-4067-a68c-2d5bc1f80157",
+        "section": "Conclusion",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Abstract",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Introduction",
+        "marker": 19,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 36,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Related Work",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 36,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Methodology",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 19,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 34,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 36,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Results",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 40,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 18,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Discussion",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 12,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 19,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 40,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 24,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 35,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 21,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 25,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "68495a77-a445-46a3-9576-41072ebe0f7c",
+        "section": "Conclusion",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Abstract",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Abstract",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Abstract",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Abstract",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Abstract",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Introduction",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 30,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 18,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Related Work",
+        "marker": 25,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Methodology",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 5,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 26,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 7,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Results",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 29,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 39,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Discussion",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "5253a9aa-cc65-4553-9952-f8bf4eb5e332",
+        "section": "Conclusion",
+        "marker": 22,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Abstract",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Introduction",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 28,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 13,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 15,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Related Work",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 37,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 25,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 39,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Methodology",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 11,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 27,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 28,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 6,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 24,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 25,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 2,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Results",
+        "marker": 4,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 17,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 33,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 25,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 23,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Discussion",
+        "marker": 30,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 1,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 3,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 10,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 16,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 14,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 9,
+        "cited_paper_in_context": null,
+        "verdict": "SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 8,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 39,
+        "cited_paper_in_context": null,
+        "verdict": "PARTIAL"
+      },
+      {
+        "doc": "c7a38176-7e0f-4139-b5e3-2b15a7441c79",
+        "section": "Conclusion",
+        "marker": 31,
+        "cited_paper_in_context": null,
+        "verdict": "NOT_SUPPORTED"
       }
-    ],
-    "_elapsed_seconds": 1686.3
+    ]
   },
   "architecture": {
     "questions": 4,
@@ -3761,5 +6879,16 @@
         "words": 1498
       }
     ]
+  },
+  "citations_comparison": {
+    "support_difference": 0.1606,
+    "support_permutation_p": 5e-05,
+    "unsupported_difference": -0.0295,
+    "unsupported_permutation_p": 0.53012,
+    "permutation_rounds": 20000,
+    "judge_model": "gemini/gemini-3.5-flash-lite",
+    "writer_model": "openai/mimo-v2.5-free",
+    "judge_evidence": "3 passages of the cited paper nearest the claim, identical standard in both arms",
+    "_elapsed_seconds": 225.4
   }
 }
