@@ -2,10 +2,17 @@
 
 plan → generate_queries → search → dedupe_rank → screen → fetch_oa_pdfs
 → parse → chunk_embed → extract → coverage_check
-→ (insufficient → generate_queries, max 2 loops) → synthesize → report
+→ (insufficient → generate_queries, max 2 loops)
+→ [literature review only: review_matrix → review_synthesis]
+→ synthesize → report
 
 A fixed staged graph, not a freeform ReAct loop: deterministic order,
 bounded looping, and a clean stage-to-SSE mapping.
+
+A literature review takes the same route with two extra stages: every
+selected paper is tabulated on its own (review_matrix), then the whole
+table is read at once for trends, methods, datasets, gaps, and future work
+(review_synthesis). Both feed the narrative writer that follows.
 """
 
 from langgraph.graph import END, START, StateGraph
@@ -26,9 +33,22 @@ STAGES = [
     "chunk_embed",
     "extract",
     "coverage_check",
+    "review_matrix",
+    "review_synthesis",
     "synthesize",
     "report",
 ]
+
+# Stages that only ever run for mode == "literature_review".
+REVIEW_STAGES = ("review_matrix", "review_synthesis")
+
+
+def _after_coverage(state: ResearchState) -> str:
+    if not state.get("coverage_ok"):
+        return "generate_queries"
+    if state.get("mode") == "literature_review":
+        return "review_matrix"
+    return "synthesize"
 
 
 def build_graph(run_id: str, user_id: str, llm: ResolvedLlm, entry: str = "plan"):
@@ -45,6 +65,8 @@ def build_graph(run_id: str, user_id: str, llm: ResolvedLlm, entry: str = "plan"
     graph.add_node("chunk_embed", nodes.chunk_embed)
     graph.add_node("extract", nodes.extract)
     graph.add_node("coverage_check", nodes.coverage_check)
+    graph.add_node("review_matrix", nodes.review_matrix)
+    graph.add_node("review_synthesis", nodes.review_synthesis)
     graph.add_node("synthesize", nodes.synthesize)
     graph.add_node("report", nodes.report)
 
@@ -62,9 +84,15 @@ def build_graph(run_id: str, user_id: str, llm: ResolvedLlm, entry: str = "plan"
     graph.add_edge("extract", "coverage_check")
     graph.add_conditional_edges(
         "coverage_check",
-        lambda state: "synthesize" if state.get("coverage_ok") else "generate_queries",
-        {"synthesize": "synthesize", "generate_queries": "generate_queries"},
+        _after_coverage,
+        {
+            "generate_queries": "generate_queries",
+            "review_matrix": "review_matrix",
+            "synthesize": "synthesize",
+        },
     )
+    graph.add_edge("review_matrix", "review_synthesis")
+    graph.add_edge("review_synthesis", "synthesize")
     graph.add_edge("synthesize", "report")
     graph.add_edge("report", END)
 
