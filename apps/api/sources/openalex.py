@@ -1,6 +1,15 @@
 from config import get_settings
-from sources.base import PaperRecord, normalize_doi
+from sources.base import PaperRecord, clean_text, normalize_doi
 from util.retry import get_with_retry
+
+
+def _pmid(ids: dict | None) -> str | None:
+    """OpenAlex reports PubMed ids as full URLs; keep just the number."""
+    raw = (ids or {}).get("pmid")
+    if not raw:
+        return None
+    digits = str(raw).rstrip("/").rsplit("/", 1)[-1].strip()
+    return digits or None
 
 
 def _reconstruct_abstract(inverted_index: dict | None) -> str | None:
@@ -25,7 +34,7 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
 
     papers: list[PaperRecord] = []
     for work in results:
-        title = work.get("display_name")
+        title = clean_text(work.get("display_name"))
         if not title:
             continue
         oa_location = work.get("best_oa_location") or {}
@@ -41,14 +50,17 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
                     for a in work.get("authorships", [])[:12]
                 ],
                 year=work.get("publication_year"),
-                venue=source_info.get("display_name"),
+                venue=clean_text(source_info.get("display_name")),
                 doi=normalize_doi(work.get("doi")),
                 url=work.get("doi") or primary.get("landing_page_url"),
-                abstract=_reconstruct_abstract(work.get("abstract_inverted_index")),
+                abstract=clean_text(
+                    _reconstruct_abstract(work.get("abstract_inverted_index"))
+                ),
                 is_open_access=bool((work.get("open_access") or {}).get("is_oa")),
                 oa_pdf_url=oa_location.get("pdf_url"),
                 cited_by_count=work.get("cited_by_count") or 0,
                 issn=source_info.get("issn_l"),
+                pmid=_pmid(work.get("ids")),
             )
         )
     return papers
