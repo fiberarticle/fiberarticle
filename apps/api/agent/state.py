@@ -25,5 +25,7 @@ class ResearchState(TypedDict, total=False):
     loops: int
     coverage_ok: bool
     findings: list[str]
+    # Literature review only: {"matrix": [per-paper record], "synthesis": {...}}
+    review: dict[str, Any]
     sections: list[dict[str, str]]
     report: str
