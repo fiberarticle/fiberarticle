@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from sources.base import PaperRecord
+from sources.base import PaperRecord, clean_text
 from util.retry import get_with_retry
 
 _NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -22,10 +22,10 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
     papers: list[PaperRecord] = []
     for entry in root.findall("atom:entry", _NS):
         arxiv_id = (entry.findtext("atom:id", "", _NS) or "").rsplit("/", 1)[-1]
-        title = " ".join((entry.findtext("atom:title", "", _NS) or "").split())
+        title = clean_text(entry.findtext("atom:title", "", _NS))
         if not title:
             continue
-        abstract = " ".join((entry.findtext("atom:summary", "", _NS) or "").split())
+        abstract = clean_text(entry.findtext("atom:summary", "", _NS))
         published = entry.findtext("atom:published", "", _NS) or ""
         year = int(published[:4]) if published[:4].isdigit() else None
         authors = [
@@ -49,7 +49,7 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
                 venue="arXiv",
                 doi=None,
                 url=page_url or f"https://arxiv.org/abs/{arxiv_id}",
-                abstract=abstract or None,
+                abstract=abstract,
                 is_open_access=True,
                 oa_pdf_url=pdf_url or f"https://arxiv.org/pdf/{arxiv_id}",
                 cited_by_count=0,
