@@ -102,6 +102,22 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+    additionalFields: {
+      /**
+       * "user" or "admin".
+       *
+       * input: false is the important part. Better Auth would otherwise let a
+       * caller pass role in the sign-up body, and anyone could register
+       * themselves as an admin. With it off the field can only be changed by
+       * server-side code, which is the admin API and nothing else.
+       */
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false,
+      },
+    },
   },
   databaseHooks: {
     user: {
@@ -176,7 +192,29 @@ export const auth = betterAuth({
       }
     : {}),
   plugins: [
-    jwt(),
+    /**
+     * The role travels inside the signed token.
+     *
+     * The API has no session store and no shared secret with this app: all it
+     * ever sees is the JWT, which it checks against the JWKS. So if the role
+     * is not in the token, the API has no way to tell an admin from anyone
+     * else, and /v1/admin could not be defended at all. Putting it in the
+     * payload means the API can trust it, because the signature covers it and
+     * only this server holds the signing key.
+     *
+     * Consequence worth knowing: a token already issued keeps whatever role it
+     * was minted with until it expires. Removing someone's admin rights also
+     * deletes their sessions, so they cannot mint a fresh one.
+     */
+    jwt({
+      jwt: {
+        definePayload: ({ user }) => ({
+          sub: user.id,
+          email: user.email,
+          role: (user as { role?: string }).role ?? "user",
+        }),
+      },
+    }),
     bearer(),
     /**
      * Email verification by six digit code.
