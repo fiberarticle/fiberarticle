@@ -116,8 +116,8 @@ export const AGENTS: AgentDef[] = [
   {
     id: "review",
     label: "Literature Reviewer",
-    tagline: "Thematic review with synthesis matrix",
-    placeholder: "Describe the topic for a thematic literature review...",
+    tagline: "Evidence matrix, gaps, and future work",
+    placeholder: "Describe the topic for a literature review...",
     icon: ClipboardCheck,
     accent: "#50c158",
     rotate: 2.5,
