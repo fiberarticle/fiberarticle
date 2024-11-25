@@ -4,10 +4,38 @@ The agent never talks to a provider directly and never sees raw keys:
 it receives a ResolvedLlm bound to the user's stored configuration.
 """
 
+import asyncio
+import logging
+import random
 import re
 from dataclasses import dataclass
 
 import litellm
+
+logger = logging.getLogger("fiberarticle.llm")
+
+# Free provider tiers throttle by the minute and occasionally drop a request
+# outright. A research run makes dozens of calls, so a single 429 must not
+# silently cost the user a whole section of their review. Back off and retry.
+_RETRY_ATTEMPTS = 4
+_RETRY_DELAYS = (5.0, 12.0, 25.0)
+_TRANSIENT_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
+_TRANSIENT_NAMES = {
+    "RateLimitError",
+    "ServiceUnavailableError",
+    "InternalServerError",
+    "APIConnectionError",
+    "APIError",
+    "Timeout",
+    "APITimeoutError",
+}
+
+
+def _is_transient(exc: Exception) -> bool:
+    status = getattr(exc, "status_code", None)
+    if isinstance(status, int) and status in _TRANSIENT_STATUS:
+        return True
+    return type(exc).__name__ in _TRANSIENT_NAMES
 
 # House style enforcement on every completion: no em/en dashes, no emojis.
 # The prompts already forbid them; this is the guarantee for models that
@@ -82,18 +110,36 @@ class ResolvedLlm:
     async def _call(
         self, messages: list[dict], max_tokens: int, temperature: float
     ) -> tuple[str, str | None]:
-        response = await litellm.acompletion(
-            model=self.model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            api_key=self.api_key,
-            api_base=self.api_base,
-            extra_headers=self.extra_headers or {},
-            timeout=240,
-        )
-        choice = response.choices[0]
-        return (choice.message.content or "").strip(), choice.finish_reason
+        for attempt in range(_RETRY_ATTEMPTS):
+            try:
+                response = await litellm.acompletion(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    api_key=self.api_key,
+                    api_base=self.api_base,
+                    extra_headers=self.extra_headers or {},
+                    timeout=240,
+                )
+            except Exception as exc:
+                if attempt == _RETRY_ATTEMPTS - 1 or not _is_transient(exc):
+                    raise
+                # Jitter keeps concurrent sections from retrying in lockstep
+                # and hitting the same per-minute quota all over again.
+                delay = _RETRY_DELAYS[attempt] + random.uniform(0, 1.5)
+                logger.info(
+                    "%s from the provider; retrying in %.0fs (attempt %d of %d)",
+                    type(exc).__name__,
+                    delay,
+                    attempt + 2,
+                    _RETRY_ATTEMPTS,
+                )
+                await asyncio.sleep(delay)
+                continue
+            choice = response.choices[0]
+            return (choice.message.content or "").strip(), choice.finish_reason
+        raise RuntimeError("The model could not be reached after several retries.")
 
 
 _PROVIDER_PREFIXES = {
