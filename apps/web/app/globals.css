@@ -271,6 +271,24 @@
   height: 0;
 }
 
+/* Literature review evidence matrix: the header sits in its own element so
+   the vertical scrollbar belongs to the table body alone. It still declares
+   overflow-y: scroll so the browser reserves exactly the same scrollbar
+   gutter the body reserves, which is what keeps the two tables column
+   aligned on every OS and scrollbar style without measuring anything. Its
+   own scrollbar is then made invisible; the gutter shows the header tint. */
+.fa-matrix-head::-webkit-scrollbar-thumb,
+.fa-matrix-head::-webkit-scrollbar-thumb:hover,
+.fa-matrix-head::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .fa-matrix-head {
+    scrollbar-color: transparent transparent;
+  }
+}
+
 /* Auto-growing writing textareas (prompt editors, topic/criteria boxes):
    a thinner, near-invisible-until-needed scrollbar than the app default,
    matching modern AI product writing surfaces (ChatGPT/Claude/Notion AI). */
