@@ -61,9 +61,71 @@ export interface LlmConfig {
   reasoning: boolean;
 }
 
+/** One reviewed paper: paper details, implementation, limitations and gaps. */
+export interface ReviewMatrixRow {
+  n: number;
+  paper_id: string;
+  title: string;
+  authors: string[];
+  venue: string | null;
+  year: number | null;
+  doi: string | null;
+  url: string | null;
+  /** Databases the record is demonstrably indexed in. */
+  indexed_in: string[];
+  quartile: Quartile | null;
+  cited_by_count: number;
+  full_text: boolean;
+  /** What the agent had to read for this paper. */
+  evidence: "full_text" | "abstract" | "none" | "";
+  contribution: string;
+  methodology: string;
+  models: string;
+  dataset: string;
+  tools: string;
+  metrics: string;
+  results: string;
+  limitations: string;
+  unresolved: string;
+  assumptions: string;
+  missing_evaluations: string;
+  opportunities: string;
+}
+
+export interface ReviewFacet {
+  name: string;
+  /** Reference numbers of the papers this facet was drawn from. */
+  papers: number[];
+  note: string;
+}
+
+export interface ReviewDirection {
+  title: string;
+  rationale: string;
+  addresses: string;
+}
+
+export interface ReviewSynthesis {
+  themes: string[];
+  trends: string[];
+  methodologies: ReviewFacet[];
+  datasets: ReviewFacet[];
+  strengths: string[];
+  weaknesses: string[];
+  gaps: string[];
+  future_work: ReviewDirection[];
+}
+
+export interface Review {
+  matrix: ReviewMatrixRow[];
+  synthesis: ReviewSynthesis;
+}
+
 export interface RunDetail extends Run {
   report: string | null;
   papers: Paper[];
+  /** Literature reviews only. */
+  review: Review | null;
 }
 
 export type DocumentTemplate =
