@@ -1,21 +1,51 @@
 import asyncio
+import csv
+import io
 import json
+import logging
+import re
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from agent.graph import STAGES
+from agent.review import IMPLEMENTATION_FIELDS, LIMITATION_FIELDS
 from agent.runner import cancel_run as cancel_run_task
 from agent.runner import is_run_active, resume_run, start_run
 from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from llm.titles import schedule_title
-from models import PaperOut, RunCreate, RunDetailOut, RunOut, RunUpdate
+from models import PaperOut, ReviewOut, RunCreate, RunDetailOut, RunOut, RunUpdate
 from security import CurrentUser
+
+logger = logging.getLogger("fiberarticle.runs")
 
 router = APIRouter(prefix="/v1/runs", tags=["runs"])
 
 _TERMINAL = {"completed", "failed", "cancelled"}
+
+
+# How much of each paper the agent could actually read, in plain words.
+_EVIDENCE_LABEL = {
+    "full_text": "full text",
+    "abstract": "abstract only",
+    "none": "nothing available",
+}
+
+
+def _review_out(raw: dict | None) -> ReviewOut | None:
+    """Parse the stored review, tolerating anything an older run wrote.
+
+    A malformed review must never take the whole run detail down with it:
+    the report, the sources, and the activity log still have to load.
+    """
+    if not raw:
+        return None
+    try:
+        return ReviewOut.model_validate(raw)
+    except Exception:
+        logger.warning("stored review could not be parsed; omitting it")
+        return None
 
 
 def _run_out(row: dict) -> RunOut:
@@ -120,6 +150,7 @@ async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
     return RunDetailOut(
         **_run_out(row).model_dump(),
         report=row["report"],
+        review=_review_out(row.get("review")),
         papers=[
             PaperOut(
                 id=str(p["id"]),
@@ -136,6 +167,75 @@ async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
             )
             for p in papers
         ],
+    )
+
+
+@router.get("/{run_id}/review.csv")
+async def export_review_matrix(run_id: str, user_id: str = CurrentUser) -> Response:
+    """The evidence matrix as a spreadsheet: one row per reviewed paper, the
+    paper details, the implementation, and the limitations and gaps."""
+    row = await _get_owned_run(run_id, user_id)
+    review = _review_out(row.get("review"))
+    if review is None or not review.matrix:
+        raise HTTPException(404, "This run has no evidence matrix yet.")
+
+    implementation = [name for name, _ in IMPLEMENTATION_FIELDS]
+    limitations = [name for name, _ in LIMITATION_FIELDS]
+
+    def header(name: str) -> str:
+        return name.replace("_", " ").capitalize()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "#",
+            "Title",
+            "Authors",
+            "Venue",
+            "Year",
+            "Indexed in",
+            "Scimago quartile",
+            "Citations",
+            "Evidence read",
+            "DOI",
+            "URL",
+            *(header(n) for n in implementation),
+            *(header(n) for n in limitations),
+        ]
+    )
+    for item in review.matrix:
+        writer.writerow(
+            [
+                item.n,
+                item.title,
+                "; ".join(item.authors),
+                item.venue or "",
+                item.year or "",
+                "; ".join(item.indexed_in),
+                item.quartile or "",
+                item.cited_by_count,
+                _EVIDENCE_LABEL.get(
+                    item.evidence, "full text" if item.full_text else "abstract only"
+                ),
+                item.doi or "",
+                item.url or "",
+                *(getattr(item, n) for n in implementation),
+                *(getattr(item, n) for n in limitations),
+            ]
+        )
+    slug = (
+        re.sub(r"[^a-zA-Z0-9]+", "-", row.get("title") or row["topic"])
+        .strip("-")
+        .lower()[:60]
+        or "literature-review"
+    )
+    # Excel opens UTF-8 CSV as the local codepage unless it sees a BOM, which
+    # turns every accented author name into mojibake.
+    return Response(
+        content="﻿" + buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{slug}-matrix.csv"'},
     )
 
 
@@ -244,7 +344,8 @@ async def resume_failed_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
         await execute("DELETE FROM papers WHERE run_id = %s", run_id)
         await execute("DELETE FROM run_events WHERE run_id = %s", run_id)
         await execute(
-            "UPDATE runs SET report = NULL, stage = NULL WHERE id = %s", run_id
+            "UPDATE runs SET report = NULL, review = NULL, stage = NULL WHERE id = %s",
+            run_id,
         )
 
     resume_run(
@@ -278,7 +379,8 @@ async def retry_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
     claimed = await fetch_one(
         """
         UPDATE runs SET status = 'pending', stage = NULL, error = NULL,
-            report = NULL, snapshot = NULL, created_at = now(), updated_at = now()
+            report = NULL, review = NULL, snapshot = NULL,
+            created_at = now(), updated_at = now()
         WHERE id = %s AND status = 'failed'
         RETURNING id
         """,
