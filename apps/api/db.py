@@ -257,6 +257,9 @@ async def _create_schema(conn) -> None:
     await conn.execute(
         "ALTER TABLE runs ADD COLUMN IF NOT EXISTS seed_paper_ids JSONB"
     )
+    # Literature review deliverable: the per-paper evidence matrix and the
+    # cross-paper synthesis (trends, methods, datasets, gaps, future work).
+    await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS review JSONB")
     await conn.execute(
         "ALTER TABLE documents ADD COLUMN IF NOT EXISTS citation_style TEXT"
     )
