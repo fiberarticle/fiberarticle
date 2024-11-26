@@ -15,6 +15,7 @@ import {
   Pin,
   PinOff,
   Settings,
+  ShieldCheck,
   SquarePen,
   Table2,
   Trash2,
@@ -444,9 +445,13 @@ function Section({
 export function Sidebar({
   userName,
   userEmail,
+  isAdmin = false,
 }: {
   userName: string;
   userEmail: string;
+  /** Shows the Admin entry in the account menu. Cosmetic only: the page and
+      the API both check the role again on the server. */
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -602,6 +607,11 @@ export function Sidebar({
             {userEmail}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {isAdmin ? (
+            <DropdownMenuItem onSelect={() => router.push("/admin")}>
+              <ShieldCheck /> Admin
+            </DropdownMenuItem>
+          ) : null}
           {/* Opens the centered settings modal (settings-dialog.tsx). */}
           <DropdownMenuItem
             onSelect={() => router.push(`${pathname}?settings=preferences`)}
