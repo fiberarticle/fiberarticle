@@ -12,3 +12,4 @@ export { welcomeEmail } from "./welcome";
 export { verifyEmail } from "./verify-email";
 export { passwordResetEmail } from "./password-reset";
 export { passwordChangedEmail } from "./password-changed";
+export { pricingQuotationEmail } from "./pricing";
