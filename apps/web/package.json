@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "postinstall": "prisma generate",
-    "db:migrate": "prisma db push"
+    "db:migrate": "prisma db push",
+    "make-admin": "node scripts/make-admin.mjs"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.19.10",
