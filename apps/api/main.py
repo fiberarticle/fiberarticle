@@ -10,6 +10,7 @@ from db import close_pool, open_pool
 from db import execute
 from rag.embeddings import _get_model
 from routers import (
+    admin,
     chats,
     citations,
     documents,
@@ -94,6 +95,7 @@ app.add_middleware(
 )
 
 app.include_router(me.router)
+app.include_router(admin.router)
 app.include_router(runs.router)
 app.include_router(papers.router)
 app.include_router(documents.router)
