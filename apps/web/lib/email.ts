@@ -7,11 +7,38 @@ import {
   LOGO_CONTENT_TYPE,
   LOGO_FILENAME,
 } from "@/lib/emails/logo";
+import {
+  WORDMARK_BASE64,
+  WORDMARK_CID,
+  WORDMARK_CONTENT_TYPE,
+  WORDMARK_FILENAME,
+} from "@/lib/emails/wordmark";
 
 const resendKey = process.env.RESEND_API_KEY;
 const from = process.env.EMAIL_FROM ?? "Fiberarticle <noreply@fiberarticle.com>";
 
 const resend = resendKey ? new Resend(resendKey) : null;
+
+/**
+ * Images the templates reference as `cid:...` rather than as a URL, so the
+ * bytes travel with the message. Only the ones a given message actually asks
+ * for are attached: a plain-text send stays plain, and the pricing quotation
+ * does not carry the transactional header mark it never shows.
+ */
+const INLINE_IMAGES = [
+  {
+    cid: LOGO_CID,
+    base64: LOGO_BASE64,
+    filename: LOGO_FILENAME,
+    contentType: LOGO_CONTENT_TYPE,
+  },
+  {
+    cid: WORDMARK_CID,
+    base64: WORDMARK_BASE64,
+    filename: WORDMARK_FILENAME,
+    contentType: WORDMARK_CONTENT_TYPE,
+  },
+] as const;
 
 interface SendEmailOptions {
   to: string;
@@ -28,10 +55,14 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     );
     return;
   }
-  // The templates reference the logo as `cid:...` rather than a URL, so the
-  // bytes have to travel with the message. Attached only when the markup
-  // actually asks for it, so a plain-text send stays plain.
-  const needsLogo = !!html && html.includes(`cid:${LOGO_CID}`);
+  const attachments = INLINE_IMAGES.filter(
+    (image) => !!html && html.includes(`cid:${image.cid}`)
+  ).map((image) => ({
+    content: Buffer.from(image.base64, "base64"),
+    filename: image.filename,
+    contentType: image.contentType,
+    inlineContentId: image.cid,
+  }));
 
   const { error } = await resend.emails.send({
     from,
@@ -39,18 +70,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     subject,
     text,
     ...(html ? { html } : {}),
-    ...(needsLogo
-      ? {
-          attachments: [
-            {
-              content: Buffer.from(LOGO_BASE64, "base64"),
-              filename: LOGO_FILENAME,
-              contentType: LOGO_CONTENT_TYPE,
-              inlineContentId: LOGO_CID,
-            },
-          ],
-        }
-      : {}),
+    ...(attachments.length ? { attachments } : {}),
   });
   if (error) {
     console.error(`[Fiberarticle mail] failed to send to ${to}: ${error.message}`);
