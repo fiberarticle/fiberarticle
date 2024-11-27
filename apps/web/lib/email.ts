@@ -7,15 +7,20 @@ import {
   LOGO_CONTENT_TYPE,
   LOGO_FILENAME,
 } from "@/lib/emails/logo";
-import {
-  WORDMARK_BASE64,
-  WORDMARK_CID,
-  WORDMARK_CONTENT_TYPE,
-  WORDMARK_FILENAME,
-} from "@/lib/emails/wordmark";
 
 const resendKey = process.env.RESEND_API_KEY;
 const from = process.env.EMAIL_FROM ?? "Fiberarticle <noreply@fiberarticle.com>";
+
+/**
+ * The address a quotation comes from.
+ *
+ * Account mail keeps noreply: a password reset should not invite a reply. A
+ * price list is the opposite. It is written to a person who asked for it and
+ * who is meant to write back, and a no-reply sender on commercial mail is a
+ * signal filters weigh against you. Set EMAIL_FROM_CAMPAIGN to change it.
+ */
+const campaignFrom =
+  process.env.EMAIL_FROM_CAMPAIGN ?? "Fiberarticle <admin@fiberarticle.com>";
 
 const resend = resendKey ? new Resend(resendKey) : null;
 
@@ -32,12 +37,6 @@ const INLINE_IMAGES = [
     filename: LOGO_FILENAME,
     contentType: LOGO_CONTENT_TYPE,
   },
-  {
-    cid: WORDMARK_CID,
-    base64: WORDMARK_BASE64,
-    filename: WORDMARK_FILENAME,
-    contentType: WORDMARK_CONTENT_TYPE,
-  },
 ] as const;
 
 interface SendEmailOptions {
@@ -45,9 +44,21 @@ interface SendEmailOptions {
   subject: string;
   text: string;
   html?: string;
+  /** Overrides the account sender. Only the campaign path sets this. */
+  from?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }
 
-export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  from: fromOverride,
+  replyTo,
+  headers,
+}: SendEmailOptions) {
   if (!resend) {
     // Development fallback: no Resend key configured, log instead of sending.
     console.log(
@@ -65,11 +76,13 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
   }));
 
   const { error } = await resend.emails.send({
-    from,
+    from: fromOverride ?? from,
     to,
     subject,
     text,
     ...(html ? { html } : {}),
+    ...(replyTo ? { replyTo } : {}),
+    ...(headers ? { headers } : {}),
     ...(attachments.length ? { attachments } : {}),
   });
   if (error) {
@@ -85,6 +98,33 @@ export async function sendRendered(
   email: RenderedEmail
 ): Promise<void> {
   await sendEmail({ to, ...email });
+}
+
+/**
+ * Sends one of the Admin -> Send emails messages.
+ *
+ * Differs from account mail in three ways, all of them about how a mail
+ * provider reads commercial post. It comes from a mailbox a person can answer,
+ * it says so again in Reply-To, and it carries the unsubscribe headers Gmail
+ * looks for on anything that resembles bulk. The unsubscribe is a mailto
+ * rather than a link, which needs no page and no list to maintain: a reader
+ * writes, and we stop.
+ */
+export async function sendCampaign(
+  to: string,
+  email: RenderedEmail,
+  replyTo = "admin@fiberarticle.com"
+): Promise<void> {
+  await sendEmail({
+    to,
+    ...email,
+    from: campaignFrom,
+    replyTo,
+    headers: {
+      "List-Unsubscribe": `<mailto:${replyTo}?subject=unsubscribe>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  });
 }
 
 /**
