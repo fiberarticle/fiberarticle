@@ -1,9 +1,4 @@
 import type { RenderedEmail } from "./shell";
-import {
-  WORDMARK_CID,
-  WORDMARK_HEIGHT,
-  WORDMARK_WIDTH,
-} from "./wordmark";
 
 /**
  * The pricing quotation, sent by hand from Admin -> Send emails.
@@ -19,8 +14,13 @@ import {
  *
  * Deliberate departures from the flier, all forced by the medium:
  *   - 600px wide rather than A4, so type is scaled down by about a fifth
- *   - the wordmark gradient becomes the solid brown-gold it runs through
- *   - the logo is the PNG the other templates already attach, not the SVG
+ *   - the wordmark is real text, carrying the app's gradient in Apple Mail
+ *     and solid brown-gold in Gmail and Outlook, which support neither the
+ *     gradient nor the app's webfont
+ *   - the mark is a small PNG served from the app, since no common mail
+ *     client draws an SVG and an attached one shows up in Gmail's attachment
+ *     strip. It is the only thing the message fetches: the backdrop is drawn
+ *     with gradients rather than downloaded as the website's photograph
  *   - the two payment cards stack under each other on a phone
  *   - the sheet behind it is the website's pricing backdrop rather than the
  *     flier's paper, so the mail and that page look like the same product
@@ -45,23 +45,50 @@ const BODY = "#4a4238";
 const MUTED = "#6e675e";
 /** The numeral accent, and the brown-gold the wordmark gradient passes through. */
 const ACCENT = "#fca91e";
+/** The wordmark's colour where a client cannot paint the app's gradient. */
+const BRAND = "#b3782d";
+
 
 /**
- * The backdrop, taken from the website's own pricing page: the near-black it
- * paints behind the photograph, and the photograph itself.
+ * The sheet sits on this: the near-black of the website's pricing page with
+ * its warm glow drawn in, not photographed.
  *
- * Linked rather than attached. An inline attachment cannot be a CSS background
- * in most clients, and at 133 KB this would be the heaviest thing in the
- * message. It is already served from our own domain for the website, so a
- * recipient with images on gets the same arc they would see at
- * fiberarticle.com/pricing, and one with images off gets PAGE underneath,
- * which is what the website paints while the photograph loads.
+ * The website paints an arc of light across a dark field. That photograph is
+ * 133 KB on a server, which means the mail would fetch something every time it
+ * is opened. These two radial gradients evoke the same light for nothing: no
+ * file, no request, no wait. Outlook understands neither and keeps PAGE, which
+ * is the colour the website itself shows while its photograph loads.
  */
 const PAGE = "#050406";
-const PAGE_IMAGE = "https://fiberarticle.com/pricing/pricing-bg.jpg";
+const PAGE_GLOW =
+  "radial-gradient(115% 85% at 116% 74%,rgba(255,138,32,0.50) 0%,rgba(198,58,18,0.26) 34%,rgba(5,4,6,0) 64%)," +
+  "radial-gradient(85% 62% at -12% 16%,rgba(206,58,24,0.30) 0%,rgba(5,4,6,0) 58%)";
 /** The flier's own paper. The sheet sits on the backdrop; only the margin
  * around it shows the photograph, the way the flier sits on a desk. */
 const SHEET = "#f8f5f0";
+
+/**
+ * The watermark behind the priced table.
+ *
+ * Served from the app rather than attached, because an attachment cannot be a
+ * CSS background in a mail client. Pre-faded to five percent and baked onto
+ * the card colour, since neither opacity nor a transparent PNG can be relied
+ * on behind text. Outlook ignores background images altogether and shows the
+ * plain card, which is a quiet way to lose a decoration.
+ */
+/** The engraved figures: banknote green, a lit top edge, and a soft drop.
+ * Apple Mail and iOS draw the relief. Gmail and Outlook drop text shadows and
+ * show flat ink, which is why the colour is declared on its own. */
+const PRICE_INK = "#1e4d34";
+const PRICE_RELIEF =
+  "text-shadow:0 1px 0 rgba(255,255,255,0.92),0 2px 1px rgba(20,62,42,0.30);";
+
+/** The marker behind the word Note. A filled cell, not a brush stroke: the
+ * stroke had to be a picture, and this message carries none. */
+const HIGHLIGHT = "#f8d878";
+
+/** The small labels. A size up from 10px and browner than the old grey. */
+const LABEL = "#6b5233";
 
 /** Where a reader should write back. A quotation is meant to be replied to. */
 const REPLY_TO = "admin@fiberarticle.com";
@@ -79,7 +106,7 @@ const ITEMS: Item[] = [
   {
     no: "01",
     title: "Problem identification",
-    body: "Problem identification as per provided domain, with objectives. Presentation deck (PPT) included.",
+    body: "Problem identification as per provided domain, with objectives. Presentation (PPT) included.",
     amount: "&#8377;10,000",
   },
   {
@@ -113,19 +140,19 @@ function itemRow(item: Item, last: boolean): string {
     ? `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:9px;">
           <tr>
-            <td style="padding:5px 11px;border:1px dashed #ddd5c9;border-radius:40px;font-family:${MONO};font-size:11.5px;line-height:15px;mso-line-height-rule:exactly;color:${MUTED};white-space:nowrap;" class="s-pill">${item.addOn}</td>
+            <td style="padding:5px 11px;border:1px dashed #ddd5c9;border-radius:40px;font-family:${MONO};font-size:11.5px;line-height:15px;mso-line-height-rule:exactly;color:${MUTED};white-space:nowrap;" class="s-pill mut">${item.addOn}</td>
           </tr>
         </table>`
     : "";
 
   return `
       <tr>
-        <td class="s-no" width="34" valign="top" style="width:34px;padding:15px 0 15px 24px;border-bottom:${edge};font-family:${MONO};font-size:15px;line-height:22px;mso-line-height-rule:exactly;font-weight:500;color:${ACCENT};">${item.no}</td>
+        <td class="s-no acc" width="34" valign="top" style="width:34px;padding:15px 0 15px 24px;border-bottom:${edge};font-family:${MONO};font-size:15px;line-height:22px;mso-line-height-rule:exactly;font-weight:500;color:${ACCENT};">${item.no}</td>
         <td class="s-mid" valign="top" style="padding:15px 14px 15px 12px;border-bottom:${edge};font-family:${SANS};">
-          <div style="font-size:19px;line-height:23px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.4px;color:${INK};">${item.title}</div>
-          <p style="margin:6px 0 0;font-size:14px;line-height:20px;mso-line-height-rule:exactly;color:${BODY};">${item.body}</p>${pill}
+          <div class="ink" style="font-size:19px;line-height:23px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.4px;color:${INK};">${item.title}</div>
+          <p class="txt" style="margin:6px 0 0;font-size:14px;line-height:20px;mso-line-height-rule:exactly;color:${BODY};">${item.body}</p>${pill}
         </td>
-        <td class="s-amt" width="118" align="right" valign="top" style="width:118px;padding:15px 24px 15px 0;border-bottom:${edge};font-family:${SANS};font-size:26px;line-height:30px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.8px;color:${INK};white-space:nowrap;">${item.amount}</td>
+        <td class="s-amt amt" width="118" align="right" valign="top" style="width:118px;padding:15px 24px 15px 0;border-bottom:${edge};font-family:${SANS};font-size:27px;line-height:32px;mso-line-height-rule:exactly;font-weight:600;letter-spacing:-0.6px;color:${PRICE_INK};${PRICE_RELIEF}white-space:nowrap;">${item.amount}</td>
       </tr>`;
 }
 
@@ -144,21 +171,40 @@ function paymentCard(label: string, heading: string, body: string): string {
   // 265 + 14 + 265 = 544, the sheet's width less its two 28px margins. A pair
   // sized for the full 600 would push the sheet itself out to 660.
   return `
-        <td class="s-stack" width="265" valign="top" style="width:265px;background-color:${CARD};border:1px solid ${LINE};border-radius:12px">
+        <td class="s-stack card" width="265" valign="top" style="width:265px;background-color:${CARD};border:1px solid ${LINE};border-radius:12px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%">
             <tr>
               <td style="padding:16px 18px;font-family:${SANS}">
-                <div style="font-family:${MONO};font-size:10px;line-height:14px;mso-line-height-rule:exactly;letter-spacing:1.4px;text-transform:uppercase;color:${MUTED}">${label}</div>
-                <div style="margin-top:7px;font-size:18px;line-height:22px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.4px;color:${INK}">${heading}</div>
-                <p style="margin:5px 0 0;font-size:13.5px;line-height:19px;mso-line-height-rule:exactly;color:${BODY}">${body}</p>
+                <div class="lbl" style="font-family:${MONO};font-size:11px;line-height:15px;mso-line-height-rule:exactly;letter-spacing:1.5px;text-transform:uppercase;color:${LABEL}">${label}</div>
+                <div class="ink" style="margin-top:7px;font-size:18px;line-height:22px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.4px;color:${INK}">${heading}</div>
+                <p class="txt" style="margin:5px 0 0;font-size:13.5px;line-height:19px;mso-line-height-rule:exactly;color:${BODY}">${body}</p>
               </td>
             </tr>
           </table>
         </td>`;
 }
 
-const MARK_W = Math.round(WORDMARK_WIDTH / 2);
-const MARK_H = Math.round(WORDMARK_HEIGHT / 2);
+/**
+ * The mark, served from the app rather than attached to the message.
+ *
+ * It has to be a picture at all because no common mail client draws an SVG.
+ * Attaching it works, but Gmail then lists it under the mail as "One
+ * attachment", which looks wrong on a quotation and cannot be turned off: an
+ * inline attachment is still an attachment. Serving it is what every
+ * professional sender does, and Gmail fetches it through its own cache rather
+ * than exposing the reader to us.
+ *
+ * EMAIL_ASSET_BASE exists for a staging host. The default is production,
+ * never the app's own origin, because a mail is read long after it was sent
+ * and a developer machine's localhost is unreachable from an inbox.
+ */
+const ASSET_BASE = (
+  process.env.EMAIL_ASSET_BASE ?? "https://app.fiberarticle.com"
+).replace(/\/$/, "");
+const MARK_SRC = `${ASSET_BASE}/email/mark.png`;
+/** Half the file's natural size, which is 2x for retina screens. */
+const MARK_W = 42;
+const MARK_H = 42;
 
 const HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -169,6 +215,9 @@ const HTML = `<!DOCTYPE html>
 <meta name="supported-color-schemes" content="light">
 <title>Article Work Pricing</title>
 <style>
+  /* "only" is the strong form: it tells a client this message has no dark
+     variant at all, so the well behaved ones skip their repaint entirely. */
+  :root { color-scheme: light only; supported-color-schemes: light; }
   body { margin:0; padding:0; background-color:${PAGE}; -webkit-text-size-adjust:100%; }
   table { border-collapse:collapse; }
   img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
@@ -201,41 +250,102 @@ const HTML = `<!DOCTYPE html>
     .s-payrow { table-layout:auto !important; }
     .s-pad { padding-left:18px !important; padding-right:18px !important; }
   }
+  /* Dark mode.
+     Gmail and Outlook.com repaint a message when the reader is in dark mode:
+     light panels go dark and dark text goes light. They cannot repaint a
+     picture, and our wordmark is a picture with the paper colour baked into
+     it, so a repainted card would leave a pale rectangle sitting on a dark
+     one. This document is a light sheet on a dark backdrop of its own and is
+     meant to look the same either way.
+
+     The meta tags and color-scheme above ask clients not to repaint. These
+     rules put every colour back for the ones that do it anyway, and the
+     data-ogsc and data-ogsb copies do the same for Outlook.com, which
+     rewrites the message with those attributes instead of honouring the
+     media query. */
+  @media (prefers-color-scheme: dark) {
+    .sheet { background-color:${SHEET} !important; }
+    .card { background-color:${CARD} !important; }
+    .band { background-color:${BAND} !important; }
+    .ink { color:${INK} !important; }
+    .txt { color:${BODY} !important; }
+    .mut { color:${MUTED} !important; }
+    .acc { color:${ACCENT} !important; }
+    .ntl { color:#985203 !important; }
+    .nte { color:#3c352d !important; }
+    .lnk { color:#9a6b45 !important; }
+    .lbl { color:${LABEL} !important; }
+    .mark { background-color:${HIGHLIGHT} !important; color:#7a3f02 !important; }
+    .ntl { color:#8a4a03 !important; }
+    .amt { color:${PRICE_INK} !important; }
+    /* Both properties, because the gradient rule below sets the fill colour
+       separately and a repainting client must not be left with an invisible
+       word. */
+    .wm { color:${BRAND} !important; -webkit-text-fill-color:${BRAND} !important; }
+  }
+  [data-ogsc] .sheet, [data-ogsb] .sheet { background-color:${SHEET} !important; }
+  [data-ogsc] .card, [data-ogsb] .card { background-color:${CARD} !important; }
+  [data-ogsc] .band, [data-ogsb] .band { background-color:${BAND} !important; }
+  [data-ogsc] .ink { color:${INK} !important; }
+  [data-ogsc] .txt { color:${BODY} !important; }
+  [data-ogsc] .mut { color:${MUTED} !important; }
+  [data-ogsc] .acc { color:${ACCENT} !important; }
+  [data-ogsc] .ntl { color:#985203 !important; }
+  [data-ogsc] .nte { color:#3c352d !important; }
+  [data-ogsc] .lnk { color:#9a6b45 !important; }
+  [data-ogsc] .lbl { color:${LABEL} !important; }
+  [data-ogsc] .mark, [data-ogsb] .mark { background-color:${HIGHLIGHT} !important; color:#7a3f02 !important; }
+  [data-ogsc] .amt { color:${PRICE_INK} !important; }
+  [data-ogsc] .wm { color:${BRAND} !important; -webkit-text-fill-color:${BRAND} !important; }
+  /* The app paints "Fiberarticle" as a gradient clipped to the letters. Apple
+     Mail and iOS can do the same. Gmail and Outlook support neither the clip
+     nor @supports, so they drop this block and keep the solid brown declared
+     on the cell. Guarded on purpose: applied unconditionally, a client that
+     honours the transparent fill but not the clip would show no word at all. */
+  @supports (-webkit-background-clip: text) or (background-clip: text) {
+    .wm {
+      background-image: linear-gradient(90deg,#b3782d 0%,#c2842b 62%,#fca91e 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+  }
 </style>
 </head>
 <body style="margin:0; padding:0; background-color:${PAGE}">
 <!-- The preheader: the line Gmail and Apple Mail print next to the subject
      in the message list. Hidden in the message itself. -->
-<span style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Our pricing for article work: problem identification and three article objectives, in Indian rupees. Reply to admin@fiberarticle.com to discuss your objectives.</span>
+<span style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Thank you for your interest in Fiberarticle. Here is our pricing for article work, in Indian rupees.</span>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${PAGE}" style="width:100%;background-color:${PAGE};margin:0;padding:0">
 <tr>
-<!-- background= for the clients that only read the attribute, the CSS for the
-     ones that only read the property. Outlook desktop reads neither on a cell
-     and simply keeps bgcolor, which is the same near-black the website shows
-     under the photograph, so it degrades to a flat dark sheet rather than to
-     nothing. -->
-<td align="center" background="${PAGE_IMAGE}" bgcolor="${PAGE}" valign="top" style="padding:30px 12px;background-color:${PAGE};background-image:url('${PAGE_IMAGE}');background-position:center top;background-repeat:no-repeat;background-size:cover">
+<td align="center" bgcolor="${PAGE}" valign="top" style="padding:30px 12px;background-color:${PAGE};background-image:${PAGE_GLOW}">
 
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-<table role="presentation" class="w600" cellpadding="0" cellspacing="0" border="0" width="600" bgcolor="${SHEET}" style="width:600px;max-width:600px;background-color:${SHEET};border:1px solid ${LINE};border-radius:18px;overflow:hidden">
+<table role="presentation" class="w600 sheet" cellpadding="0" cellspacing="0" border="0" width="600" bgcolor="${SHEET}" style="width:600px;max-width:600px;background-color:${SHEET};border:1px solid ${LINE};border-radius:18px;overflow:hidden">
 
   <!-- Header: mark, wordmark, hairline. The flier runs a gradient through the
        wordmark; a mail client cannot clip one to text, so it is the solid
        brown-gold that gradient passes through. -->
   <tr>
     <td class="s-pad" style="padding:28px 28px 18px 28px;border-bottom:1px solid ${LINE}">
-<img src="cid:${WORDMARK_CID}" width="${MARK_W}" height="${MARK_H}" alt="Fiberarticle" style="display:block;width:${MARK_W}px;height:${MARK_H}px;border:0">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="${MARK_W}" style="width:${MARK_W}px;padding-right:10px;vertical-align:middle"><img src="${MARK_SRC}" width="${MARK_W}" height="${MARK_H}" alt="Fiberarticle" style="display:block;width:${MARK_W}px;height:${MARK_H}px;border:0"></td>
+          <td class="wm" style="vertical-align:middle;font-family:${SANS};font-size:26px;line-height:32px;mso-line-height-rule:exactly;font-weight:600;letter-spacing:-0.5px;color:${BRAND}">Fiberarticle</td>
+        </tr>
+      </table>
     </td>
   </tr>
 
   <!-- The priced items, one card with a banded header. -->
   <tr>
     <td class="s-pad" style="padding:26px 28px 0 28px">
-      <table role="presentation" class="s-table" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;background-color:${CARD};border:1px solid ${LINE};border-radius:16px">
+      <table role="presentation" class="s-table card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;background-color:${CARD};background-image:repeating-linear-gradient(135deg,rgba(154,107,69,0.05) 0 1px,transparent 1px 10px);border:1px solid ${LINE};border-radius:16px">
         <tr>
-          <td class="s-no" width="34" style="width:34px;padding:12px 0 12px 24px;background-color:${BAND};border-bottom:1px solid ${LINE};border-radius:16px 0 0 0;font-family:${MONO};font-size:10px;line-height:14px;mso-line-height-rule:exactly;letter-spacing:1.4px;text-transform:uppercase;color:${MUTED}">No</td>
-          <td class="s-mid" style="padding:12px 14px 12px 12px;background-color:${BAND};border-bottom:1px solid ${LINE};font-family:${MONO};font-size:10px;line-height:14px;mso-line-height-rule:exactly;letter-spacing:1.4px;text-transform:uppercase;color:${MUTED}">Deliverable</td>
-          <td class="s-amth" width="118" align="right" style="width:118px;padding:12px 24px 12px 0;background-color:${BAND};border-bottom:1px solid ${LINE};border-radius:0 16px 0 0;font-family:${MONO};font-size:10px;line-height:14px;mso-line-height-rule:exactly;letter-spacing:1.4px;text-transform:uppercase;color:${MUTED}">Amount</td>
+          <td class="s-no band lbl" width="34" style="width:34px;padding:13px 0 13px 24px;background-color:${BAND};border-bottom:1px solid ${LINE};border-radius:16px 0 0 0;font-family:${MONO};font-size:11px;line-height:15px;mso-line-height-rule:exactly;letter-spacing:1.5px;text-transform:uppercase;color:${LABEL}">No</td>
+          <td class="s-mid band lbl" style="padding:13px 14px 13px 12px;background-color:${BAND};border-bottom:1px solid ${LINE};font-family:${MONO};font-size:11px;line-height:15px;mso-line-height-rule:exactly;letter-spacing:1.5px;text-transform:uppercase;color:${LABEL}">Deliverable</td>
+          <td class="s-amth band lbl" width="118" align="right" style="width:118px;padding:13px 24px 13px 0;background-color:${BAND};border-bottom:1px solid ${LINE};border-radius:0 16px 0 0;font-family:${MONO};font-size:11px;line-height:15px;mso-line-height-rule:exactly;letter-spacing:1.5px;text-transform:uppercase;color:${LABEL}">Amount</td>
         </tr>${ITEMS.map((item, index) =>
           itemRow(item, index === ITEMS.length - 1)
         ).join("")}
@@ -269,15 +379,21 @@ const HTML = `<!DOCTYPE html>
     <td class="s-pad" style="padding:16px 28px 0 28px">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;background-color:${BAND};border:1px solid ${LINE};border-radius:12px">
         <tr>
-          <td width="46" valign="top" style="width:46px;padding:18px 0 18px 18px;font-family:${MONO};font-size:10px;line-height:16px;mso-line-height-rule:exactly;letter-spacing:1.4px;text-transform:uppercase;color:#985203">Note</td>
-          <td valign="top" style="padding:16px 18px 18px 12px;font-family:${SANS};font-size:14px;line-height:21px;mso-line-height-rule:exactly;color:#3c352d">Fiberarticle is not responsible for paying the APC (Article Processing Charges). The APC must be paid by the scholar as per journal norms.</td>
+          <td class="band" width="76" align="center" valign="middle" style="width:76px;padding:18px 8px 18px 14px">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate">
+              <tr>
+                <td class="mark" bgcolor="${HIGHLIGHT}" align="center" style="padding:5px 10px;background-color:${HIGHLIGHT};border-radius:5px;font-family:${MONO};font-size:11px;line-height:15px;mso-line-height-rule:exactly;letter-spacing:1.5px;text-transform:uppercase;color:#7a3f02">Note</td>
+              </tr>
+            </table>
+          </td>
+          <td class="band nte" valign="middle" style="padding:18px 18px 18px 14px;font-family:${SANS};font-size:14px;line-height:21px;mso-line-height-rule:exactly;color:#3c352d">Fiberarticle is not responsible for paying the APC (Article Processing Charges). The APC must be paid by the scholar as per journal norms.</td>
         </tr>
       </table>
     </td>
   </tr>
 
   <tr>
-    <td class="s-pad" style="padding:20px 28px 14px 28px;font-family:${SANS};font-size:12.5px;line-height:18px;mso-line-height-rule:exactly;color:${BODY}">Questions about this quotation? Reply to <a href="mailto:${REPLY_TO}" style="color:#9a6b45;text-decoration:none;font-weight:700">${REPLY_TO}</a></td>
+    <td class="s-pad txt" style="padding:20px 28px 14px 28px;font-family:${SANS};font-size:12.5px;line-height:18px;mso-line-height-rule:exactly;color:${BODY}">Questions about this quotation? Reply to <a class="lnk" href="mailto:${REPLY_TO}" style="color:#9a6b45;text-decoration:none;font-weight:700">${REPLY_TO}</a></td>
   </tr>
 
   <!-- The flier's three colour bar, bled to the full width of the sheet.
@@ -307,44 +423,51 @@ const HTML = `<!DOCTYPE html>
 </html>
 `;
 
+/**
+ * The plain-text copy of the same quotation.
+ *
+ * Every message carries two copies: this one and the designed one. A message
+ * with only markup scores badly with spam filters, and a screen reader or a
+ * watch is handed this copy instead, so it cannot be dropped.
+ *
+ * It is written as a letter rather than as a dump of the priced table,
+ * because it is also what an inbox prints beside the subject line. Gmail
+ * takes that grey preview line from here and not from the markup, so the
+ * first sentence has to read like something a person wrote.
+ */
 const TEXT = [
-  // First line on purpose: an inbox that snippets the plain text part rather
-  // than the markup shows this instead of the first price row.
-  "Our pricing for article work: problem identification and three article objectives, in Indian rupees. Reply to admin@fiberarticle.com to discuss your objectives.",
+  "Thank you for your interest in Fiberarticle. Here is our pricing for article work, in Indian rupees. Each item stands on its own, so you can take one of them or all of them.",
   "",
-  "FIBERARTICLE PRICING",
+  "PROBLEM IDENTIFICATION, Rs 10,000",
+  "The problem is identified for the domain you provide, along with the",
+  "objectives. Presentation (PPT) included.",
   "",
-  "Priced per deliverable, in Indian rupees. Each item stands on its own.",
+  "ARTICLE, FIRST OBJECTIVE, Rs 20,000",
+  "Dataset collection, implementation and evaluation, generation of the",
+  "figures and tables, and corrections for the reviewer comments.",
+  "Add Rs 5,000 for the PPT preparation for the presentation.",
   "",
-  "01. Problem identification - Rs 10,000",
-  "    Problem identification as per provided domain, with objectives.",
-  "    Presentation deck (PPT) included.",
+  "ARTICLE, SECOND OBJECTIVE, Rs 20,000",
+  "Dataset collection, implementation and evaluation, generation of the",
+  "figures and tables, and corrections for the reviewer comments.",
+  "Add Rs 5,000 for the PPT preparation for the presentation.",
   "",
-  "02. Article, first objective - Rs 20,000",
-  "    Dataset collection, implementation and evaluation, figures and tables",
-  "    generation, and reviewer comments corrections.",
-  "    + Rs 5,000 PPT preparation for presentation.",
-  "",
-  "03. Article, second objective - Rs 20,000",
-  "    Dataset collection, implementation and evaluation, figures and tables",
-  "    generation, and reviewer comments corrections.",
-  "    + Rs 5,000 PPT preparation for presentation.",
-  "",
-  "04. Article, third objective - Rs 20,000",
-  "    Dataset collection, implementation and evaluation, figures and tables",
-  "    generation, and reviewer comments corrections.",
-  "    + Rs 5,000 PPT preparation for presentation.",
+  "ARTICLE, THIRD OBJECTIVE, Rs 20,000",
+  "Dataset collection, implementation and evaluation, generation of the",
+  "figures and tables, and corrections for the reviewer comments.",
+  "Add Rs 5,000 for the PPT preparation for the presentation.",
   "",
   "PAYMENT",
-  "Stage 1, 50% in advance. Paid before work on the item begins.",
-  "Stage 2, 50% on acceptance. Paid after the paper is accepted into a scopus",
-  "journal.",
+  "The payment is in two halves. Fifty percent in advance, before the work on",
+  "an item begins, and the remaining fifty percent once the paper is accepted",
+  "into a scopus journal.",
   "",
-  "NOTE",
-  "Fiberarticle is not responsible for paying the APC (Article Processing",
-  "Charges). The APC must be paid by the scholar as per journal norms.",
+  "PLEASE NOTE",
+  "Fiberarticle does not pay the APC, the Article Processing Charges. That is",
+  "paid by the scholar as per the norms of the journal.",
   "",
-  "Questions about this quotation? Reply to admin@fiberarticle.com",
+  "If you have any questions about this quotation, simply reply to this mail",
+  "or write to admin@fiberarticle.com.",
 ].join("\n");
 
 /** The quotation as sent. Takes no arguments: every recipient gets the same
