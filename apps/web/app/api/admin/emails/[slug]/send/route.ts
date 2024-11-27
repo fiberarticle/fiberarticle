@@ -1,4 +1,4 @@
-import { sendRendered } from "@/lib/email";
+import { sendCampaign } from "@/lib/email";
 import { currentAdmin } from "@/lib/admin-server";
 import { findCampaign } from "@/lib/emails/catalog";
 
@@ -58,7 +58,7 @@ export async function POST(
 
   const email = campaign.build();
   try {
-    await sendRendered(address, email);
+    await sendCampaign(address, email);
   } catch {
     // sendRendered already logged the provider's own message.
     return json(
