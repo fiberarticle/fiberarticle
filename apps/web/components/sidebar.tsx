@@ -8,6 +8,7 @@ import {
   ChevronRight,
   HatGlasses,
   LogOut,
+  Mail,
   Menu,
   MoreHorizontal,
   PanelLeft,
@@ -608,9 +609,14 @@ export function Sidebar({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {isAdmin ? (
-            <DropdownMenuItem onSelect={() => router.push("/admin")}>
-              <ShieldCheck /> Admin
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onSelect={() => router.push("/admin")}>
+                <ShieldCheck /> Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push("/admin/emails")}>
+                <Mail /> Send emails
+              </DropdownMenuItem>
+            </>
           ) : null}
           {/* Opens the centered settings modal (settings-dialog.tsx). */}
           <DropdownMenuItem
