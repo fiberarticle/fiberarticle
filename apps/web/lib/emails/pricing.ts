@@ -204,7 +204,9 @@ const HTML = `<!DOCTYPE html>
 </style>
 </head>
 <body style="margin:0; padding:0; background-color:${PAGE}">
-<span style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Pricing per deliverable: problem identification and three article objectives, in rupees.</span>
+<!-- The preheader: the line Gmail and Apple Mail print next to the subject
+     in the message list. Hidden in the message itself. -->
+<span style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Our pricing for article work: problem identification and three article objectives, in Indian rupees. Reply to admin@fiberarticle.com to discuss your objectives.</span>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${PAGE}" style="width:100%;background-color:${PAGE};margin:0;padding:0">
 <tr>
 <!-- background= for the clients that only read the attribute, the CSS for the
@@ -306,6 +308,10 @@ const HTML = `<!DOCTYPE html>
 `;
 
 const TEXT = [
+  // First line on purpose: an inbox that snippets the plain text part rather
+  // than the markup shows this instead of the first price row.
+  "Our pricing for article work: problem identification and three article objectives, in Indian rupees. Reply to admin@fiberarticle.com to discuss your objectives.",
+  "",
   "FIBERARTICLE PRICING",
   "",
   "Priced per deliverable, in Indian rupees. Each item stands on its own.",
