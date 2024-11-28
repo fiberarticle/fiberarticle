@@ -197,6 +197,12 @@ function paymentCard(label: string, heading: string, body: string): string {
  * EMAIL_ASSET_BASE exists for a staging host. The default is production,
  * never the app's own origin, because a mail is read long after it was sent
  * and a developer machine's localhost is unreachable from an inbox.
+ *
+ * The file has a transparent background rather than the card colour behind
+ * it. The Gmail app on Android repaints a message for dark mode and cannot be
+ * told not to, but it cannot repaint a picture either, so a mark baked onto
+ * cream left a pale square sitting on a darkened card. Transparent, it has no
+ * square to leave behind and sits correctly on either.
  */
 const ASSET_BASE = (
   process.env.EMAIL_ASSET_BASE ?? "https://app.fiberarticle.com"
