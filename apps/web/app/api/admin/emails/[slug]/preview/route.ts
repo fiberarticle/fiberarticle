@@ -1,11 +1,6 @@
 import { currentAdmin } from "@/lib/admin-server";
 import { findCampaign } from "@/lib/emails/catalog";
 import { LOGO_BASE64, LOGO_CID, LOGO_CONTENT_TYPE } from "@/lib/emails/logo";
-import {
-  WORDMARK_BASE64,
-  WORDMARK_CID,
-  WORDMARK_CONTENT_TYPE,
-} from "@/lib/emails/wordmark";
 
 /**
  * Renders one sendable email so the admin screen can show it in an iframe.
@@ -23,11 +18,6 @@ import {
 /** The bytes a mail client resolves against the inline attachments. */
 const INLINE_IMAGES = [
   { cid: LOGO_CID, base64: LOGO_BASE64, contentType: LOGO_CONTENT_TYPE },
-  {
-    cid: WORDMARK_CID,
-    base64: WORDMARK_BASE64,
-    contentType: WORDMARK_CONTENT_TYPE,
-  },
 ] as const;
 
 /**
@@ -60,7 +50,7 @@ const PREVIEW_SCROLLBAR = `<style>
 </style>`;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   // 404, not 403: an address that answers differently for an admin tells an
@@ -87,6 +77,12 @@ export async function GET(
       `data:${image.contentType};base64,${image.base64}`
     );
   }
+  // The template points the mark at the public host, because a message is
+  // read long after it was sent. On a developer machine nothing is deployed
+  // there yet, so the preview alone borrows the running server's own origin.
+  const origin = new URL(request.url).origin;
+  html = html.replaceAll("https://app.fiberarticle.com/email/", `${origin}/email/`);
+
   html = html.includes("</head>")
     ? html.replace("</head>", `${PREVIEW_SCROLLBAR}</head>`)
     : html + PREVIEW_SCROLLBAR;
