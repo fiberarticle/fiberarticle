@@ -7,7 +7,7 @@
   <img src=".github/assets/readme/tagline-light.png" width="820" alt="An Agentic AI that researches, performs literature reviews, and writes publication-ready manuscripts.">
 </picture>
 
-[Try Fiberarticle](https://app.fiberarticle.com) &nbsp;|&nbsp; [Website](https://fiberarticle.com) &nbsp;|&nbsp; [Pricing](https://fiberarticle.com/pricing/) &nbsp;|&nbsp; [Microsoft Marketplace](https://marketplace.microsoft.com/en-us/product/saas/fiberarticle.fiberarticle?tab=Overview) &nbsp;|&nbsp; [Blogs](https://fiberarticle.com/blogs/)
+[Try Fiberarticle](https://app.fiberarticle.com) &nbsp;|&nbsp; [Website](https://fiberarticle.com) &nbsp;|&nbsp; [Pricing](https://fiberarticle.com/pricing/) &nbsp;|&nbsp; [Blogs](https://fiberarticle.com/blogs/)
 
 [![Follow Fiberarticle on X](https://img.shields.io/badge/%40fiberarticle-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/fiberarticle) [![Available on Microsoft Marketplace](https://img.shields.io/badge/Microsoft%20Marketplace-available-0078D4?style=flat-square&logo=microsoft&logoColor=white)](https://marketplace.microsoft.com/en-us/product/saas/fiberarticle.fiberarticle?tab=Overview) ![License](https://img.shields.io/badge/license-Apache%202.0-4f90e4?style=flat-square)
 
