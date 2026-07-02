@@ -1,0 +1,234 @@
+import re
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
+
+from db import execute, fetch_all, fetch_one, jsonb
+from export.docx_export import render_docx
+from llm.client import LlmNotConfigured, resolve_llm
+from models import (
+    DocumentCreate,
+    DocumentListItem,
+    DocumentOut,
+    DocumentUpdate,
+    PaperOut,
+    SectionEditIn,
+    SectionEditOut,
+)
+from security import CurrentUser
+from writer.generate import run_edit_command, start_generation
+
+router = APIRouter(prefix="/v1", tags=["documents"])
+
+
+def _paper_out(p: dict) -> PaperOut:
+    return PaperOut(
+        id=str(p["id"]),
+        title=p["title"],
+        authors=p["authors"] or [],
+        year=p["year"],
+        venue=p["venue"],
+        doi=p["doi"],
+        url=p["url"],
+        source=p["source"],
+        is_open_access=p["is_open_access"],
+        abstract=p["abstract"],
+    )
+
+
+async def _get_owned_document(document_id: str, user_id: str) -> dict:
+    row = await fetch_one(
+        "SELECT * FROM documents WHERE id = %s AND user_id = %s",
+        document_id,
+        user_id,
+    )
+    if row is None:
+        raise HTTPException(404, "Document not found")
+    return row
+
+
+async def _references_for(row: dict, user_id: str) -> list[PaperOut]:
+    if not row["run_id"]:
+        return []
+    papers = await fetch_all(
+        "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
+        row["run_id"],
+        user_id,
+    )
+    return [_paper_out(p) for p in papers]
+
+
+async def _document_out(row: dict, user_id: str) -> DocumentOut:
+    return DocumentOut(
+        id=str(row["id"]),
+        run_id=str(row["run_id"]) if row["run_id"] else None,
+        title=row["title"],
+        template=row["template"],
+        status=row["status"],
+        sections=row["sections"] or [],
+        authors=row["authors"] or [],
+        error=row["error"],
+        references=await _references_for(row, user_id),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+@router.post("/runs/{run_id}/document", response_model=DocumentOut, status_code=201)
+async def create_document(
+    run_id: str, body: DocumentCreate, user_id: str = CurrentUser
+) -> DocumentOut:
+    run = await fetch_one(
+        "SELECT * FROM runs WHERE id = %s AND user_id = %s", run_id, user_id
+    )
+    if run is None:
+        raise HTTPException(404, "Run not found")
+    if run["status"] != "completed":
+        raise HTTPException(409, "The run must complete before generating an article.")
+    paper_count = await fetch_one(
+        "SELECT count(*) AS n FROM papers WHERE run_id = %s", run_id
+    )
+    if not paper_count or paper_count["n"] == 0:
+        raise HTTPException(409, "This run found no papers to cite.")
+    try:
+        await resolve_llm(user_id)
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+
+    row = await fetch_one(
+        """
+        INSERT INTO documents (run_id, user_id, title, template, status, sections)
+        VALUES (%s, %s, %s, %s, 'generating', %s)
+        RETURNING *
+        """,
+        run_id,
+        user_id,
+        run["topic"],
+        body.template,
+        jsonb([]),
+    )
+    start_generation(str(row["id"]), run_id, user_id)
+    return await _document_out(row, user_id)
+
+
+@router.get("/documents", response_model=list[DocumentListItem])
+async def list_documents(user_id: str = CurrentUser) -> list[DocumentListItem]:
+    rows = await fetch_all(
+        "SELECT * FROM documents WHERE user_id = %s ORDER BY created_at DESC LIMIT 100",
+        user_id,
+    )
+    return [
+        DocumentListItem(
+            id=str(r["id"]),
+            title=r["title"],
+            template=r["template"],
+            status=r["status"],
+            section_count=len(r["sections"] or []),
+            created_at=r["created_at"],
+            updated_at=r["updated_at"],
+        )
+        for r in rows
+    ]
+
+
+@router.get("/documents/{document_id}", response_model=DocumentOut)
+async def get_document(document_id: str, user_id: str = CurrentUser) -> DocumentOut:
+    row = await _get_owned_document(document_id, user_id)
+    return await _document_out(row, user_id)
+
+
+@router.put("/documents/{document_id}", response_model=DocumentOut)
+async def update_document(
+    document_id: str, body: DocumentUpdate, user_id: str = CurrentUser
+) -> DocumentOut:
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] == "generating":
+        raise HTTPException(409, "Wait for generation to finish before editing.")
+
+    title = body.title if body.title is not None else row["title"]
+    template = body.template if body.template is not None else row["template"]
+    sections = (
+        [s.model_dump() for s in body.sections]
+        if body.sections is not None
+        else row["sections"]
+    )
+    authors = body.authors if body.authors is not None else (row["authors"] or [])
+
+    await execute(
+        """
+        UPDATE documents
+        SET title = %s, template = %s, sections = %s, authors = %s, updated_at = now()
+        WHERE id = %s
+        """,
+        title.strip() or row["title"],
+        template,
+        jsonb(sections),
+        jsonb(authors),
+        document_id,
+    )
+    updated = await _get_owned_document(document_id, user_id)
+    return await _document_out(updated, user_id)
+
+
+@router.delete("/documents/{document_id}", status_code=204)
+async def delete_document(document_id: str, user_id: str = CurrentUser) -> None:
+    await _get_owned_document(document_id, user_id)
+    await execute("DELETE FROM documents WHERE id = %s", document_id)
+
+
+@router.post("/documents/{document_id}/edit", response_model=SectionEditOut)
+async def edit_section(
+    document_id: str, body: SectionEditIn, user_id: str = CurrentUser
+) -> SectionEditOut:
+    row = await _get_owned_document(document_id, user_id)
+    sections = row["sections"] or []
+    section = next((s for s in sections if s["id"] == body.section_id), None)
+    if section is None:
+        raise HTTPException(404, "Section not found")
+    try:
+        content = await run_edit_command(
+            user_id, body.command, section["heading"], section["content"]
+        )
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+    if not content:
+        raise HTTPException(502, "The model returned an empty revision.")
+
+    for s in sections:
+        if s["id"] == body.section_id:
+            s["content"] = content
+    await execute(
+        "UPDATE documents SET sections = %s, updated_at = now() WHERE id = %s",
+        jsonb(sections),
+        document_id,
+    )
+    return SectionEditOut(section_id=body.section_id, content=content)
+
+
+@router.get("/documents/{document_id}/export")
+async def export_document(document_id: str, user_id: str = CurrentUser) -> Response:
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] != "ready":
+        raise HTTPException(409, "The document is not ready to export yet.")
+    papers = await fetch_all(
+        "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
+        row["run_id"],
+        user_id,
+    )
+    data = render_docx(
+        {
+            "title": row["title"],
+            "template": row["template"],
+            "authors": row["authors"] or [],
+            "sections": row["sections"] or [],
+        },
+        papers,
+    )
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", row["title"]).strip("-").lower()[:60] or "article"
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{slug}.docx"',
+        },
+    )
