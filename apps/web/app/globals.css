@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Light Sand */
+  --background: #f8f5f0;
+  --foreground: #211d18;
+  --card: #fdfcfa;
+  --card-foreground: #211d18;
+  --popover: #fdfcfa;
+  --popover-foreground: #211d18;
+  --primary: #9a6b45;
+  --primary-hover: #8a5e3b;
+  --primary-foreground: #fff8f0;
+  --secondary: #efe9e1;
+  --secondary-foreground: #4a4238;
+  --muted: #efe9e1;
+  --muted-foreground: #6e675e;
+  --accent: #f1ebe2;
+  --accent-foreground: #3c352d;
+  --destructive: #d13415;
+  --destructive-foreground: #fff8f0;
+  --border: #e5ded4;
+  --input: #ddd5c9;
+  --ring: #ad7f58;
+  --sidebar: #f3efe8;
+  --success: #2f7a3d;
+  --warning: #9a6700;
+  /* Academic-nature green companion to the brown primary */
+  --leaf: #3f7350;
+  --leaf-soft: #e3ecdf;
+  --radius: 0.75rem;
+
+  /* Radix "classic" button surfaces */
+  --classic-accent-from: #b3835b;
+  --classic-accent-to: #96683f;
+  --classic-accent-border: rgba(88, 53, 22, 0.55);
+  --classic-gray-from: #ffffff;
+  --classic-gray-to: #efece7;
+  --classic-gray-border: rgba(60, 53, 45, 0.25);
+  --classic-gray-text: #3c352d;
+  --classic-highlight: rgba(255, 255, 255, 0.55);
+  --classic-shade: rgba(0, 0, 0, 0.12);
+}
+
+.dark {
+  /* Charcoal */
+  --background: #161618;
+  --foreground: #edebe8;
+  --card: #1d1d20;
+  --card-foreground: #edebe8;
+  --popover: #202024;
+  --popover-foreground: #edebe8;
+  --primary: #c09468;
+  --primary-hover: #cda37a;
+  --primary-foreground: #1c130b;
+  --secondary: #26262a;
+  --secondary-foreground: #cfccc6;
+  --muted: #232326;
+  --muted-foreground: #a19d96;
+  --accent: #2a2a2f;
+  --accent-foreground: #e6e3de;
+  --destructive: #e5563a;
+  --destructive-foreground: #1c0d08;
+  --border: #2c2c31;
+  --input: #35353b;
+  --ring: #c09468;
+  --sidebar: #1a1a1d;
+  --success: #6fbf7e;
+  --warning: #d9a944;
+  --leaf: #86b294;
+  --leaf-soft: #223327;
+
+  --classic-accent-from: #c49a6c;
+  --classic-accent-to: #a97d51;
+  --classic-accent-border: rgba(0, 0, 0, 0.55);
+  --classic-gray-from: #6b6b70;
+  --classic-gray-to: #57575c;
+  --classic-gray-border: rgba(0, 0, 0, 0.6);
+  --classic-gray-text: #ffffff;
+  --classic-highlight: rgba(255, 255, 255, 0.22);
+  --classic-shade: rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-leaf: var(--leaf);
+  --color-leaf-soft: var(--leaf-soft);
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes shimmer {
+    0% {
+      background-position: 150% center;
+    }
+    100% {
+      background-position: -50% center;
+    }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+.fa-serif {
+  font-family: var(--font-serif);
+}
