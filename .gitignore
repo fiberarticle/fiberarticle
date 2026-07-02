@@ -1,0 +1,33 @@
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+build/
+*.docx
+
+# Local run logs
+*.log
