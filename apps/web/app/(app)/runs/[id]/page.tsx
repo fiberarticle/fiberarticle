@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { RunView } from "./run-view";
 
 export const metadata = { title: "Run" };
@@ -8,5 +9,9 @@ export default async function RunPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <RunView runId={id} />;
+  return (
+    <Suspense>
+      <RunView runId={id} />
+    </Suspense>
+  );
 }
