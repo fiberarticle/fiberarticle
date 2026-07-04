@@ -81,7 +81,12 @@ _SECTION_PLAN: list[tuple[str, str, str]] = [
 async def _retrieve_evidence(
     run_id: str, user_id: str, query: str, limit: int = 6
 ) -> list[dict]:
-    vector = await embed_query(query)
+    try:
+        vector = await embed_query(query)
+    except Exception:
+        # Embeddings unavailable: callers fall back to abstracts.
+        logger.warning("embed_query failed; writing from abstracts")
+        return []
     return await fetch_all(
         """
         SELECT paper_id, content
