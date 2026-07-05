@@ -15,7 +15,23 @@ from agent.state import ResearchState
 from llm.client import ResolvedLlm
 
 
-def build_graph(run_id: str, user_id: str, llm: ResolvedLlm):
+STAGES = [
+    "plan",
+    "generate_queries",
+    "search",
+    "dedupe_rank",
+    "screen",
+    "fetch_oa_pdfs",
+    "parse",
+    "chunk_embed",
+    "extract",
+    "coverage_check",
+    "synthesize",
+    "report",
+]
+
+
+def build_graph(run_id: str, user_id: str, llm: ResolvedLlm, entry: str = "plan"):
     nodes = ResearchNodes(run_id, user_id, llm)
     graph = StateGraph(ResearchState)
 
@@ -32,7 +48,9 @@ def build_graph(run_id: str, user_id: str, llm: ResolvedLlm):
     graph.add_node("synthesize", nodes.synthesize)
     graph.add_node("report", nodes.report)
 
-    graph.add_edge(START, "plan")
+    # Resume support: a failed run re-enters the graph at the stage it died
+    # in, with its saved state. Fresh runs always enter at "plan".
+    graph.add_edge(START, entry if entry in STAGES else "plan")
     graph.add_edge("plan", "generate_queries")
     graph.add_edge("generate_queries", "search")
     graph.add_edge("search", "dedupe_rank")
