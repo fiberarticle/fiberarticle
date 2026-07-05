@@ -4,6 +4,7 @@ import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from agent.runner import cancel_run as cancel_run_task
 from agent.runner import start_run
 from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
@@ -43,6 +44,15 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
         body.filters.model_dump(exclude_none=True) if body.filters else None
     )
     criteria = (body.criteria or "").strip() or None
+    # Attached papers: only ones the user actually owns become seeds.
+    seed_ids: list[str] = []
+    if body.seed_paper_ids:
+        owned = await fetch_all(
+            "SELECT id FROM papers WHERE user_id = %s AND id = ANY(%s::uuid[])",
+            user_id,
+            body.seed_paper_ids,
+        )
+        seed_ids = [str(r["id"]) for r in owned]
     row = await fetch_one(
         """
         INSERT INTO runs (user_id, topic, mode, filters, criteria)
@@ -55,7 +65,9 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
         jsonb(filters) if filters else None,
         criteria,
     )
-    start_run(str(row["id"]), user_id, body.topic.strip(), body.mode, filters, criteria)
+    start_run(
+        str(row["id"]), user_id, body.topic.strip(), body.mode, filters, criteria, seed_ids
+    )
     # Sidebar history shows an AI title, not the raw topic. Background only.
     schedule_title("run", str(row["id"]), user_id, body.topic.strip())
     return _run_out(row)
@@ -142,6 +154,26 @@ async def update_run(
             body.pinned,
             run_id,
         )
+    return _run_out(await _get_owned_run(run_id, user_id))
+
+
+@router.post("/{run_id}/cancel", response_model=RunOut)
+async def cancel_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+    """Non-destructive stop: the run is marked cancelled and everything
+    collected so far (papers, events, partial report) is kept."""
+    row = await _get_owned_run(run_id, user_id)
+    if row["status"] not in ("pending", "running"):
+        raise HTTPException(409, "Only a pending or running run can be stopped.")
+    cancel_run_task(run_id)
+    # Conditional update: if the task slipped to completed/failed in the
+    # meantime, that terminal status wins.
+    await execute(
+        """
+        UPDATE runs SET status = 'cancelled', error = NULL, updated_at = now()
+        WHERE id = %s AND status IN ('pending', 'running')
+        """,
+        run_id,
+    )
     return _run_out(await _get_owned_run(run_id, user_id))
 
 
