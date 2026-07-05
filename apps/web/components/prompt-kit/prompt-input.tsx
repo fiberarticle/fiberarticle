@@ -42,7 +42,7 @@ function PromptInput({
   value,
   onValueChange,
   onSubmit,
-  maxHeight = 240,
+  maxHeight = 320,
   children,
   ...props
 }: PromptInputProps) {
@@ -76,13 +76,11 @@ function PromptInputTextarea({
   const { value, setValue, maxHeight, onSubmit } = usePromptInput();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  React.useEffect(() => {
-    if (disableAutosize || !textareaRef.current) return;
-    textareaRef.current.style.height = "auto";
-    textareaRef.current.style.height = `${Math.min(
-      textareaRef.current.scrollHeight,
-      maxHeight
-    )}px`;
+  React.useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (disableAutosize || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
   }, [value, maxHeight, disableAutosize]);
 
   return (
@@ -99,7 +97,7 @@ function PromptInputTextarea({
       }}
       rows={1}
       className={cn(
-        "w-full resize-none border-none bg-transparent px-4 pt-3 text-base outline-none placeholder:text-muted-foreground",
+        "fa-textarea-scroll w-full resize-none overflow-y-auto border-none bg-transparent px-4 pt-3 text-base leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground",
         className
       )}
       {...props}
