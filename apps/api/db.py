@@ -193,30 +193,8 @@ async def _create_schema(conn) -> None:
     await conn.execute(
         "ALTER TABLE llm_config ALTER COLUMN reasoning SET DEFAULT false"
     )
-    await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS notes TEXT")
-    await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS summary JSONB")
     await conn.execute(
         "ALTER TABLE papers ADD COLUMN IF NOT EXISTS cited_by_count INT NOT NULL DEFAULT 0"
-    )
-    await conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS collections (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            UNIQUE (user_id, name)
-        )
-        """
-    )
-    await conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS paper_collections (
-            paper_id UUID NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-            collection_id UUID NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
-            PRIMARY KEY (paper_id, collection_id)
-        )
-        """
     )
     await conn.execute(
         """
