@@ -4,10 +4,8 @@ import { getSessionCookie } from "better-auth/cookies";
 const protectedPrefixes = [
   "/dashboard",
   "/runs",
-  "/library",
   "/documents",
   "/settings",
-  "/ask",
   "/assistant",
   "/extract",
   "/researcher",
@@ -40,10 +38,8 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/runs/:path*",
-    "/library/:path*",
     "/documents/:path*",
     "/settings/:path*",
-    "/ask/:path*",
     "/assistant/:path*",
     "/extract/:path*",
     "/researcher/:path*",
