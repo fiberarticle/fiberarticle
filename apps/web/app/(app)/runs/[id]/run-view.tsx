@@ -52,6 +52,7 @@ import { streamRunEvents } from "@/lib/sse";
 import type {
   DocumentDetail,
   DocumentTemplate,
+  Paper,
   RunDetail,
   RunEvent,
   RunStatus,
@@ -112,7 +113,35 @@ function groupByStage(events: RunEvent[]): StageGroup[] {
   return groups;
 }
 
-function MarkdownTable({ block }: { block: string }) {
+/** Renders text with every [n] citation marker as a link to that paper. */
+function CitedText({ text, papers }: { text: string; papers: Paper[] }) {
+  const parts = text.split(/(\[\d+\])/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = /^\[(\d+)\]$/.exec(part);
+        const paper = match ? papers[Number(match[1]) - 1] : undefined;
+        if (paper?.url) {
+          return (
+            <a
+              key={i}
+              href={paper.url}
+              target="_blank"
+              rel="noreferrer"
+              title={paper.title}
+              className="font-medium text-[#4f90e4] hover:underline"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+function MarkdownTable({ block, papers }: { block: string; papers: Paper[] }) {
   const rows = block
     .split("\n")
     .map((line) => line.trim())
@@ -146,7 +175,7 @@ function MarkdownTable({ block }: { block: string }) {
             <tr key={r} className="border-t border-border align-top">
               {cells.map((cell, c) => (
                 <td key={c} className="px-3 py-2 leading-5">
-                  {cell}
+                  <CitedText text={cell} papers={papers} />
                 </td>
               ))}
             </tr>
@@ -157,7 +186,13 @@ function MarkdownTable({ block }: { block: string }) {
   );
 }
 
-function ReportView({ markdown }: { markdown: string }) {
+function ReportView({
+  markdown,
+  papers,
+}: {
+  markdown: string;
+  papers: Paper[];
+}) {
   const blocks = markdown.split(/\n{2,}/);
   return (
     <div className="flex flex-col gap-4">
@@ -179,11 +214,11 @@ function ReportView({ markdown }: { markdown: string }) {
           );
         }
         if (trimmed.startsWith("|")) {
-          return <MarkdownTable key={i} block={trimmed} />;
+          return <MarkdownTable key={i} block={trimmed} papers={papers} />;
         }
         return (
           <p key={i} className="whitespace-pre-wrap text-[15px] leading-7">
-            {trimmed}
+            <CitedText text={trimmed} papers={papers} />
           </p>
         );
       })}
@@ -232,6 +267,17 @@ export function RunView({ runId }: { runId: string }) {
   const [elapsed, setElapsed] = useState("");
   const userToggledRef = useRef(false);
   const runStatusRef = useRef<RunStatus | null>(null);
+  // Slide-out report panel: opens itself the first time a report exists,
+  // then the user opens and closes it freely.
+  const [reportOpen, setReportOpen] = useState(false);
+  const reportAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (run?.report && !reportAutoOpenedRef.current) {
+      reportAutoOpenedRef.current = true;
+      setReportOpen(true);
+    }
+  }, [run?.report]);
 
   const loadRun = useCallback(async () => {
     try {
@@ -396,7 +442,15 @@ export function RunView({ runId }: { runId: string }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    // With the report panel open, a fixed right margin reserves the panel's
+    // width, so the auto left margin re-centers the content in the space
+    // that remains: both stay fully visible side by side.
+    <div
+      className={cn(
+        "mx-auto flex max-w-3xl flex-col gap-6",
+        reportOpen && run.report && "xl:mr-[47rem]"
+      )}
+    >
       <div>
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground">
@@ -466,7 +520,15 @@ export function RunView({ runId }: { runId: string }) {
           </div>
         )}
         {run.status === "completed" && (
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {run.report && (
+              <Button
+                variant="secondary"
+                onClick={() => setReportOpen((v) => !v)}
+              >
+                <FileText /> {reportOpen ? "Hide report" : "View report"}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button loading={generatingDoc}>
@@ -564,20 +626,24 @@ export function RunView({ runId }: { runId: string }) {
                       </span>
                     </ChainOfThoughtTrigger>
                     <ChainOfThoughtContent>
-                      {group.events.map((event) => (
-                        <ChainOfThoughtItem
-                          key={event.id}
-                          className={
-                            event.type === "error"
-                              ? "text-destructive"
-                              : event.type === "warning"
-                                ? "text-warning"
-                                : undefined
-                          }
-                        >
-                          {event.message}
-                        </ChainOfThoughtItem>
-                      ))}
+                      {/* Claude-style: long stage logs stay compact and
+                          scroll inside a fixed-height box. */}
+                      <div className="fa-textarea-scroll flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-2">
+                        {group.events.map((event) => (
+                          <ChainOfThoughtItem
+                            key={event.id}
+                            className={
+                              event.type === "error"
+                                ? "text-destructive"
+                                : event.type === "warning"
+                                  ? "text-warning"
+                                  : undefined
+                            }
+                          >
+                            {event.message}
+                          </ChainOfThoughtItem>
+                        ))}
+                      </div>
                     </ChainOfThoughtContent>
                   </ChainOfThoughtStep>
                 );
@@ -588,7 +654,7 @@ export function RunView({ runId }: { runId: string }) {
       </Card>
 
       {run.papers.length > 0 && (
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2.5 text-sm font-semibold text-muted-foreground">
             Sources ({run.papers.length})
           </h2>
@@ -617,12 +683,33 @@ export function RunView({ runId }: { runId: string }) {
         </div>
       )}
 
+      {/* Slide-out report panel, Claude artifact style: opens from the
+          right edge, closable, reopenable from the View report button. */}
       {run.report && (
-        <Card>
-          <CardContent className="pt-5">
-            <ReportView markdown={run.report} />
-          </CardContent>
-        </Card>
+        <div
+          className={cn(
+            "fixed inset-y-0 right-0 z-40 flex w-[min(720px,94vw)] flex-col border-l border-border bg-card shadow-[-24px_0_60px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-out",
+            reportOpen ? "translate-x-0" : "translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <FileText className="size-4 text-muted-foreground" />
+              Research report
+            </span>
+            <button
+              type="button"
+              aria-label="Close report"
+              onClick={() => setReportOpen(false)}
+              className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
+            <ReportView markdown={run.report} papers={run.papers} />
+          </div>
+        </div>
       )}
     </div>
   );
