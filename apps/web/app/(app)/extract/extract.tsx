@@ -327,7 +327,7 @@ export function Extract() {
                 <span>
                   {active.name}{" "}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    {active.rows.length} of {active.status === "running" ? "..." : active.rows.length} papers
+                    {active.rows.length} of {active.total_papers} papers
                   </span>
                 </span>
                 <span className="flex gap-2">
