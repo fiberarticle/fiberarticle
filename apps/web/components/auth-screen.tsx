@@ -58,7 +58,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             </h1>
             <p className={styles.leftDescription}>
               <span className={styles.descLine}>An Agentic AI that,</span>
-              <span className={`${styles.descLine} ${styles.hlAmber}`}>
+              <span className={`${styles.descLine} ${styles.hlBlue}`}>
                 Researches.
               </span>
               <span className={`${styles.descLine} ${styles.hlGreen}`}>
