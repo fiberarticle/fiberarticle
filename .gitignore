@@ -31,3 +31,6 @@ build/
 
 # Local run logs
 *.log
+
+# Citation styles fetched at runtime (bundled styles are committed)
+apps/api/csl/cache/
