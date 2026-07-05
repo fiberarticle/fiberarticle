@@ -20,7 +20,8 @@ class LlmConfigIn(BaseModel):
     api_key: str | None = None
     base_url: str | None = None
     # Fiberarticle AI managed mode: max reasoning (thorough) vs fast.
-    reasoning: bool = True
+    # Defaults off: the fast model is the zero-friction default.
+    reasoning: bool = False
 
 
 class LlmConfigOut(BaseModel):
@@ -30,7 +31,7 @@ class LlmConfigOut(BaseModel):
     base_url: str | None
     has_key: bool
     caps: dict[str, int]
-    reasoning: bool = True
+    reasoning: bool = False
 
 
 class PreferencesIn(BaseModel):
@@ -59,6 +60,9 @@ class RunCreate(BaseModel):
     filters: RunFilters | None = None
     # Inclusion/exclusion criteria applied during screening.
     criteria: str | None = Field(default=None, max_length=2000)
+    # Library papers the user attached to this task: always included in the
+    # run alongside fresh search results.
+    seed_paper_ids: list[str] | None = Field(default=None, max_length=20)
 
 
 class RunOut(BaseModel):
@@ -139,6 +143,9 @@ class DocumentOut(BaseModel):
     title: str
     template: str
     status: str
+    # Planned section count while generating; written count once done. Lets
+    # the editor show real "n of m sections" progress.
+    total_sections: int = 0
     sections: list[DocumentSection]
     authors: list[str]
     citation_style: str | None = None
@@ -245,25 +252,6 @@ class CollectionOut(BaseModel):
     created_at: datetime
 
 
-class SearchIn(BaseModel):
-    query: str = Field(min_length=3, max_length=500)
-    year_from: int | None = None
-    year_to: int | None = None
-    open_access_only: bool = False
-    full_text_only: bool = False
-    min_citations: int | None = Field(default=None, ge=0)
-    quartiles: list[Literal["Q1", "Q2", "Q3", "Q4"]] | None = None
-    answer: bool = True
-
-
-class SearchResultOut(BaseModel):
-    results: list[PaperAddIn]
-    answer: str | None
-    answer_sources: list[int]
-    sub_queries: list[str]
-    in_library_dois: list[str]
-
-
 class ConversationCreateIn(BaseModel):
     scope: Literal["library", "paper"] = "library"
     paper_id: str | None = None
@@ -305,6 +293,9 @@ class ChatMessageOut(BaseModel):
 
 class ChatMessageIn(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+    # True when the user attached/uploaded files with this message: forces
+    # one library_search pass so the attached documents are always consulted.
+    search_library_first: bool = False
 
 
 class ExtractionColumn(BaseModel):
@@ -329,6 +320,9 @@ class ExtractionOut(BaseModel):
     name: str
     status: str
     pinned: bool = False
+    # How many papers this extraction covers, so the UI can show real
+    # "n of m papers" progress while rows stream in.
+    total_papers: int = 0
     columns: list[ExtractionColumn]
     rows: list[dict[str, Any]]
     error: str | None
