@@ -14,9 +14,13 @@ reply never kills the turn — the loop degrades to a direct answer.
 """
 
 import asyncio
+import json
 import logging
 import re
 from typing import Any
+from urllib.parse import quote
+
+import httpx
 
 from db import fetch_all
 from llm.client import ResolvedLlm
@@ -37,6 +41,44 @@ _THOUGHT_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
+# Some models ignore the ReAct text format and emit their native tool-call
+# markup instead. Recognize the common shapes so a tool call is executed
+# rather than shown to the user as a raw XML/JSON blob.
+_XML_TOOL_RE = re.compile(
+    r"<tool_call>.*?<function_name>\s*(\w+)\s*</function_name>"
+    r".*?<arguments>\s*(\{.*?\})\s*</arguments>",
+    re.DOTALL | re.IGNORECASE,
+)
+_JSON_TOOL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
+_TOOLBLOB_RE = re.compile(r"<tool_call>.*?(?:</tool_call>|\Z)", re.DOTALL | re.IGNORECASE)
+_LOOKS_TOOLCALL_RE = re.compile(r"<tool_call|<function_name", re.IGNORECASE)
+
+
+def _parse_native_tool_call(text: str) -> tuple[str | None, str | None]:
+    """(tool, query) from a native-format tool call, or (None, None)."""
+    m = _XML_TOOL_RE.search(text)
+    if m:
+        tool = m.group(1).lower()
+        try:
+            args = json.loads(m.group(2))
+            value = args.get("query") or next(iter(args.values()), "")
+            return tool, str(value).strip()
+        except Exception:
+            return tool, None
+    m = _JSON_TOOL_RE.search(text)
+    if m:
+        try:
+            data = json.loads(m.group(1))
+            tool = str(data.get("name") or data.get("function") or "").lower()
+            args = data.get("arguments") or data.get("parameters") or {}
+            if isinstance(args, str):
+                args = json.loads(args)
+            value = args.get("query") if isinstance(args, dict) else ""
+            return (tool or None), str(value or "").strip()
+        except Exception:
+            return None, None
+    return None, None
+
 _SYSTEM = """You are Fiberarticle Assistant, a research assistant that answers \
 any question accurately, grounding claims in sources whenever possible.
 
@@ -45,11 +87,14 @@ You have these tools:
 (full text and abstracts). Input: a short search query.
 - scholar_search: searches published academic literature (OpenAlex, \
 Crossref). Input: a short keyword query.
+- web_search: searches the web (Wikipedia) for current events, people \
+currently in office, organizations, places, and general facts. Input: a \
+short topic query.
 
 Work in steps. On each step respond with EXACTLY one of these two formats:
 
 Thought: <your reasoning about what to do next>
-Action: <library_search or scholar_search>
+Action: <library_search, scholar_search, or web_search>
 Action Input: <the query>
 
 OR, once you can answer:
@@ -60,6 +105,9 @@ Final Answer: <the answer>
 Rules:
 - Questions about "my papers", "this paper", or an attached document need \
 library_search first.
+- Questions about current events or anything that may have changed after \
+your training data need web_search; trust its observations over your own \
+memory when they conflict.
 - Factual or scientific claims should be checked against sources; cite \
 evidence with bracketed numbers like [2] that match the numbered \
 observations you received.
@@ -164,6 +212,76 @@ class AssistantAgent:
             )
         return "\n".join(lines)
 
+    async def _web_search(self, query: str) -> str:
+        """Keyless general-knowledge lookup via Wikipedia: search titles,
+        then pull each page's summary as citable evidence."""
+        # Wikimedia's robot policy 403s vague user agents: it requires a
+        # descriptive UA with a contact address.
+        headers = {
+            "User-Agent": (
+                "FiberarticleAssistant/0.1 "
+                "(https://fiberarticle.com; abdulateeb5932@gmail.com) httpx"
+            )
+        }
+        try:
+            async with httpx.AsyncClient(
+                timeout=12, headers=headers, follow_redirects=True
+            ) as client:
+                # Full-text search, not opensearch: opensearch only matches
+                # title prefixes and returns nothing for natural queries
+                # like "current chief minister of tamil nadu".
+                res = await client.get(
+                    "https://en.wikipedia.org/w/api.php",
+                    params={
+                        "action": "query",
+                        "list": "search",
+                        "srsearch": query,
+                        "srlimit": 3,
+                        "format": "json",
+                    },
+                )
+                res.raise_for_status()
+                titles = [
+                    item["title"]
+                    for item in res.json().get("query", {}).get("search", [])
+                ]
+                lines = []
+                for title in titles:
+                    summary = await client.get(
+                        "https://en.wikipedia.org/api/rest_v1/page/summary/"
+                        + quote(title, safe="")
+                    )
+                    if summary.status_code != 200:
+                        continue
+                    data = summary.json()
+                    extract = _snippet(data.get("extract"))
+                    if not extract:
+                        continue
+                    url = ((data.get("content_urls") or {}).get("desktop") or {}).get(
+                        "page"
+                    )
+                    self.evidence.append(
+                        {
+                            "paper_id": None,
+                            "title": f"Wikipedia: {data.get('title') or title}",
+                            "quote": extract,
+                            "url": url,
+                        }
+                    )
+                    lines.append(f"[{len(self.evidence)}] {title}: {extract}")
+                if lines:
+                    return "\n".join(lines)
+                return (
+                    "No web results for that query. Try a shorter, more "
+                    "specific query, or answer from general knowledge and "
+                    "say the lookup found nothing."
+                )
+        except Exception:
+            return (
+                "Web search is unavailable right now. Answer from general "
+                "knowledge and say you could not verify against the web."
+            )
+
     async def run(
         self,
         question: str,
@@ -218,13 +336,35 @@ class AssistantAgent:
                 break
 
             action = _ACTION_RE.search(text)
-            if not action:
-                # No recognizable structure: treat the whole reply as the answer.
-                answer = text
-                break
-
-            tool = action.group(1).lower()
-            tool_input = action.group(2).strip().strip('"')
+            if action:
+                tool = action.group(1).lower()
+                tool_input = action.group(2).strip().strip('"')
+            else:
+                # Models that ignore the text format fall back to their
+                # native tool-call markup: execute it instead of showing it.
+                tool, tool_input = _parse_native_tool_call(text)
+                if tool is None:
+                    if _LOOKS_TOOLCALL_RE.search(text):
+                        # Unparseable tool call: correct the model, never
+                        # surface the blob as an answer.
+                        messages.append({"role": "assistant", "content": text})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "That tool call could not be parsed. Respond "
+                                    "using EXACTLY this format:\nThought: <why>\n"
+                                    "Action: <library_search, scholar_search, or "
+                                    "web_search>\nAction Input: <the query>"
+                                ),
+                            }
+                        )
+                        continue
+                    # No structure at all: treat the reply as the answer.
+                    answer = text
+                    break
+                if not tool_input:
+                    tool_input = question[:200]
             if thought:
                 self.steps.append({"type": "thought", "text": thought})
 
@@ -232,8 +372,13 @@ class AssistantAgent:
                 observation = await self._library_search(tool_input)
             elif tool == "scholar_search":
                 observation = await self._scholar_search(tool_input)
+            elif tool == "web_search":
+                observation = await self._web_search(tool_input)
             else:
-                observation = f"Unknown tool '{tool}'. Use library_search or scholar_search."
+                observation = (
+                    f"Unknown tool '{tool}'. Use library_search, "
+                    "scholar_search, or web_search."
+                )
             self.steps.append(
                 {
                     "type": "action",
@@ -261,6 +406,23 @@ class AssistantAgent:
             text = (await self.llm.complete(messages, max_tokens=900)).strip()
             final = _FINAL_RE.search(text)
             answer = (final.group(1) if final else text).strip()
+
+        # A tool-call blob must never reach the user, even inside an answer.
+        if answer and _LOOKS_TOOLCALL_RE.search(answer):
+            answer = _TOOLBLOB_RE.sub("", answer).strip()
+            if not answer:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Stop calling tools. Give your Final Answer now in "
+                            "plain prose from the observations so far."
+                        ),
+                    }
+                )
+                text = (await self.llm.complete(messages, max_tokens=900)).strip()
+                final = _FINAL_RE.search(text)
+                answer = _TOOLBLOB_RE.sub("", (final.group(1) if final else text)).strip()
 
         # Only evidence actually cited in the answer becomes a citation chip.
         # No [n] markers means the answer used no sources: show none, rather
