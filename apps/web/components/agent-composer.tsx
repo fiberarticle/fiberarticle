@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 const ACCEPTED_FILES = ".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp";
 
 /** Small rectangle badge for one attachment: preview, name, remove cross. */
-function AttachmentBadge({
+export function AttachmentBadge({
   file,
   onRemove,
 }: {
