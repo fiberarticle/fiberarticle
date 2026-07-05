@@ -402,6 +402,13 @@
   text-indent: var(--pg-indent, 0);
   margin: 0 0 var(--pg-space, 0.55em);
 }
+/* Typographic rule: the first paragraph after a heading needs no indent
+   (the heading already marks the new thought); only the paragraphs that
+   follow are indented to signal "new paragraph" inside the prose block. */
+.fa-page .fa-prose h2 + p,
+.fa-page .fa-prose h3 + p {
+  text-indent: 0;
+}
 .fa-page .fa-prose ul p,
 .fa-page .fa-prose ol p,
 .fa-page .fa-prose blockquote p,
