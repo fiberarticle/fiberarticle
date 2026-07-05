@@ -20,7 +20,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
 from docx.oxml.ns import qn
 from docx.shared import Inches, Mm, Pt
 
-from export.md import decode_data_image, isolate_images, span_props
+from export.md import (
+    aligned_block,
+    decode_data_image,
+    html_inline_segments,
+    isolate_images,
+    span_props,
+)
 
 _CITE_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _PLACEHOLDER_RE = re.compile(r"^\[.*placeholder.*\]$", re.IGNORECASE)
@@ -108,6 +114,29 @@ def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
     return segments
 
 
+def _apply_marks(run, marks: frozenset, style: dict) -> None:
+    run.font.name = "Consolas" if "code" in marks else style["font"]
+    run.font.size = style["body_size"]
+    # Per-selection font family/size from the editor's font controls.
+    family, size = span_props(marks)
+    if family and "code" not in marks:
+        run.font.name = family
+    if size:
+        run.font.size = Pt(size)
+    if "bold" in marks:
+        run.bold = True
+    if "italic" in marks:
+        run.italic = True
+    if "strike" in marks:
+        run.font.strike = True
+    if "underline" in marks:
+        run.underline = True
+    if "superscript" in marks:
+        run.font.superscript = True
+    if "subscript" in marks:
+        run.font.subscript = True
+
+
 def _write_runs(
     p, text: str, style: dict, base_marks: frozenset = frozenset()
 ) -> None:
@@ -115,28 +144,22 @@ def _write_runs(
     for seg_text, seg_marks in _parse_inline(text):
         if not seg_text:
             continue
-        marks = base_marks | seg_marks
         run = p.add_run(seg_text)
-        run.font.name = "Consolas" if "code" in marks else style["font"]
-        run.font.size = style["body_size"]
-        # Per-selection font family/size from the editor's font controls.
-        family, size = span_props(marks)
-        if family and "code" not in marks:
-            run.font.name = family
-        if size:
-            run.font.size = Pt(size)
-        if "bold" in marks:
-            run.bold = True
-        if "italic" in marks:
-            run.italic = True
-        if "strike" in marks:
-            run.font.strike = True
-        if "underline" in marks:
-            run.underline = True
-        if "superscript" in marks:
-            run.font.superscript = True
-        if "subscript" in marks:
-            run.font.subscript = True
+        _apply_marks(run, base_marks | seg_marks, style)
+
+
+def _write_segments(
+    p,
+    segments: list[tuple[str, frozenset]],
+    style: dict,
+    base_marks: frozenset = frozenset(),
+) -> None:
+    """Write pre-parsed (text, marks) segments into paragraph p."""
+    for seg_text, seg_marks in segments:
+        if not seg_text:
+            continue
+        run = p.add_run(seg_text)
+        _apply_marks(run, base_marks | seg_marks, style)
 
 
 def _add_table(
@@ -180,11 +203,17 @@ def _add_body_paragraphs(
         quote_style_exists = False
 
     table_buffer: list[str] = []
+    # Typographic rule: the first paragraph after a heading (the section
+    # heading this body follows, or an inline subheading) is not indented;
+    # later paragraphs are.
+    suppress_indent = True
 
     def flush_table() -> None:
+        nonlocal suppress_indent
         if table_buffer:
             _add_table(doc, list(table_buffer), style, intext)
             table_buffer.clear()
+            suppress_indent = False
 
     for raw in isolate_images(text).split("\n"):
         line = raw.strip()
@@ -198,6 +227,45 @@ def _add_body_paragraphs(
         if _PAGE_BREAK_RE.match(line):
             p = doc.add_paragraph()
             p.add_run().add_break(WD_BREAK.PAGE)
+            continue
+
+        aligned = aligned_block(line)
+        if aligned:
+            tag, align, inner = aligned
+            segments = html_inline_segments(inner)
+            if intext:
+                segments = [
+                    (
+                        _CITE_RE.sub(
+                            lambda m: intext.get(m.group(0), m.group(0)), text
+                        ),
+                        marks,
+                    )
+                    for text, marks in segments
+                ]
+            heading_like = tag.startswith("h")
+            p = doc.add_paragraph()
+            p.alignment = {
+                "left": WD_ALIGN_PARAGRAPH.LEFT,
+                "center": WD_ALIGN_PARAGRAPH.CENTER,
+                "right": WD_ALIGN_PARAGRAPH.RIGHT,
+                "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
+            }.get(align, WD_ALIGN_PARAGRAPH.LEFT)
+            run_style = (
+                {**style, "body_size": style["heading_size"]}
+                if heading_like
+                else style
+            )
+            _write_segments(
+                p,
+                segments,
+                run_style,
+                frozenset({"bold"}) if heading_like else frozenset(),
+            )
+            if style["double_space"]:
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
+            p.paragraph_format.space_after = style["space_after"]
+            suppress_indent = heading_like
             continue
 
         image_match = _IMAGE_LINE_RE.match(line)
@@ -215,6 +283,7 @@ def _add_body_paragraphs(
                     picture.height = int(picture.height * ratio)
                     picture.width = max_width
                 p.paragraph_format.space_after = Pt(6)
+                suppress_indent = False
             continue
         if intext:
             line = _CITE_RE.sub(lambda m: intext.get(m.group(0), m.group(0)), line)
@@ -230,6 +299,7 @@ def _add_body_paragraphs(
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
             p.paragraph_format.space_before = Pt(8)
             p.paragraph_format.space_after = Pt(4)
+            suppress_indent = True
             continue
 
         list_style = None
@@ -268,7 +338,12 @@ def _add_body_paragraphs(
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         elif list_style is None:
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-            p.paragraph_format.first_line_indent = style["indent"]
+            p.paragraph_format.first_line_indent = (
+                None if suppress_indent else style["indent"]
+            )
+        # Any written block (prose, list item, quote, placeholder) ends the
+        # after-heading suppression.
+        suppress_indent = False
         if style["double_space"]:
             p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
         p.paragraph_format.space_after = style["space_after"]
