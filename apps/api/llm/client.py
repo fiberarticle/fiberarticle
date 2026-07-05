@@ -4,9 +4,28 @@ The agent never talks to a provider directly and never sees raw keys:
 it receives a ResolvedLlm bound to the user's stored configuration.
 """
 
+import re
 from dataclasses import dataclass
 
 import litellm
+
+# House style enforcement on every completion: no em/en dashes, no emojis.
+# The prompts already forbid them; this is the guarantee for models that
+# ignore instructions.
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001f300-\U0001faff"  # symbols, pictographs, extended
+    "\U00002600-\U000027bf"  # misc symbols, dingbats
+    "\U0001f1e6-\U0001f1ff"  # regional indicators
+    "️"  # variation selector
+    "]"
+)
+
+
+def _apply_style_rules(text: str) -> str:
+    text = text.replace(" — ", ", ").replace("—", ", ")
+    text = text.replace(" – ", ", ").replace("–", "-")
+    return _EMOJI_RE.sub("", text)
 
 from config import get_settings
 from db import fetch_one
@@ -46,7 +65,7 @@ class ResolvedLlm:
                 content, _ = await self._call(
                     messages, max(max_tokens * 4, 4000), temperature
                 )
-            return content
+            return _apply_style_rules(content)
 
         # Reasoning models spend most of the token budget on hidden reasoning
         # before the visible answer, and they keep that reasoning in a separate
@@ -58,7 +77,7 @@ class ResolvedLlm:
         content, finish = await self._call(messages, budget, temperature)
         if not content and finish == "length":
             content, _ = await self._call(messages, budget * 2, temperature)
-        return content
+        return _apply_style_rules(content)
 
     async def _call(
         self, messages: list[dict], max_tokens: int, temperature: float
