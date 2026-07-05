@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Dashboard } from "./dashboard";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Home" };
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
