@@ -270,7 +270,7 @@ export function Dashboard({ userName }: { userName: string }) {
           <div className="text-center">
             <TextShimmer className="text-sm">
               {uploading
-                ? "Adding your attachments to the library"
+                ? "Adding your attachments"
                 : startingLabel[mode]}
             </TextShimmer>
           </div>
