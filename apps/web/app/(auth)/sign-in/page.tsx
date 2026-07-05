@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { SignInForm } from "./sign-in-form";
+import { AuthScreen } from "@/components/auth-screen";
 
 export const metadata = { title: "Sign in" };
 
@@ -16,7 +16,7 @@ export default async function SignInPage() {
 
   return (
     <Suspense>
-      <SignInForm googleEnabled={Boolean(process.env.GOOGLE_CLIENT_ID)} />
+      <AuthScreen initialMode="login" />
     </Suspense>
   );
 }
