@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
 from db import close_pool, open_pool
 from db import execute
+from rag.embeddings import _get_model
 from routers import (
     chats,
     citations,
@@ -19,10 +21,27 @@ from routers import (
 
 logging.basicConfig(level=logging.INFO)
 
+logger = logging.getLogger("fiberarticle.main")
+
+
+async def _warm_embeddings() -> None:
+    """Load the fastembed model in the background at startup.
+
+    First use otherwise pays a ~130 MB download plus model init, stalling the
+    first upload or run for tens of seconds. Failure is non-fatal: embedding
+    call sites already degrade gracefully.
+    """
+    try:
+        await _get_model()
+        logger.info("embedding model warmed")
+    except Exception:
+        logger.exception("embedding warm-up failed; first use will retry")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await open_pool()
+    asyncio.create_task(_warm_embeddings())
     # Runs execute as in-process tasks; anything still marked running after a
     # restart was interrupted and can never finish. Surface that honestly.
     await execute(
