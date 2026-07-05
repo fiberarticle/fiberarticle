@@ -193,7 +193,7 @@ async def create_extraction(
     )
     owned_ids = [str(r["id"]) for r in owned]
     if not owned_ids:
-        raise HTTPException(422, "None of those papers are in your library.")
+        raise HTTPException(422, "None of those papers belong to your account.")
 
     name = body.name.strip()
     row = await fetch_one(
