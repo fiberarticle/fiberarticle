@@ -146,7 +146,7 @@ export function Dashboard({ userName }: { userName: string }) {
         return;
       }
       // The Assistant page creates the chat and sends this question;
-      // attached=1 forces a library search over the just-uploaded files.
+      // attached=1 forces a search over the just-uploaded files.
       router.push(
         `/assistant?q=${encodeURIComponent(trimmed)}${
           uploadedIds.length > 0 ? "&attached=1" : ""
@@ -175,13 +175,17 @@ export function Dashboard({ userName }: { userName: string }) {
           seed_paper_ids: seedIds.length > 0 ? seedIds : null,
         }),
       });
+      // Feature-named URLs: a review run lives under /literature-reviewer,
+      // everything else (research, article intent) under /researcher.
+      const base =
+        mode === "review" ? "/literature-reviewer" : "/researcher";
       if (mode === "article") {
         // The run page consumes this once and auto-generates the article
         // when the research completes.
         sessionStorage.setItem(`fa-article-intent-${run.id}`, "1");
-        router.push(`/runs/${run.id}?intent=article`);
+        router.push(`${base}/${run.id}?intent=article`);
       } else {
-        router.push(`/runs/${run.id}`);
+        router.push(`${base}/${run.id}`);
       }
     } catch (e) {
       setError(
@@ -257,10 +261,10 @@ export function Dashboard({ userName }: { userName: string }) {
           <p className="text-center text-xs text-muted-foreground">
             Need screening criteria and filters? Use the full{" "}
             <Link
-              href="/review"
+              href="/literature-reviewer"
               className="font-medium text-primary hover:underline"
             >
-              Literature review
+              Literature Reviewer
             </Link>{" "}
             form.
           </p>
