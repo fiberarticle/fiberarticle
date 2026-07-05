@@ -18,6 +18,7 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from "@/components/prompt-kit/prompt-input";
+import { StarBorder } from "@/components/star-border";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -368,12 +369,16 @@ export function AgentComposer({
       </div>
 
       <div className="relative z-10">
+        <StarBorder
+          radius={26}
+          className="w-full shadow-[0_24px_60px_-26px_rgba(0,0,0,0.65)]"
+        >
         <PromptInput
           isLoading={isLoading}
           value={value}
           onValueChange={onValueChange}
           onSubmit={onSubmit}
-          className="w-full rounded-[26px] border-2 border-[color-mix(in_oklab,var(--border)_78%,var(--muted-foreground))] bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--card)_88%,white),color-mix(in_oklab,var(--card)_97%,white)_50%)] shadow-[inset_0_1.5px_0_var(--classic-highlight),0_24px_60px_-26px_rgba(0,0,0,0.65)]"
+          className="w-full rounded-[24px] border-0 bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--card)_88%,white),color-mix(in_oklab,var(--card)_97%,white)_50%)] shadow-[inset_0_1.5px_0_var(--classic-highlight)]"
         >
           <div className="flex flex-col">
             <PromptInputTextarea
@@ -440,6 +445,7 @@ export function AgentComposer({
             </PromptInputActions>
           </div>
         </PromptInput>
+        </StarBorder>
       </div>
     </div>
   );
