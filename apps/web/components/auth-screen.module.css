@@ -223,8 +223,8 @@
 }
 
 /* Decorative Lottie in the empty lower half of the brand panel. Above the
-   stripes/fade layers (z=2), below the brand text (z=10). Hidden on the
-   stacked mobile layout where the panel has no spare room. */
+   stripes/fade layers (z=2), below the brand text (z=10). On the stacked
+   mobile layout it flows under the tagline instead of floating. */
 /* Comfortable hero size; the side fades on .animSearch (not raw scale)
    sell the endless-stream illusion, so the artwork never has to dominate
    the composition to feel bigger than the panel. */
@@ -277,8 +277,15 @@
 }
 
 @media (max-width: 767.98px) {
+  /* In the stacked layout the panel hugs its content, so the animation
+     joins the normal flow right under the tagline: full width, its own
+     height from the aspect ratio, still masked at the sides. */
   .leftAnimation {
-    display: none;
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-top: 10px;
+    order: 2;
   }
 }
 
@@ -536,9 +543,11 @@
   }
 
   .leftPanel {
-    min-height: 42vh;
+    /* The panel hugs its content (brand, tagline, animation) instead of
+       reserving 42vh; the form starts right below without a dead gap. */
+    min-height: 0;
     justify-content: flex-start;
-    padding: 28px 24px 34px;
+    padding: 28px 24px 26px;
   }
 
   .leftContent {
