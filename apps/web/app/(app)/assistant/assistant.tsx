@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowUp, FileText, Library, Plus, Trash2 } from "lucide-react";
+import { AssistantArt } from "@/components/art";
 import {
   Source,
   SourceContent,
@@ -199,6 +200,7 @@ export function Assistant() {
 
         {!active ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+            <AssistantArt className="w-48" />
             <h1 className="text-2xl font-semibold tracking-tight">
               Chat with your papers
             </h1>
