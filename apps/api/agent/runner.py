@@ -24,10 +24,20 @@ async def _set_status(run_id: str, status: str, error: str | None = None) -> Non
     )
 
 
-async def _execute(run_id: str, user_id: str, topic: str) -> None:
+async def _execute(
+    run_id: str,
+    user_id: str,
+    topic: str,
+    mode: str = "research",
+    filters: dict | None = None,
+    criteria: str | None = None,
+) -> None:
     try:
         llm = await resolve_llm(user_id)
         caps = CAPS[llm.mode]
+        papers_per_run = caps["papers_per_run"]
+        if filters and filters.get("max_papers"):
+            papers_per_run = min(papers_per_run, int(filters["max_papers"]))
         await _set_status(run_id, "running")
         graph = build_graph(run_id, user_id, llm)
         await asyncio.wait_for(
@@ -36,7 +46,10 @@ async def _execute(run_id: str, user_id: str, topic: str) -> None:
                     "run_id": run_id,
                     "user_id": user_id,
                     "topic": topic,
-                    "papers_per_run": caps["papers_per_run"],
+                    "papers_per_run": papers_per_run,
+                    "mode": mode,
+                    "filters": filters or {},
+                    "criteria": criteria or "",
                 },
                 {"recursion_limit": 60},
             ),
@@ -62,6 +75,15 @@ async def _execute(run_id: str, user_id: str, topic: str) -> None:
         _active_tasks.pop(run_id, None)
 
 
-def start_run(run_id: str, user_id: str, topic: str) -> None:
-    task = asyncio.create_task(_execute(run_id, user_id, topic))
+def start_run(
+    run_id: str,
+    user_id: str,
+    topic: str,
+    mode: str = "research",
+    filters: dict | None = None,
+    criteria: str | None = None,
+) -> None:
+    task = asyncio.create_task(
+        _execute(run_id, user_id, topic, mode, filters, criteria)
+    )
     _active_tasks[run_id] = task
