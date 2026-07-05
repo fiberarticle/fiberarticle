@@ -824,7 +824,7 @@ function AiBar({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe how you want to edit or rewrite this text..."
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
         />
         <Button type="submit" size="sm" disabled={!prompt.trim()}>
           <ArrowUp />
@@ -1218,7 +1218,7 @@ function AiDocPanel({
             rows={1}
             disabled={busy}
             placeholder="Ask for any edit or question..."
-            className="fa-textarea-scroll max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent px-1.5 py-2 text-sm leading-relaxed outline-none placeholder:text-muted-foreground disabled:opacity-60"
+            className="fa-textarea-scroll max-h-32 min-h-9 flex-1 resize-none overflow-y-auto bg-transparent px-1.5 py-2 text-base leading-relaxed outline-none placeholder:text-muted-foreground disabled:opacity-60 sm:text-sm"
           />
           <Button
             size="icon-sm"
