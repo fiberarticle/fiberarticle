@@ -13,7 +13,13 @@ from fastapi.responses import Response
 
 from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
-from models import ExtractionColumn, ExtractionCreateIn, ExtractionOut
+from llm.titles import schedule_title
+from models import (
+    ExtractionColumn,
+    ExtractionCreateIn,
+    ExtractionOut,
+    ExtractionUpdate,
+)
 from security import CurrentUser
 
 router = APIRouter(prefix="/v1/extractions", tags=["extractions"])
@@ -26,6 +32,7 @@ def _extraction_out(row: dict) -> ExtractionOut:
         id=str(row["id"]),
         name=row["name"],
         status=row["status"],
+        pinned=bool(row.get("pinned")),
         columns=[ExtractionColumn(**c) for c in row["columns"]],
         rows=row["rows"] or [],
         error=row["error"],
@@ -187,6 +194,7 @@ async def create_extraction(
     if not owned_ids:
         raise HTTPException(422, "None of those papers are in your library.")
 
+    name = body.name.strip()
     row = await fetch_one(
         """
         INSERT INTO extractions (user_id, name, columns, paper_ids)
@@ -194,11 +202,20 @@ async def create_extraction(
         RETURNING *
         """,
         user_id,
-        body.name.strip(),
+        name or "New extraction",
         jsonb([c.model_dump() for c in body.columns]),
         jsonb(owned_ids),
     )
     asyncio.create_task(_run_extraction(str(row["id"]), user_id))
+    if not name:
+        # No user-given name: title it from what is being extracted.
+        spec = "; ".join(f"{c.name}: {c.description}" for c in body.columns)
+        schedule_title(
+            "extraction",
+            str(row["id"]),
+            user_id,
+            f"Extract these fields from {len(owned_ids)} papers: {spec}",
+        )
     return _extraction_out(row)
 
 
@@ -206,6 +223,26 @@ async def create_extraction(
 async def get_extraction(
     extraction_id: str, user_id: str = CurrentUser
 ) -> ExtractionOut:
+    return _extraction_out(await _get_owned(extraction_id, user_id))
+
+
+@router.patch("/{extraction_id}", response_model=ExtractionOut)
+async def update_extraction(
+    extraction_id: str, body: ExtractionUpdate, user_id: str = CurrentUser
+) -> ExtractionOut:
+    await _get_owned(extraction_id, user_id)
+    if body.name is not None:
+        await execute(
+            "UPDATE extractions SET name = %s, updated_at = now() WHERE id = %s",
+            body.name.strip(),
+            extraction_id,
+        )
+    if body.pinned is not None:
+        await execute(
+            "UPDATE extractions SET pinned = %s, updated_at = now() WHERE id = %s",
+            body.pinned,
+            extraction_id,
+        )
     return _extraction_out(await _get_owned(extraction_id, user_id))
 
 
