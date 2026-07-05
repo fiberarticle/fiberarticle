@@ -10,6 +10,7 @@ marked placeholders.
 import asyncio
 import json
 import logging
+import re
 import uuid
 
 from db import execute, fetch_all, fetch_one, jsonb
@@ -294,6 +295,171 @@ def cancel_generation(document_id: str) -> bool:
         return False
     task.cancel()
     return True
+
+
+# ------------------------------------------------------------------ agent
+# The AI side panel: a document-level agent that answers questions and can
+# rewrite, insert, or delete whole sections in one turn.
+
+_AGENT_MAX_SECTION_CHARS = 4000
+_AGENT_HISTORY_LIMIT = 12
+
+_AGENT_SYSTEM = """You are Fiberarticle AI, the editing agent inside an \
+academic article editor. You see the full document as a list of sections, \
+each with a stable id. The user asks questions or requests edits; you decide \
+what (if anything) to change.
+
+Respond with ONLY a JSON object in this exact shape:
+{
+  "reply": "<short conversational answer describing what you did or answering the question>",
+  "edits": [{"id": "<section id>", "heading": "<optional new heading>", "content": "<full replacement Markdown for that section>"}],
+  "insert": [{"after_id": "<section id to insert after, or null for the start>", "heading": "<heading>", "content": "<Markdown>"}],
+  "delete": ["<section id>"]
+}
+
+Rules:
+- "reply" is always present. Use empty arrays when nothing changes.
+- Content is Markdown. Allowed: paragraphs, **bold**, *italic*, ~~strike~~, \
+`code`, <u>underline</u>, <sup>/<sub>, bullet and numbered lists, > quotes, \
+### subheadings, GFM tables, [Figure/Table ... - placeholder] lines, and \
+"---" on its own line for a manual page break.
+- An edit replaces the ENTIRE section content, so always return the full \
+revised section, not a fragment.
+- Preserve [n] citation markers exactly; cite only numbers that exist in the \
+reference key. Never invent citations.
+- Only include sections you actually change. Do not rewrite sections the \
+user did not ask about unless the request is document-wide.
+- Headings are plain text without any numbering ("Conclusion", not \
+"4. Conclusion"); section numbers are applied automatically.
+- Never delete every section."""
+
+# Models sometimes echo list numbering into headings; numbering is applied
+# at render time, so strip any "4. " / "IV. " prefix defensively.
+_HEADING_NUMBER_RE = re.compile(r"^(?:\d+|[IVXLCM]+)[.)]\s+")
+
+
+def _parse_json_object(text: str) -> dict | None:
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group(0))
+        return parsed if isinstance(parsed, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def _apply_agent_ops(
+    sections: list[dict], parsed: dict
+) -> tuple[list[dict], bool]:
+    """Apply edits/insert/delete from the agent's JSON to the section list."""
+    by_id: dict[str, dict] = {s["id"]: dict(s) for s in sections}
+    order: list[str] = [s["id"] for s in sections]
+    changed = False
+
+    for edit in parsed.get("edits") or []:
+        if not isinstance(edit, dict):
+            continue
+        section_id = edit.get("id")
+        if section_id not in by_id:
+            continue
+        heading = edit.get("heading")
+        if isinstance(heading, str) and heading.strip():
+            by_id[section_id]["heading"] = _HEADING_NUMBER_RE.sub(
+                "", heading.strip()
+            )[:200]
+            changed = True
+        content = edit.get("content")
+        if isinstance(content, str):
+            by_id[section_id]["content"] = content
+            changed = True
+
+    for section_id in parsed.get("delete") or []:
+        # Never let the agent empty the document.
+        if section_id in by_id and len(order) > 1:
+            order.remove(section_id)
+            del by_id[section_id]
+            changed = True
+
+    for insert in parsed.get("insert") or []:
+        if not isinstance(insert, dict):
+            continue
+        section = {
+            "id": str(uuid.uuid4()),
+            "heading": _HEADING_NUMBER_RE.sub(
+                "", str(insert.get("heading") or "New section").strip()
+            )[:200],
+            "content": str(insert.get("content") or ""),
+        }
+        after_id = insert.get("after_id")
+        if after_id in order:
+            order.insert(order.index(after_id) + 1, section["id"])
+        else:
+            order.append(section["id"])
+        by_id[section["id"]] = section
+        changed = True
+
+    return [by_id[section_id] for section_id in order], changed
+
+
+async def run_document_agent(
+    user_id: str,
+    document: dict,
+    papers: list[dict],
+    message: str,
+    history: list[dict],
+    attachments: list[dict] | None = None,
+) -> tuple[str, list[dict] | None]:
+    """One side-panel turn. Returns (reply, new_sections or None).
+
+    attachments: [{"title", "text"}] - files the user attached to this turn,
+    provided to the model as reference material (not citable sources)."""
+    llm = await resolve_llm(user_id)
+    language = await language_instruction(user_id)
+    sections = document.get("sections") or []
+
+    catalog = "\n\n".join(
+        f"[id={s['id']}] {s.get('heading') or 'Section'}\n"
+        + (s.get("content") or "")[:_AGENT_MAX_SECTION_CHARS]
+        for s in sections
+    )
+    context = (
+        f"Document title: {document.get('title') or 'Untitled'}\n"
+        f"Journal template: {document.get('template') or 'generic'}\n\n"
+        f"Sections:\n{catalog or '(the document has no sections yet)'}"
+    )
+    if papers:
+        context += f"\n\nReference key:\n{_reference_key(papers)}"
+    if attachments:
+        attached = "\n\n".join(
+            f"--- Attached document: {a['title']} ---\n{a['text']}"
+            for a in attachments
+        )
+        context += (
+            "\n\nThe user attached these documents as reference material for "
+            "this request. Use them to inform your answer or edits, but do "
+            "NOT cite them with [n] markers (they are not in the reference "
+            "key):\n" + attached
+        )
+
+    messages: list[dict] = [
+        {"role": "system", "content": _AGENT_SYSTEM + language},
+        *[
+            {"role": turn["role"], "content": turn["content"]}
+            for turn in history[-_AGENT_HISTORY_LIMIT:]
+        ],
+        {"role": "user", "content": f"{context}\n\nUser request: {message}"},
+    ]
+
+    text = await llm.complete(messages, max_tokens=3000, temperature=0.4)
+    parsed = _parse_json_object(text)
+    if parsed is None:
+        # The model answered in prose; treat it as a reply with no edits.
+        return text.strip() or "I could not process that request. Try rephrasing.", None
+
+    reply = str(parsed.get("reply") or "").strip() or "Done."
+    new_sections, changed = _apply_agent_ops(sections, parsed)
+    return reply, new_sections if changed else None
 
 
 EDIT_COMMANDS = {
