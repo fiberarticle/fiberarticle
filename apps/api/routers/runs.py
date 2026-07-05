@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from agent.runner import start_run
-from db import fetch_all, fetch_one
+from db import fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from models import PaperOut, RunCreate, RunDetailOut, RunOut
 from security import CurrentUser
@@ -19,6 +19,7 @@ def _run_out(row: dict) -> RunOut:
     return RunOut(
         id=str(row["id"]),
         topic=row["topic"],
+        mode=row.get("mode") or "research",
         status=row["status"],
         stage=row["stage"],
         paper_count=row.get("paper_count", 0),
@@ -35,29 +36,41 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
     except LlmNotConfigured as exc:
         raise HTTPException(409, str(exc))
 
+    filters = (
+        body.filters.model_dump(exclude_none=True) if body.filters else None
+    )
+    criteria = (body.criteria or "").strip() or None
     row = await fetch_one(
         """
-        INSERT INTO runs (user_id, topic) VALUES (%s, %s)
+        INSERT INTO runs (user_id, topic, mode, filters, criteria)
+        VALUES (%s, %s, %s, %s, %s)
         RETURNING *, 0 AS paper_count
         """,
         user_id,
         body.topic.strip(),
+        body.mode,
+        jsonb(filters) if filters else None,
+        criteria,
     )
-    start_run(str(row["id"]), user_id, body.topic.strip())
+    start_run(str(row["id"]), user_id, body.topic.strip(), body.mode, filters, criteria)
     return _run_out(row)
 
 
 @router.get("", response_model=list[RunOut])
-async def list_runs(user_id: str = CurrentUser) -> list[RunOut]:
+async def list_runs(
+    mode: str | None = None, user_id: str = CurrentUser
+) -> list[RunOut]:
+    condition = "AND r.mode = %s" if mode in ("research", "literature_review") else ""
+    args = [user_id] + ([mode] if condition else [])
     rows = await fetch_all(
-        """
+        f"""
         SELECT r.*, (SELECT count(*) FROM papers p WHERE p.run_id = r.id) AS paper_count
         FROM runs r
-        WHERE r.user_id = %s
+        WHERE r.user_id = %s {condition}
         ORDER BY r.created_at DESC
         LIMIT 50
         """,
-        user_id,
+        *args,
     )
     return [_run_out(r) for r in rows]
 
@@ -100,6 +113,7 @@ async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
                 source=p["source"],
                 is_open_access=p["is_open_access"],
                 abstract=p["abstract"],
+                quartile=p.get("quartile"),
             )
             for p in papers
         ],
