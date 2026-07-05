@@ -240,6 +240,48 @@ async def _create_schema(conn) -> None:
         )
         """
     )
+    # Per-user preferences: global citation style (any CSL id) and the
+    # language Fiberarticle AI writes in.
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_prefs (
+            user_id TEXT PRIMARY KEY,
+            citation_style TEXT NOT NULL DEFAULT 'apa',
+            ai_language TEXT NOT NULL DEFAULT 'en-US',
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    # Journal identity and Scimago rank, denormalized onto papers at insert.
+    await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS issn TEXT")
+    await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS quartile TEXT")
+    # Research runs double as literature reviews; filters/criteria shape the
+    # search and screening stages.
+    await conn.execute(
+        "ALTER TABLE runs ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'research'"
+    )
+    await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS filters JSONB")
+    await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS criteria TEXT")
+    await conn.execute(
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS citation_style TEXT"
+    )
+    # Scimago SJR journal ranks (seeded by scripts/seed_journal_ranks.py).
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS journal_ranks (
+            issn TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            norm_title TEXT NOT NULL,
+            sjr REAL,
+            best_quartile TEXT,
+            h_index INT,
+            areas TEXT
+        )
+        """
+    )
+    await conn.execute(
+        "CREATE INDEX IF NOT EXISTS journal_ranks_title_idx ON journal_ranks (norm_title)"
+    )
     await conn.execute(
         """
         CREATE TABLE IF NOT EXISTS extractions (
