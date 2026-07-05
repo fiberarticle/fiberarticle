@@ -11,18 +11,27 @@ import re
 import zipfile
 
 from export.citations import _bibtex_key, to_bibtex
+from export.md import decode_data_image, isolate_images, span_props
 from latex.templates import LatexTemplate, template_for, vendored_files
 
 _CITE_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _PLACEHOLDER_RE = re.compile(r"^\[(.*placeholder.*)\]$", re.IGNORECASE)
 
-# Block-level Markdown: list items and blockquotes.
+# Block-level Markdown: list items, blockquotes, subheadings, and tables.
 _LIST_BULLET_RE = re.compile(r"^[-*+]\s+(.+)$")
 _LIST_NUMBER_RE = re.compile(r"^\d+[.)]\s+(.+)$")
 _BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)$")
+_SUBHEADING_RE = re.compile(r"^(#{2,6})\s+(.+)$")
+_TABLE_ROW_RE = re.compile(r"^\|.*\|$")
+_TABLE_SEPARATOR_RE = re.compile(r"^\|[\s\-:|]+\|$")
+# Thematic break "---": the manual page break.
+_PAGE_BREAK_RE = re.compile(r"^(?:-{3,}|\*{3,}|_{3,})\s*$")
+_IMAGE_LINE_RE = re.compile(r"^!\[([^\]]*)\]\((\S+?)\)$")
 
 # Inline Markdown marks, tried in priority order (bold before italic so
 # "**x**" is not swallowed by the single-marker italic alternatives).
+# Underline/superscript/subscript arrive as inline HTML tags, the only
+# representation Markdown has for them.
 _INLINE_TOKEN_RE = re.compile(
     r"\*\*(?P<bold>.+?)\*\*"
     r"|__(?P<bold2>.+?)__"
@@ -30,6 +39,10 @@ _INLINE_TOKEN_RE = re.compile(
     r"|_(?P<italic2>[^_]+?)_"
     r"|~~(?P<strike>.+?)~~"
     r"|`(?P<code>[^`]+?)`"
+    r"|<u>(?P<underline>.+?)</u>"
+    r"|<sup>(?P<superscript>.+?)</sup>"
+    r"|<sub>(?P<subscript>.+?)</sub>"
+    r'|<span style="(?P<spanstyle>[^"]*)">(?P<span>.+?)</span>'
 )
 
 _MARK_COMMANDS = {
@@ -37,9 +50,20 @@ _MARK_COMMANDS = {
     "italic": r"\emph{%s}",
     "strike": r"\sout{%s}",
     "code": r"\texttt{%s}",
+    "underline": r"\underline{%s}",
+    "superscript": r"\textsuperscript{%s}",
+    "subscript": r"\textsubscript{%s}",
 }
-# Wrap order: innermost first (code/strike), emphasis/bold outermost.
-_MARK_ORDER = ("code", "strike", "italic", "bold")
+# Wrap order: innermost first (code/strike/scripts), emphasis/bold outermost.
+_MARK_ORDER = (
+    "code",
+    "strike",
+    "subscript",
+    "superscript",
+    "underline",
+    "italic",
+    "bold",
+)
 
 # Order matters: backslash first.
 _ESCAPES = [
@@ -76,7 +100,10 @@ def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
             continue
         if m.start() > pos:
             segments.append((text[pos : m.start()], frozenset()))
-        if m.group("bold") is not None:
+        if m.group("spanstyle") is not None:
+            # Font span: the mark carries the style declaration itself.
+            inner, mark = m.group("span"), f"style:{m.group('spanstyle')}"
+        elif m.group("bold") is not None:
             inner, mark = m.group("bold"), "bold"
         elif m.group("bold2") is not None:
             inner, mark = m.group("bold2"), "bold"
@@ -86,6 +113,12 @@ def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
             inner, mark = m.group("italic2"), "italic"
         elif m.group("strike") is not None:
             inner, mark = m.group("strike"), "strike"
+        elif m.group("underline") is not None:
+            inner, mark = m.group("underline"), "underline"
+        elif m.group("superscript") is not None:
+            inner, mark = m.group("superscript"), "superscript"
+        elif m.group("subscript") is not None:
+            inner, mark = m.group("subscript"), "subscript"
         else:
             inner, mark = m.group("code"), "code"
         for seg_text, seg_marks in _parse_inline(inner):
@@ -100,6 +133,14 @@ def _wrap_marks(text: str, marks: frozenset) -> str:
     for mark in _MARK_ORDER:
         if mark in marks:
             text = _MARK_COMMANDS[mark] % text
+    # Editor font-size spans map to \fontsize groups. Font families are
+    # intentionally NOT translated: journal document classes own the fonts,
+    # which is what submission systems expect.
+    _, size = span_props(marks)
+    if size:
+        text = (
+            f"{{\\fontsize{{{size:g}pt}}{{{size * 1.2:g}pt}}\\selectfont {text}}}"
+        )
     return text
 
 
@@ -142,13 +183,19 @@ def _convert_inline(text: str, keys: list[str]) -> str:
     return "".join(pieces)
 
 
-def _convert_body(content: str, keys: list[str]) -> str:
+def _convert_body(
+    content: str, keys: list[str], images: list[tuple[str, bytes]] | None = None
+) -> str:
     """Escape prose, turn [n] markers into \\cite{...} calls, and render
-    Markdown block structure (lists, blockquotes) and inline marks."""
+    Markdown block structure (lists, blockquotes, figures) and inline marks.
+    Embedded data-URI images are appended to `images` as (filename, bytes)
+    and referenced with \\includegraphics; without a collector they become
+    a comment."""
     blocks: list[str] = []
     list_buffer: list[str] = []
     list_env: str | None = None
     quote_buffer: list[str] = []
+    table_buffer: list[str] = []
 
     def flush_list() -> None:
         nonlocal list_env
@@ -164,10 +211,86 @@ def _convert_body(content: str, keys: list[str]) -> str:
             blocks.append(f"\\begin{{quote}}\n{body}\n\\end{{quote}}")
             quote_buffer.clear()
 
-    for raw in content.split("\n"):
+    def flush_table() -> None:
+        if not table_buffer:
+            return
+        rows: list[list[str]] = []
+        for table_line in table_buffer:
+            if _TABLE_SEPARATOR_RE.match(table_line):
+                continue
+            rows.append(
+                [
+                    _convert_inline(cell.strip(), keys)
+                    for cell in table_line.strip().strip("|").split("|")
+                ]
+            )
+        table_buffer.clear()
+        if not rows:
+            return
+        columns = max(len(r) for r in rows)
+        spec = "|" + "l|" * columns
+        lines: list[str] = []
+        for i, cells in enumerate(rows):
+            padded = cells + [""] * (columns - len(cells))
+            if i == 0:
+                # GFM's first row is the header row.
+                padded = [f"\\textbf{{{c}}}" if c else c for c in padded]
+            lines.append("  " + " & ".join(padded) + r" \\ \hline")
+        blocks.append(
+            "\\begin{center}\n\\begin{tabular}{" + spec + "}\n\\hline\n"
+            + "\n".join(lines)
+            + "\n\\end{tabular}\n\\end{center}"
+        )
+
+    for raw in isolate_images(content).split("\n"):
         line = raw.strip()
         if not line:
+            flush_table()
             continue
+        if _TABLE_ROW_RE.match(line):
+            flush_list()
+            flush_quote()
+            table_buffer.append(line)
+            continue
+        flush_table()
+
+        if _PAGE_BREAK_RE.match(line):
+            flush_list()
+            flush_quote()
+            blocks.append("\\newpage")
+            continue
+
+        image_match = _IMAGE_LINE_RE.match(line)
+        if image_match:
+            flush_list()
+            flush_quote()
+            decoded = decode_data_image(image_match.group(2))
+            if decoded is not None and images is not None:
+                name = f"figure{len(images) + 1}.{decoded[0]}"
+                images.append((name, decoded[1]))
+                alt = escape_latex(image_match.group(1))
+                caption = f"  \\caption{{{alt}}}\n" if alt.strip() else ""
+                blocks.append(
+                    "\\begin{figure}[htbp]\n"
+                    "  \\centering\n"
+                    f"  \\includegraphics[width=0.9\\linewidth]{{{name}}}\n"
+                    + caption
+                    + "\\end{figure}"
+                )
+            else:
+                blocks.append("% [embedded image omitted]")
+            continue
+
+        subheading = _SUBHEADING_RE.match(line)
+        if subheading:
+            flush_list()
+            flush_quote()
+            command = (
+                "\\subsection*" if len(subheading.group(1)) <= 3 else "\\subsubsection*"
+            )
+            blocks.append(f"{command}{{{_convert_inline(subheading.group(2), keys)}}}")
+            continue
+
         placeholder = _PLACEHOLDER_RE.match(line)
         if placeholder:
             flush_list()
@@ -213,10 +336,15 @@ def _convert_body(content: str, keys: list[str]) -> str:
 
     flush_list()
     flush_quote()
+    flush_table()
     return "\n\n".join(blocks)
 
 
-def render_main_tex(document: dict, papers: list[dict]) -> str:
+def render_main_tex(
+    document: dict,
+    papers: list[dict],
+    images: list[tuple[str, bytes]] | None = None,
+) -> str:
     template: LatexTemplate = template_for(document.get("template") or "generic")
     keys = _bib_keys(papers)
     title = escape_latex(document.get("title") or "Untitled")
@@ -253,11 +381,11 @@ def render_main_tex(document: dict, papers: list[dict]) -> str:
         content = section.get("content") or ""
         if heading.lower() == "abstract":
             lines.append("\\begin{abstract}")
-            lines.append(_convert_body(content, keys))
+            lines.append(_convert_body(content, keys, images))
             lines.append("\\end{abstract}")
         else:
             lines.append(f"\\section{{{escape_latex(heading)}}}")
-            lines.append(_convert_body(content, keys))
+            lines.append(_convert_body(content, keys, images))
         lines.append("")
 
     lines.extend(
@@ -274,7 +402,8 @@ def render_main_tex(document: dict, papers: list[dict]) -> str:
 
 def render_project_zip(document: dict, papers: list[dict]) -> bytes:
     template = template_for(document.get("template") or "generic")
-    main_tex = render_main_tex(document, papers)
+    images: list[tuple[str, bytes]] = []
+    main_tex = render_main_tex(document, papers, images)
     refs_bib = to_bibtex(papers) if papers else "% no references\n"
 
     readme = (
@@ -303,6 +432,8 @@ def render_project_zip(document: dict, papers: list[dict]) -> bytes:
         archive.writestr("main.tex", main_tex)
         archive.writestr("refs.bib", refs_bib)
         archive.writestr("README.txt", readme)
+        for name, data in images:
+            archive.writestr(name, data)
         for name, data in vendored_files(template):
             archive.writestr(name, data)
     return buffer.getvalue()
