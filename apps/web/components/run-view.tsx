@@ -15,7 +15,9 @@ import {
   Lightbulb,
   ListChecks,
   PenLine,
+  Play,
   Quote,
+  RotateCcw,
   Search,
   Scroll,
   Target,
@@ -264,6 +266,10 @@ export function RunView({ runId }: { runId: string }) {
   const [openStage, setOpenStage] = useState<string | null>(null);
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [resuming, setResuming] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  // Bumped after resume/retry so the closed SSE stream reconnects.
+  const [streamEpoch, setStreamEpoch] = useState(0);
   const [elapsed, setElapsed] = useState("");
   const userToggledRef = useRef(false);
   const runStatusRef = useRef<RunStatus | null>(null);
@@ -348,7 +354,7 @@ export function RunView({ runId }: { runId: string }) {
       clearInterval(poll);
       handle?.close();
     };
-  }, [runId, loadRun]);
+  }, [runId, loadRun, streamEpoch]);
 
   const groups = groupByStage(events);
   const isActive = run?.status === "running" || run?.status === "pending";
@@ -382,6 +388,44 @@ export function RunView({ runId }: { runId: string }) {
     }
   }
 
+  // Resume: continue a failed run from the stage it died in.
+  async function onResumeRun() {
+    setResuming(true);
+    setError(null);
+    try {
+      await apiFetch(`/v1/runs/${runId}/resume`, { method: "POST" });
+      reportAutoOpenedRef.current = false;
+      await loadRun();
+      setStreamEpoch((n) => n + 1);
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "Could not resume the run."
+      );
+    } finally {
+      setResuming(false);
+    }
+  }
+
+  // Retry: wipe the failed attempt and run the same topic from the start.
+  async function onRetryRun() {
+    setRetrying(true);
+    setError(null);
+    try {
+      await apiFetch(`/v1/runs/${runId}/retry`, { method: "POST" });
+      setEvents([]);
+      reportAutoOpenedRef.current = false;
+      userToggledRef.current = false;
+      await loadRun();
+      setStreamEpoch((n) => n + 1);
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "Could not retry the run."
+      );
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   async function onGenerateDocument(template: DocumentTemplate) {
     setGeneratingDoc(true);
     setError(null);
@@ -390,7 +434,7 @@ export function RunView({ runId }: { runId: string }) {
         method: "POST",
         body: JSON.stringify({ template }),
       });
-      router.push(`/documents/${doc.id}`);
+      router.push(`/article-writer/${doc.id}`);
     } catch (e) {
       setError(
         e instanceof ApiError ? e.message : "Could not start the article."
@@ -479,6 +523,33 @@ export function RunView({ runId }: { runId: string }) {
               run.status
             )}
           </Badge>
+          {run.status === "failed" && (
+            <>
+              <button
+                type="button"
+                onClick={onResumeRun}
+                disabled={resuming || retrying}
+                className={cn(
+                  badgeVariants({ variant: "success" }),
+                  "cursor-pointer transition-colors hover:bg-[color-mix(in_oklab,var(--success)_22%,transparent)] disabled:opacity-60"
+                )}
+              >
+                <Play /> {resuming ? "Resuming" : "Resume"}
+              </button>
+              <button
+                type="button"
+                aria-label="Retry from the start"
+                title="Retry from the start"
+                onClick={onRetryRun}
+                disabled={resuming || retrying}
+                className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-60"
+              >
+                <RotateCcw
+                  className={cn("size-4", retrying && "animate-spin")}
+                />
+              </button>
+            </>
+          )}
           <span className="text-xs text-muted-foreground">
             Started {new Date(run.created_at).toLocaleString()}
           </span>
@@ -573,14 +644,7 @@ export function RunView({ runId }: { runId: string }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
-            Agent activity
-            {isActive && activeStage && (
-              <TextShimmer className="text-xs font-normal">
-                {stageMeta[activeStage]?.label ?? activeStage}
-              </TextShimmer>
-            )}
-          </CardTitle>
+          <CardTitle>Agent activity</CardTitle>
         </CardHeader>
         <CardContent>
           {events.length === 0 ? (
@@ -620,7 +684,13 @@ export function RunView({ runId }: { runId: string }) {
                       leftIcon={<Icon />}
                       status={stageStatus}
                     >
-                      {meta.label}
+                      {/* The step that is happening right now shimmers in
+                          place; no separate status label anywhere else. */}
+                      {stageStatus === "active" ? (
+                        <TextShimmer>{meta.label}</TextShimmer>
+                      ) : (
+                        meta.label
+                      )}
                       <span className="ml-1.5 text-xs text-muted-foreground">
                         {group.events.length}
                       </span>
@@ -688,7 +758,7 @@ export function RunView({ runId }: { runId: string }) {
       {run.report && (
         <div
           className={cn(
-            "fixed inset-y-0 right-0 z-40 flex w-[min(720px,94vw)] flex-col border-l border-border bg-card shadow-[-24px_0_60px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-out",
+            "fixed inset-y-0 right-0 z-40 flex w-[min(720px,94vw)] flex-col border-l border-border bg-card transition-transform duration-300 ease-out",
             reportOpen ? "translate-x-0" : "translate-x-full"
           )}
         >
