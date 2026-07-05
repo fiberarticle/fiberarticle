@@ -529,8 +529,10 @@ export function Assistant({ chatId }: { chatId?: string }) {
       // No inner scroll container: the inset panel itself scrolls, so the
       // only scrollbar sits at the panel's right edge (Claude style). The
       // header and the reply bar stick to the panel's top and bottom.
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col">
-        <div className="sticky top-0 z-20 -mt-8 flex items-center gap-2 bg-background pb-3 pt-8">
+      <div className="mx-auto flex min-h-[calc(100svh-6.5rem)] max-w-3xl flex-col md:min-h-[calc(100vh-4rem)]">
+        {/* The negative margins mirror the app panel's responsive padding
+            (py-6 below sm, py-8 from sm) so the sticky bands stay flush. */}
+        <div className="sticky top-0 z-20 -mt-6 flex items-center gap-2 bg-background pb-3 pt-6 sm:-mt-8 sm:pt-8">
           <Button
             variant="ghost"
             size="sm"
@@ -629,7 +631,9 @@ export function Assistant({ chatId }: { chatId?: string }) {
                     hidden until the message is hovered (or just copied). */}
                 <div
                   className={cn(
-                    "mt-1 flex items-center gap-1.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/msg:opacity-100",
+                    // Touch screens have no hover: keep the time and copy
+                    // control visible below md.
+                    "mt-1 flex items-center gap-1.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/msg:opacity-100 max-md:opacity-100",
                     copiedKey === `${message.id}-${i}` && "opacity-100",
                     message.role === "user" ? "justify-end" : "justify-start"
                   )}
@@ -704,7 +708,7 @@ export function Assistant({ chatId }: { chatId?: string }) {
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-20 -mb-8 bg-background pb-4 pt-2">
+        <div className="sticky bottom-0 z-20 -mb-6 bg-background pb-3 pt-2 sm:-mb-8 sm:pb-4">
         <StarBorder
           radius={24}
           borderWidth={1.5}
@@ -762,7 +766,7 @@ export function Assistant({ chatId }: { chatId?: string }) {
               }}
               rows={1}
               placeholder="Ask follow ups..."
-              className="fa-textarea-scroll max-h-40 flex-1 resize-none overflow-y-auto border-none bg-transparent px-2 py-1.5 text-sm leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground"
+              className="fa-textarea-scroll max-h-40 flex-1 resize-none overflow-y-auto border-none bg-transparent px-2 py-1.5 text-base leading-relaxed outline-none transition-[height] duration-150 ease-out placeholder:text-muted-foreground sm:text-sm"
             />
             <Button
               size="icon"
@@ -814,9 +818,9 @@ export function Assistant({ chatId }: { chatId?: string }) {
 
   // --------------------------------------------------------- landing view
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-3xl flex-col justify-center gap-6">
-      <AskArt className="mx-auto -mb-2 w-44" />
-      <h1 className="text-center text-3xl font-semibold tracking-tight">
+    <div className="mx-auto flex min-h-[calc(100svh-9.5rem)] max-w-3xl flex-col justify-center gap-6 md:min-h-[calc(100vh-8rem)]">
+      <AskArt className="mx-auto -mb-2 w-36 sm:w-44" />
+      <h1 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
         What do you want to know?
       </h1>
       <p className="-mt-3 text-center text-sm text-muted-foreground">
