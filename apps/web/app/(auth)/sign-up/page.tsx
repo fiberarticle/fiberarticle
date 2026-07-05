@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { SignUpForm } from "./sign-up-form";
+import { AuthScreen } from "@/components/auth-screen";
 
 export const metadata = { title: "Create account" };
 
@@ -13,5 +14,9 @@ export default async function SignUpPage() {
     redirect("/dashboard");
   }
 
-  return <SignUpForm googleEnabled={Boolean(process.env.GOOGLE_CLIENT_ID)} />;
+  return (
+    <Suspense>
+      <AuthScreen initialMode="signup" />
+    </Suspense>
+  );
 }
