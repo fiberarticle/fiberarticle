@@ -4,8 +4,9 @@ import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from agent.graph import STAGES
 from agent.runner import cancel_run as cancel_run_task
-from agent.runner import start_run
+from agent.runner import is_run_active, resume_run, start_run
 from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from llm.titles import schedule_title
@@ -55,8 +56,8 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
         seed_ids = [str(r["id"]) for r in owned]
     row = await fetch_one(
         """
-        INSERT INTO runs (user_id, topic, mode, filters, criteria)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO runs (user_id, topic, mode, filters, criteria, seed_paper_ids)
+        VALUES (%s, %s, %s, %s, %s, %s)
         RETURNING *, 0 AS paper_count
         """,
         user_id,
@@ -64,6 +65,7 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
         body.mode,
         jsonb(filters) if filters else None,
         criteria,
+        jsonb(seed_ids) if seed_ids else None,
     )
     start_run(
         str(row["id"]), user_id, body.topic.strip(), body.mode, filters, criteria, seed_ids
@@ -173,6 +175,128 @@ async def cancel_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
         WHERE id = %s AND status IN ('pending', 'running')
         """,
         run_id,
+    )
+    return _run_out(await _get_owned_run(run_id, user_id))
+
+
+@router.post("/{run_id}/resume", response_model=RunOut)
+async def resume_failed_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+    """Continue a failed run from the stage it died in. The state saved after
+    every completed stage is restored, so finished work is never redone."""
+    row = await _get_owned_run(run_id, user_id)
+    if is_run_active(run_id):
+        raise HTTPException(409, "This run is already being resumed.")
+    try:
+        await resolve_llm(user_id)
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+
+    # Atomic claim: only one caller can flip failed -> pending, so two
+    # Resume clicks (or Resume plus Retry) can never spawn two pipelines
+    # for the same run. The elapsed timer restarts with the new attempt.
+    claimed = await fetch_one(
+        """
+        UPDATE runs SET status = 'pending', error = NULL,
+            created_at = now(), updated_at = now()
+        WHERE id = %s AND status = 'failed'
+        RETURNING id
+        """,
+        run_id,
+    )
+    if claimed is None:
+        raise HTTPException(409, "Only a failed run can be resumed.")
+
+    snapshot = row.get("snapshot") or None
+    entry = row.get("stage") if snapshot else "plan"
+    if entry not in STAGES:
+        entry = "plan"
+    # PDF bytes are never snapshotted, so a run that died while reading
+    # documents re-enters one stage earlier and refetches them.
+    if entry == "parse":
+        entry = "fetch_oa_pdfs"
+
+    if snapshot:
+        # Rows written by the half-finished stage would duplicate what the
+        # resumed stage writes again: papers not in the snapshot go, and
+        # partly indexed chunks of unfinished papers are re-embedded.
+        kept_ids = [p["id"] for p in snapshot.get("papers", []) if p.get("id")]
+        await execute(
+            "DELETE FROM papers WHERE run_id = %s AND NOT (id = ANY(%s::uuid[]))",
+            run_id,
+            kept_ids or ["00000000-0000-0000-0000-000000000000"],
+        )
+        if STAGES.index(entry) <= STAGES.index("chunk_embed"):
+            pending_ids = [
+                p["id"]
+                for p in snapshot.get("papers", [])
+                if p.get("id") and not p.get("_done")
+            ]
+            if pending_ids:
+                await execute(
+                    "DELETE FROM chunks WHERE run_id = %s AND paper_id = ANY(%s::uuid[])",
+                    run_id,
+                    pending_ids,
+                )
+    else:
+        # A run that failed before any stage snapshot existed (or one from
+        # before snapshots shipped) can only start over; clear what the
+        # failed attempt wrote so nothing shows up twice.
+        await execute("DELETE FROM papers WHERE run_id = %s", run_id)
+        await execute("DELETE FROM run_events WHERE run_id = %s", run_id)
+        await execute(
+            "UPDATE runs SET report = NULL, stage = NULL WHERE id = %s", run_id
+        )
+
+    resume_run(
+        run_id,
+        user_id,
+        row["topic"],
+        row.get("mode") or "research",
+        row.get("filters"),
+        row.get("criteria"),
+        seed_paper_ids=row.get("seed_paper_ids") or [],
+        entry_stage=entry,
+        resume_state=snapshot,
+    )
+    return _run_out(await _get_owned_run(run_id, user_id))
+
+
+@router.post("/{run_id}/retry", response_model=RunOut)
+async def retry_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+    """Start the run over from scratch: everything the failed attempt
+    collected is wiped and the same topic runs again."""
+    row = await _get_owned_run(run_id, user_id)
+    if is_run_active(run_id):
+        raise HTTPException(409, "This run is already active.")
+    try:
+        await resolve_llm(user_id)
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+
+    # Atomic claim (see resume): one caller wins, every other gets a 409.
+    # A retry is a fresh attempt, so the clock starts over too.
+    claimed = await fetch_one(
+        """
+        UPDATE runs SET status = 'pending', stage = NULL, error = NULL,
+            report = NULL, snapshot = NULL, created_at = now(), updated_at = now()
+        WHERE id = %s AND status = 'failed'
+        RETURNING id
+        """,
+        run_id,
+    )
+    if claimed is None:
+        raise HTTPException(409, "Only a failed run can be retried.")
+
+    await execute("DELETE FROM papers WHERE run_id = %s", run_id)
+    await execute("DELETE FROM run_events WHERE run_id = %s", run_id)
+    start_run(
+        run_id,
+        user_id,
+        row["topic"],
+        row.get("mode") or "research",
+        row.get("filters"),
+        row.get("criteria"),
+        seed_paper_ids=row.get("seed_paper_ids") or [],
     )
     return _run_out(await _get_owned_run(run_id, user_id))
 
