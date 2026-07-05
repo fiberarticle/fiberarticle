@@ -249,6 +249,14 @@ async def _create_schema(conn) -> None:
     )
     await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS filters JSONB")
     await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS criteria TEXT")
+    # Pipeline state saved after every completed stage, so a failed run can
+    # resume from the stage it died in instead of starting over.
+    await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS snapshot JSONB")
+    # Papers the user attached when creating the run, kept on the row so
+    # resume and retry re-seed them instead of silently dropping them.
+    await conn.execute(
+        "ALTER TABLE runs ADD COLUMN IF NOT EXISTS seed_paper_ids JSONB"
+    )
     await conn.execute(
         "ALTER TABLE documents ADD COLUMN IF NOT EXISTS citation_style TEXT"
     )
