@@ -14,6 +14,8 @@ class ResearchState(TypedDict, total=False):
     filters: dict[str, Any]
     # User's inclusion/exclusion criteria applied during screening.
     criteria: str
+    # Library papers attached to this task; always included as sources.
+    seed_paper_ids: list[str]
 
     plan: list[str]
     queries: list[str]
