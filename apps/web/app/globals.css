@@ -235,6 +235,18 @@
   pointer-events: none;
 }
 
+/* Collapsible content (chain of thought): Radix measures the content height
+   into a CSS variable; these keyframes animate it open and closed. Without
+   them the closing animation never ends and the content stays visible. */
+@keyframes expand {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes collapse {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
 /* Illustration motion: a one-time stroke draw-in and a soft pulse. */
 @keyframes fa-draw {
   from { stroke-dashoffset: 60; }
