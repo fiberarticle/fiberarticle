@@ -928,7 +928,7 @@ export function Assistant({ chatId }: { chatId?: string }) {
             No conversations yet. Ask a question above to get started.
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="fa-textarea-scroll -mr-3 flex max-h-[42vh] flex-col gap-2 overflow-y-auto pr-3">
             {conversations.map((c) => (
               <button
                 key={c.id}
