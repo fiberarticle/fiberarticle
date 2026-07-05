@@ -64,6 +64,9 @@ class RunCreate(BaseModel):
 class RunOut(BaseModel):
     id: str
     topic: str
+    # AI-generated one-line title; falls back to the topic until it exists.
+    title: str
+    pinned: bool = False
     mode: str = "research"
     status: str
     stage: str | None
@@ -71,6 +74,11 @@ class RunOut(BaseModel):
     error: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class RunUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    pinned: bool | None = None
 
 
 class PaperOut(BaseModel):
@@ -122,6 +130,7 @@ class DocumentUpdate(BaseModel):
     sections: list[DocumentSection] | None = None
     authors: list[str] | None = None
     citation_style: str | None = Field(default=None, min_length=1, max_length=120)
+    pinned: bool | None = None
 
 
 class DocumentOut(BaseModel):
@@ -144,6 +153,7 @@ class DocumentListItem(BaseModel):
     title: str
     template: str
     status: str
+    pinned: bool = False
     section_count: int
     created_at: datetime
     updated_at: datetime
@@ -265,14 +275,22 @@ class ConversationOut(BaseModel):
     paper_id: str | None
     paper_title: str | None
     title: str
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 
 
+class ConversationUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    pinned: bool | None = None
+
+
 class ChatCitation(BaseModel):
-    paper_id: str
+    # None for sources found live on the web rather than in the library.
+    paper_id: str | None = None
     title: str
     quote: str
+    url: str | None = None
 
 
 class ChatMessageOut(BaseModel):
@@ -280,6 +298,8 @@ class ChatMessageOut(BaseModel):
     role: str
     content: str
     citations: list[ChatCitation] | None
+    # ReAct chain of thought: [{type: "thought"|"action", ...}]
+    steps: list[dict[str, Any]] | None = None
     created_at: datetime
 
 
@@ -293,15 +313,22 @@ class ExtractionColumn(BaseModel):
 
 
 class ExtractionCreateIn(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
+    # Blank name: a background AI title is generated from the column spec.
+    name: str = Field(default="", max_length=200)
     paper_ids: list[str] = Field(min_length=1, max_length=50)
     columns: list[ExtractionColumn] = Field(min_length=1, max_length=20)
+
+
+class ExtractionUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    pinned: bool | None = None
 
 
 class ExtractionOut(BaseModel):
     id: str
     name: str
     status: str
+    pinned: bool = False
     columns: list[ExtractionColumn]
     rows: list[dict[str, Any]]
     error: str | None
