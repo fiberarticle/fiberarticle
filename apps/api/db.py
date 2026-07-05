@@ -185,9 +185,13 @@ async def _create_schema(conn) -> None:
     await conn.execute("ALTER TABLE papers ALTER COLUMN run_id DROP NOT NULL")
     await conn.execute("ALTER TABLE chunks ALTER COLUMN run_id DROP NOT NULL")
     # Fiberarticle AI managed mode: per-user toggle between a max-reasoning
-    # model (slow, thorough) and a fast non-reasoning model. Defaults on.
+    # model (slow, thorough) and a fast non-reasoning model. Defaults off:
+    # the fast model is the zero-friction default.
     await conn.execute(
-        "ALTER TABLE llm_config ADD COLUMN IF NOT EXISTS reasoning BOOLEAN NOT NULL DEFAULT true"
+        "ALTER TABLE llm_config ADD COLUMN IF NOT EXISTS reasoning BOOLEAN NOT NULL DEFAULT false"
+    )
+    await conn.execute(
+        "ALTER TABLE llm_config ALTER COLUMN reasoning SET DEFAULT false"
     )
     await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS notes TEXT")
     await conn.execute("ALTER TABLE papers ADD COLUMN IF NOT EXISTS summary JSONB")
