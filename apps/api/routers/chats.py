@@ -93,7 +93,7 @@ async def create_conversation(
         user_id,
         body.scope,
         body.paper_id,
-        paper_title[:120] if paper_title else "Library chat",
+        paper_title[:120] if paper_title else "New chat",
     )
     row["paper_title"] = paper_title
     return _conversation_out(row)
@@ -189,7 +189,9 @@ async def send_message(
         jsonb(result["steps"]) if result["steps"] else None,
     )
     title_update = (
-        body.content[:110] if conversation["title"] in ("Library chat",) else None
+        body.content[:110]
+        if conversation["title"] in ("New chat", "Library chat")
+        else None
     )
     await execute(
         "UPDATE conversations SET updated_at = now(), title = COALESCE(%s, title) WHERE id = %s",
