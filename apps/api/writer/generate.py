@@ -323,6 +323,9 @@ Rules:
 `code`, <u>underline</u>, <sup>/<sub>, bullet and numbered lists, > quotes, \
 ### subheadings, GFM tables, [Figure/Table ... - placeholder] lines, and \
 "---" on its own line for a manual page break.
+- An aligned block appears as one single line like \
+<p style="text-align: center">...</p>. Keep such lines as single lines and \
+preserve their alignment unless asked to change it.
 - An edit replaces the ENTIRE section content, so always return the full \
 revised section, not a fragment.
 - Preserve [n] citation markers exactly; cite only numbers that exist in the \
