@@ -513,9 +513,11 @@ export function Sidebar({
 
   return (
     <TooltipProvider delayDuration={200}>
+      {/* No border or own background: the inset shell's window background
+          shows through, and the content panel provides the separation. */}
       <aside
         className={cn(
-          "sticky top-0 flex h-screen shrink-0 flex-col justify-between border-r border-border bg-sidebar transition-[width] duration-200",
+          "flex h-screen shrink-0 flex-col justify-between transition-[width] duration-200",
           collapsed ? "w-14" : "w-64"
         )}
       >
