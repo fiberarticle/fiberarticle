@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     await execute(
         """
         UPDATE runs SET status = 'failed',
-            error = 'The run was interrupted by an API restart. Start a new run.',
+            error = 'The run was interrupted by an API restart. Press Resume to continue it.',
             updated_at = now()
         WHERE status IN ('pending', 'running')
         """
