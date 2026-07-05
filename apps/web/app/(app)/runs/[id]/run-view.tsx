@@ -227,6 +227,7 @@ export function RunView({ runId }: { runId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [openStage, setOpenStage] = useState<string | null>(null);
   const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [elapsed, setElapsed] = useState("");
   const userToggledRef = useRef(false);
   const runStatusRef = useRef<RunStatus | null>(null);
@@ -318,6 +319,21 @@ export function RunView({ runId }: { runId: string }) {
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [run, isActive]);
+
+  async function onCancelRun() {
+    setCancelling(true);
+    setError(null);
+    try {
+      await apiFetch(`/v1/runs/${runId}/cancel`, { method: "POST" });
+      await loadRun();
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "Could not stop the run."
+      );
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   async function onGenerateDocument(template: DocumentTemplate) {
     setGeneratingDoc(true);
@@ -418,6 +434,16 @@ export function RunView({ runId }: { runId: string }) {
             <span className="text-xs text-muted-foreground">
               {run.paper_count} papers
             </span>
+          )}
+          {isActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              loading={cancelling}
+              onClick={onCancelRun}
+            >
+              <X /> Stop run
+            </Button>
           )}
         </div>
         {isActive && activeStage && (
@@ -594,8 +620,6 @@ export function RunView({ runId }: { runId: string }) {
           </CardContent>
         </Card>
       )}
-
-      <p className="text-xs text-muted-foreground">Run {run.id}</p>
     </div>
   );
 }
