@@ -29,97 +29,21 @@ def _surname(author: str) -> str:
     return parts[-1] if parts else author
 
 
-def _apa_in_text(match: re.Match, papers: list[dict]) -> str:
-    cites = []
-    for num in [int(n) for n in match.group(1).replace(" ", "").split(",")]:
-        if 1 <= num <= len(papers):
-            paper = papers[num - 1]
-            authors = paper.get("authors") or []
-            year = paper.get("year") or "n.d."
-            if not authors:
-                cites.append(f"{paper['title'][:24]}..., {year}")
-            elif len(authors) == 1:
-                cites.append(f"{_surname(authors[0])}, {year}")
-            elif len(authors) == 2:
-                cites.append(
-                    f"{_surname(authors[0])} & {_surname(authors[1])}, {year}"
-                )
-            else:
-                cites.append(f"{_surname(authors[0])} et al., {year}")
-        else:
-            cites.append(match.group(0))
-    return f"({'; '.join(cites)})"
-
-
-def _format_reference(paper: dict, style: str, index: int) -> str:
-    authors = paper.get("authors") or []
-    year = paper.get("year") or "n.d."
-    title = paper["title"].rstrip(".")
-    venue = paper.get("venue")
-    doi = paper.get("doi")
-    url = paper.get("url")
-    locator = f"https://doi.org/{doi}" if doi else (url or "")
-
-    if style == "apa":
-        if authors:
-            names = []
-            for a in authors[:20]:
-                parts = a.strip().split()
-                if len(parts) >= 2:
-                    initials = " ".join(f"{p[0]}." for p in parts[:-1])
-                    names.append(f"{parts[-1]}, {initials}")
-                else:
-                    names.append(a)
-            if len(names) == 1:
-                author_str = names[0]
-            elif len(names) == 2:
-                author_str = f"{names[0]}, & {names[1]}"
-            else:
-                author_str = ", ".join(names[:-1]) + f", & {names[-1]}"
-        else:
-            author_str = title
-        venue_str = f" {venue}." if venue else ""
-        return f"{author_str} ({year}). {title}.{venue_str} {locator}".strip()
-
-    if style == "ieee":
-        if authors:
-            names = []
-            for a in authors[:6]:
-                parts = a.strip().split()
-                if len(parts) >= 2:
-                    initials = ". ".join(p[0] for p in parts[:-1])
-                    names.append(f"{initials}. {parts[-1]}")
-                else:
-                    names.append(a)
-            author_str = ", ".join(names)
-            if len(authors) > 6:
-                author_str += " et al."
-        else:
-            author_str = ""
-        venue_str = f" {venue}," if venue else ""
-        prefix = f"{author_str}, " if author_str else ""
-        return f'{prefix}"{title},"{venue_str} {year}. {locator}'.strip()
-
-    # generic
-    author_str = ", ".join(authors[:6]) + (" et al." if len(authors) > 6 else "")
-    venue_str = f" {venue}." if venue else ""
-    prefix = f"{author_str} " if author_str else ""
-    return f"[{index}] {prefix}({year}). {title}.{venue_str} {locator}".strip()
-
-
 def _set_two_columns(section) -> None:
     cols = section._sectPr.xpath("./w:cols")[0]
     cols.set(qn("w:num"), "2")
     cols.set(qn("w:space"), "360")
 
 
-def _add_body_paragraphs(doc, text: str, style: dict, papers: list[dict], apa: bool):
+def _add_body_paragraphs(
+    doc, text: str, style: dict, intext: dict[str, str] | None
+):
     for raw in text.split("\n"):
         line = raw.strip()
         if not line:
             continue
-        if apa:
-            line = _CITE_RE.sub(lambda m: _apa_in_text(m, papers), line)
+        if intext:
+            line = _CITE_RE.sub(lambda m: intext.get(m.group(0), m.group(0)), line)
         p = doc.add_paragraph()
         run = p.add_run(line)
         run.font.name = style["font"]
@@ -173,11 +97,35 @@ _STYLES = {
 
 _ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
+# Templates whose real output is LaTeX reuse the closest .docx layout.
+_LAYOUT_FOR_TEMPLATE = {
+    "generic": "generic",
+    "ieee": "ieee",
+    "apa": "apa",
+    "acm": "ieee",
+    "elsevier": "generic",
+    "springer": "generic",
+    "neurips": "generic",
+}
 
-def render_docx(document: dict, papers: list[dict]) -> bytes:
+
+def render_docx(
+    document: dict,
+    papers: list[dict],
+    references: list[str] | None = None,
+    intext: dict[str, str] | None = None,
+    numeric: bool = True,
+) -> bytes:
+    """Render the document JSON to .docx.
+
+    references: pre-rendered reference entries (CSL engine), one per paper,
+    in paper order. intext: replacement map for bracketed citation markers,
+    used by author-date styles; numeric styles keep [n] markers.
+    """
     template = document.get("template") or "generic"
-    style = _STYLES.get(template, _STYLES["generic"])
-    apa = template == "apa"
+    layout = _LAYOUT_FOR_TEMPLATE.get(template, "generic")
+    style = _STYLES.get(layout, _STYLES["generic"])
+    apa = layout == "apa"
 
     doc = DocxDocument()
     section = doc.sections[0]
@@ -226,7 +174,7 @@ def render_docx(document: dict, papers: list[dict]) -> bytes:
         h = doc.add_paragraph()
         if style["numbered_headings"] and not is_abstract:
             heading_counter += 1
-            if template == "ieee":
+            if layout == "ieee":
                 label = f"{_ROMAN[min(heading_counter - 1, len(_ROMAN) - 1)]}. {heading.upper()}"
             else:
                 label = f"{heading_counter}. {heading}"
@@ -242,12 +190,12 @@ def render_docx(document: dict, papers: list[dict]) -> bytes:
         h.paragraph_format.space_before = Pt(10)
         h.paragraph_format.space_after = Pt(4)
 
-        _add_body_paragraphs(doc, content, style, papers, apa)
+        _add_body_paragraphs(doc, content, style, intext if not numeric else None)
 
     # References
     ref_h = doc.add_paragraph()
     ref_label = "References"
-    if template == "ieee":
+    if layout == "ieee":
         ref_label = "REFERENCES"
     ref_run = ref_h.add_run(ref_label)
     ref_run.font.name = style["font"]
@@ -258,26 +206,31 @@ def render_docx(document: dict, papers: list[dict]) -> bytes:
         ref_h.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
     ref_h.paragraph_format.space_before = Pt(10)
 
-    if apa:
-        sorted_papers = sorted(
-            papers,
-            key=lambda p: (_surname((p.get("authors") or ["zzz"])[0]).lower()),
-        )
-    else:
-        sorted_papers = papers
+    if references is None:
+        # Minimal fallback when no engine-rendered entries were provided.
+        references = [
+            f"{', '.join((p.get('authors') or [])[:6])} "
+            f"({p.get('year') or 'n.d.'}). {p['title']}.".strip()
+            for p in papers
+        ]
 
-    for i, paper in enumerate(sorted_papers, 1):
-        text = _format_reference(paper, template, i)
-        if template == "ieee":
-            text = f"[{i}] {text}"
+    if numeric:
+        entries = [f"[{i}] {text}" for i, text in enumerate(references, 1)]
+    else:
+        # Author-date reference lists are alphabetical.
+        entries = sorted(references, key=str.lower)
+
+    for text in entries:
         p = doc.add_paragraph()
         run = p.add_run(text)
         run.font.name = style["font"]
         run.font.size = style["body_size"]
-        if apa:
-            p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
+        if not numeric:
+            # Hanging indent, the convention for author-date lists.
             p.paragraph_format.first_line_indent = Inches(-0.5)
             p.paragraph_format.left_indent = Inches(0.5)
+        if apa:
+            p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
         p.paragraph_format.space_after = Pt(4)
 
     buffer = io.BytesIO()
