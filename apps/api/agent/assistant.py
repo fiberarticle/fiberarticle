@@ -122,13 +122,31 @@ def _snippet(text: str | None) -> str:
 
 
 class AssistantAgent:
-    def __init__(self, llm: ResolvedLlm, user_id: str, conversation: dict):
+    def __init__(
+        self,
+        llm: ResolvedLlm,
+        user_id: str,
+        conversation: dict,
+        on_step=None,
+    ):
         self.llm = llm
         self.user_id = user_id
         self.conversation = conversation
         # Numbered evidence pool shared across tools; [n] cites index+1.
         self.evidence: list[dict[str, Any]] = []
         self.steps: list[dict[str, Any]] = []
+        # Optional async callback fired the moment a step happens, so the
+        # UI can stream the chain of thought live instead of after the fact.
+        self.on_step = on_step
+
+    async def _record_step(self, step: dict[str, Any]) -> None:
+        self.steps.append(step)
+        if self.on_step is not None:
+            try:
+                await self.on_step(step)
+            except Exception:
+                # A broken live stream must never kill the turn itself.
+                pass
 
     async def _library_search(self, query: str) -> str:
         try:
@@ -301,7 +319,7 @@ class AssistantAgent:
             # The user attached documents with this message: consult them
             # unconditionally instead of leaving retrieval to the model.
             observation = await self._library_search(question)
-            self.steps.append(
+            await self._record_step(
                 {
                     "type": "action",
                     "tool": "library_search",
@@ -331,7 +349,7 @@ class AssistantAgent:
 
             if final:
                 if thought:
-                    self.steps.append({"type": "thought", "text": thought})
+                    await self._record_step({"type": "thought", "text": thought})
                 answer = final.group(1).strip()
                 break
 
@@ -366,7 +384,7 @@ class AssistantAgent:
                 if not tool_input:
                     tool_input = question[:200]
             if thought:
-                self.steps.append({"type": "thought", "text": thought})
+                await self._record_step({"type": "thought", "text": thought})
 
             if tool == "library_search":
                 observation = await self._library_search(tool_input)
@@ -379,7 +397,7 @@ class AssistantAgent:
                     f"Unknown tool '{tool}'. Use library_search, "
                     "scholar_search, or web_search."
                 )
-            self.steps.append(
+            await self._record_step(
                 {
                     "type": "action",
                     "tool": tool,
