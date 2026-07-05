@@ -60,9 +60,9 @@ class RunCreate(BaseModel):
     filters: RunFilters | None = None
     # Inclusion/exclusion criteria applied during screening.
     criteria: str | None = Field(default=None, max_length=2000)
-    # Library papers the user attached to this task: always included in the
-    # run alongside fresh search results.
-    seed_paper_ids: list[str] | None = Field(default=None, max_length=20)
+    # Papers the user attached to this task: always included in the run
+    # alongside fresh search results. No count limit.
+    seed_paper_ids: list[str] | None = None
 
 
 class RunOut(BaseModel):
@@ -251,7 +251,9 @@ class ChatMessageOut(BaseModel):
 
 
 class ChatMessageIn(BaseModel):
-    content: str = Field(min_length=1, max_length=4000)
+    # No length cap: the model's context window is the only real limit, and
+    # oversize prompts fail gracefully at the provider instead of a 422 here.
+    content: str = Field(min_length=1)
     # True when the user attached/uploaded files with this message: forces
     # one library_search pass so the attached documents are always consulted.
     search_library_first: bool = False
