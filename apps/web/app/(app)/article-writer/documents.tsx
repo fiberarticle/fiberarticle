@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, PenLine } from "lucide-react";
 import { WriterArt } from "@/components/art";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, ApiError } from "@/lib/api";
-import type { DocumentListItem } from "@/lib/types";
+import type { DocumentListItem, Run } from "@/lib/types";
 
 const templateLabels: Record<string, string> = {
   generic: "Generic manuscript",
@@ -23,8 +26,38 @@ const templateLabels: Record<string, string> = {
 };
 
 export function Documents() {
+  const router = useRouter();
   const [documents, setDocuments] = useState<DocumentListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [topic, setTopic] = useState("");
+  const [starting, setStarting] = useState(false);
+
+  // Same flow as the home page's Article Writer card: research the topic
+  // first, then the article is generated automatically when it completes.
+  async function onStartArticle() {
+    setError(null);
+    const trimmed = topic.trim();
+    if (trimmed.length < 10) {
+      setError("Describe your topic in at least 10 characters.");
+      return;
+    }
+    setStarting(true);
+    try {
+      const run = await apiFetch<Run>("/v1/runs", {
+        method: "POST",
+        body: JSON.stringify({ topic: trimmed, mode: "research" }),
+      });
+      sessionStorage.setItem(`fa-article-intent-${run.id}`, "1");
+      router.push(`/researcher/${run.id}?intent=article`);
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.message
+          : "The Fiberarticle API is unreachable. Is it running?"
+      );
+      setStarting(false);
+    }
+  }
 
   useEffect(() => {
     const load = () =>
@@ -54,6 +87,34 @@ export function Documents() {
         <WriterArt className="hidden w-36 shrink-0 sm:block" />
       </div>
 
+      <Card className="flex flex-col gap-3 p-5">
+        <Textarea
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="Example: Retrieval-augmented generation techniques for reducing hallucination in large language models"
+          className="min-h-20"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onStartArticle();
+            }
+          }}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            The agent researches the topic first, then writes the full
+            article and opens it in the editor.
+          </p>
+          <Button
+            onClick={onStartArticle}
+            loading={starting}
+            disabled={!topic.trim()}
+          >
+            <PenLine /> Write article
+          </Button>
+        </div>
+      </Card>
+
       {error && <Callout tone="error">{error}</Callout>}
 
       {documents === null && !error ? (
@@ -70,7 +131,7 @@ export function Documents() {
           </p>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="fa-textarea-scroll -mr-3 flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-3">
           {documents?.map((doc) => (
             <Link key={doc.id} href={`/article-writer/${doc.id}`}>
               <Card className="group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-accent">
