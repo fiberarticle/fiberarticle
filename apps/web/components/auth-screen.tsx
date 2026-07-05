@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { AuthLottie } from "@/components/auth-lottie";
 import { GoogleIcon } from "@/components/google-icon";
 import { authClient } from "@/lib/auth-client";
 
@@ -38,6 +39,13 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <div className={styles.whiteGlow} />
 
         <div className={styles.leftPanel}>
+          {/* Decorative animation filling the empty lower half of the
+              brand panel. aria-hidden + pointer-events none: pure visual. */}
+          <div className={styles.leftAnimation} aria-hidden>
+            <div className={styles.animSearch}>
+              <AuthLottie src="/Searching.lottie" />
+            </div>
+          </div>
           <div className={styles.leftContent}>
             <h1 className={styles.leftBrand}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
