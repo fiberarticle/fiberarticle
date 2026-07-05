@@ -1,0 +1,106 @@
+# Manual production deploy. Pushing to main never deploys by itself;
+# open Actions, pick "Deploy Fiberarticle WebApp" and press Run workflow.
+name: Deploy Fiberarticle WebApp
+
+on:
+  workflow_dispatch:
+
+# One deploy at a time; a second trigger waits for the first to finish.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  VM_HOST: "140.245.198.50"
+
+jobs:
+  deploy:
+    name: Build and deploy to the VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Build web app
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_API_URL: https://app.fiberarticle.com
+        run: npm run build
+
+      # Next keeps static files and public/ outside the standalone folder,
+      # so copy them in before shipping one self-contained bundle.
+      - name: Assemble standalone bundle
+        working-directory: apps/web
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          tar -czf "$GITHUB_WORKSPACE/web-bundle.tar.gz" -C .next/standalone .
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload bundle
+        run: scp -i ~/.ssh/deploy_key web-bundle.tar.gz ubuntu@"$VM_HOST":/tmp/web-bundle.tar.gz
+
+      # Unpack next to the live folder, then swap and restart, so the site
+      # is only down for the restart itself.
+      - name: Install new web build
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@"$VM_HOST" '
+            set -e
+            rm -rf /opt/fiberarticle-web-next /opt/fiberarticle-web-old
+            mkdir -p /opt/fiberarticle-web-next
+            tar -xzf /tmp/web-bundle.tar.gz -C /opt/fiberarticle-web-next
+            rm /tmp/web-bundle.tar.gz
+            sudo systemctl stop fiberarticle-web
+            mv /opt/fiberarticle-web /opt/fiberarticle-web-old
+            mv /opt/fiberarticle-web-next /opt/fiberarticle-web
+            sudo systemctl start fiberarticle-web
+            rm -rf /opt/fiberarticle-web-old
+          '
+
+      - name: Update API code
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@"$VM_HOST" '
+            set -e
+            cd /opt/fiberarticle
+            git fetch origin main
+            git reset --hard origin/main
+            apps/api/venv/bin/pip install -q -r apps/api/requirements.txt
+            sudo systemctl restart fiberarticle-api
+          '
+
+      - name: Health checks
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@"$VM_HOST" '
+            web=000; api=000
+            for i in $(seq 1 45); do
+              web=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/sign-in || true)
+              api=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/health || true)
+              if [ "$web" = "200" ] && [ "$api" = "200" ]; then
+                echo "Healthy: web $web, api $api"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Unhealthy after 90s: web $web, api $api"
+            exit 1
+          '
