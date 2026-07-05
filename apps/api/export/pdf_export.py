@@ -16,7 +16,7 @@ import re
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
@@ -175,6 +175,8 @@ def render_pdf(
     plain = ParagraphStyle(
         "plain", parent=body, alignment=TA_LEFT, firstLineIndent=0
     )
+    # First paragraph after a heading: no first-line indent.
+    body_first = ParagraphStyle("bodyFirst", parent=body, firstLineIndent=0)
     title_style = ParagraphStyle(
         "title",
         parent=plain,
@@ -224,6 +226,37 @@ def render_pdf(
         leftIndent=0 if numeric else 36,
         firstLineIndent=0 if numeric else -36,
     )
+    _ALIGN_ENUM = {
+        "left": TA_LEFT,
+        "center": TA_CENTER,
+        "right": TA_RIGHT,
+        "justify": TA_JUSTIFY,
+    }
+    aligned_styles: dict[str, ParagraphStyle] = {}
+
+    def aligned_style(align: str, heading: bool) -> ParagraphStyle:
+        key = f"{align}-{heading}"
+        if key not in aligned_styles:
+            aligned_styles[key] = ParagraphStyle(
+                f"aligned-{key}",
+                parent=heading_style if heading else body,
+                alignment=_ALIGN_ENUM.get(align, TA_JUSTIFY),
+                firstLineIndent=0,
+            )
+        return aligned_styles[key]
+
+    def segments_with_intext(segments):
+        if not replacements:
+            return segments
+        return [
+            (
+                _CITE_RE.sub(
+                    lambda m: replacements.get(m.group(0), m.group(0)), text
+                ),
+                marks,
+            )
+            for text, marks in segments
+        ]
 
     margin = 0.75 * inch if layout == "ieee" else 1 * inch
     buffer = io.BytesIO()
@@ -247,9 +280,24 @@ def render_pdf(
     if authors:
         story.append(Paragraph(escape(authors), authors_style))
 
+    # Typographic rule: no indent on the paragraph right after a heading.
+    suppress_indent = True
+
     def add_block(block: Block) -> None:
+        nonlocal suppress_indent
         if block.kind == "pagebreak":
             story.append(PageBreak())
+            return
+        if block.segments is not None and block.align:
+            markup = _segments_markup(segments_with_intext(block.segments))
+            if block.kind == "heading":
+                markup = f"<b>{markup}</b>"
+                suppress_indent = True
+            else:
+                suppress_indent = False
+            story.append(
+                Paragraph(markup, aligned_style(block.align, block.kind == "heading"))
+            )
             return
         if block.kind == "image":
             decoded = decode_data_image(block.src)
@@ -265,6 +313,7 @@ def render_pdf(
                     image.hAlign = "CENTER"
                     story.append(image)
                     story.append(Spacer(1, 6))
+                    suppress_indent = False
                 except Exception:
                     pass
             return
@@ -272,11 +321,13 @@ def render_pdf(
             story.append(
                 Paragraph(f"<b>{_inline_markup(block.text, replacements)}</b>", heading_style)
             )
+            suppress_indent = True
             return
         if block.kind == "placeholder":
             story.append(
                 Paragraph(f"<i>{escape(block.text)}</i>", placeholder_style)
             )
+            suppress_indent = False
             return
         if block.kind in ("bullet", "number"):
             for i, item in enumerate(block.items, 1):
@@ -289,10 +340,12 @@ def render_pdf(
                     )
                 )
             story.append(Spacer(1, max(style["space_after_pt"], 4)))
+            suppress_indent = False
             return
         if block.kind == "quote":
             for line in block.text.split("\n"):
                 story.append(Paragraph(_inline_markup(line, replacements), quote_style))
+            suppress_indent = False
             return
         if block.kind == "table":
             columns = max(len(r) for r in block.rows)
@@ -323,8 +376,15 @@ def render_pdf(
             )
             story.append(table)
             story.append(Spacer(1, max(style["space_after_pt"], 6)))
+            suppress_indent = False
             return
-        story.append(Paragraph(_inline_markup(block.text, replacements), body))
+        story.append(
+            Paragraph(
+                _inline_markup(block.text, replacements),
+                body_first if suppress_indent else body,
+            )
+        )
+        suppress_indent = False
 
     counter = 0
     for section in document.get("sections") or []:
@@ -341,6 +401,7 @@ def render_pdf(
             label = heading
         chosen = heading_centered if apa and is_abstract else heading_style
         story.append(Paragraph(f"<b>{escape(label)}</b>", chosen))
+        suppress_indent = True
         for block in parse_blocks(section.get("content") or ""):
             add_block(block)
 
