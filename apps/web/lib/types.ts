@@ -5,9 +5,12 @@ export type RunStatus =
   | "failed"
   | "cancelled";
 
+export type RunMode = "research" | "literature_review";
+
 export interface Run {
   id: string;
   topic: string;
+  mode: RunMode;
   status: RunStatus;
   stage: string | null;
   paper_count: number;
@@ -25,6 +28,8 @@ export interface RunEvent {
   ts: string;
 }
 
+export type Quartile = "Q1" | "Q2" | "Q3" | "Q4";
+
 export interface Paper {
   id: string;
   title: string;
@@ -36,6 +41,7 @@ export interface Paper {
   source: string;
   is_open_access: boolean;
   abstract: string | null;
+  quartile: Quartile | null;
 }
 
 export type LlmMode = "fiberarticle_ai" | "byok" | "local";
@@ -57,7 +63,21 @@ export interface RunDetail extends Run {
   papers: Paper[];
 }
 
-export type DocumentTemplate = "generic" | "ieee" | "apa";
+export type DocumentTemplate =
+  | "generic"
+  | "ieee"
+  | "apa"
+  | "acm"
+  | "elsevier"
+  | "springer"
+  | "neurips";
+
+export interface TemplateInfo {
+  id: DocumentTemplate;
+  label: string;
+  description: string;
+  latex: boolean;
+}
 
 export interface DocumentSection {
   id: string;
@@ -73,6 +93,7 @@ export interface DocumentDetail {
   status: "generating" | "ready" | "failed";
   sections: DocumentSection[];
   authors: string[];
+  citation_style: string | null;
   error: string | null;
   references: Paper[];
   created_at: string;
@@ -115,6 +136,8 @@ export interface SearchResultPaper {
   is_open_access: boolean;
   oa_pdf_url: string | null;
   cited_by_count: number;
+  issn: string | null;
+  quartile: Quartile | null;
 }
 
 export interface SearchResponse {
@@ -180,4 +203,21 @@ export interface DocumentListItem {
   section_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Preferences {
+  citation_style: string;
+  citation_style_title: string;
+  ai_language: string;
+}
+
+export interface CitationStyle {
+  id: string;
+  title: string;
+  format: string | null;
+}
+
+export interface LanguageOption {
+  value: string;
+  label: string;
 }
