@@ -34,7 +34,7 @@ import {
   SourceContent,
   SourceTrigger,
 } from "@/components/prompt-kit/source";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiFetch, ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { streamRunEvents } from "@/lib/sse";
 import type {
   DocumentDetail,
@@ -436,14 +437,17 @@ export function RunView({ runId }: { runId: string }) {
             </span>
           )}
           {isActive && (
-            <Button
-              variant="outline"
-              size="sm"
-              loading={cancelling}
+            <button
+              type="button"
               onClick={onCancelRun}
+              disabled={cancelling}
+              className={cn(
+                badgeVariants({ variant: "destructive" }),
+                "cursor-pointer transition-colors hover:bg-[color-mix(in_oklab,var(--destructive)_22%,transparent)] disabled:opacity-60"
+              )}
             >
-              <X /> Stop run
-            </Button>
+              <X /> {cancelling ? "Cancelling" : "Cancel"}
+            </button>
           )}
         </div>
         {isActive && activeStage && (
