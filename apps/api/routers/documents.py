@@ -3,9 +3,14 @@ import re
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from citations import catalog
+from citations.engine import is_numeric, render_bibliography, render_intext
 from db import execute, fetch_all, fetch_one, jsonb
 from export.docx_export import render_docx
+from latex.render import render_project_zip
+from latex.templates import TEMPLATES
 from llm.client import LlmNotConfigured, resolve_llm
+from prefs import get_prefs
 from models import (
     DocumentCreate,
     DocumentListItem,
@@ -33,6 +38,7 @@ def _paper_out(p: dict) -> PaperOut:
         source=p["source"],
         is_open_access=p["is_open_access"],
         abstract=p["abstract"],
+        quartile=p.get("quartile"),
     )
 
 
@@ -58,6 +64,27 @@ async def _references_for(row: dict, user_id: str) -> list[PaperOut]:
     return [_paper_out(p) for p in papers]
 
 
+# The citation style used when neither the document nor the user chose one.
+_TEMPLATE_DEFAULT_STYLE = {
+    "generic": "ieee",
+    "ieee": "ieee",
+    "apa": "apa",
+    "acm": "acm-sig-proceedings",
+    "elsevier": "elsevier-harvard",
+    "springer": "springer-basic-author-date",
+    "neurips": "apa",
+}
+
+
+async def _effective_style(row: dict, user_id: str) -> str:
+    if row.get("citation_style") and catalog.entry(row["citation_style"]):
+        return row["citation_style"]
+    preferred = (await get_prefs(user_id))["citation_style"]
+    if catalog.entry(preferred):
+        return preferred
+    return _TEMPLATE_DEFAULT_STYLE.get(row["template"], "apa")
+
+
 async def _document_out(row: dict, user_id: str) -> DocumentOut:
     return DocumentOut(
         id=str(row["id"]),
@@ -67,6 +94,7 @@ async def _document_out(row: dict, user_id: str) -> DocumentOut:
         status=row["status"],
         sections=row["sections"] or [],
         authors=row["authors"] or [],
+        citation_style=row.get("citation_style"),
         error=row["error"],
         references=await _references_for(row, user_id),
         created_at=row["created_at"],
@@ -153,17 +181,26 @@ async def update_document(
         else row["sections"]
     )
     authors = body.authors if body.authors is not None else (row["authors"] or [])
+    citation_style = (
+        body.citation_style
+        if body.citation_style is not None
+        else row.get("citation_style")
+    )
+    if citation_style and catalog.entry(citation_style) is None:
+        raise HTTPException(422, "Unknown citation style.")
 
     await execute(
         """
         UPDATE documents
-        SET title = %s, template = %s, sections = %s, authors = %s, updated_at = now()
+        SET title = %s, template = %s, sections = %s, authors = %s,
+            citation_style = %s, updated_at = now()
         WHERE id = %s
         """,
         title.strip() or row["title"],
         template,
         jsonb(sections),
         jsonb(authors),
+        citation_style,
         document_id,
     )
     updated = await _get_owned_document(document_id, user_id)
@@ -205,6 +242,31 @@ async def edit_section(
     return SectionEditOut(section_id=body.section_id, content=content)
 
 
+_CITE_GROUP_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+
+
+async def _intext_replacements(
+    sections: list[dict], papers: list[dict], style: str
+) -> dict[str, str]:
+    """Map every bracketed marker group in the text to a rendered cite."""
+    markers: list[str] = []
+    for section in sections:
+        markers.extend(
+            m.group(0) for m in _CITE_GROUP_RE.finditer(section.get("content") or "")
+        )
+    unique = list(dict.fromkeys(markers))
+    if not unique:
+        return {}
+    groups = [
+        [int(n) for n in marker.strip("[]").replace(" ", "").split(",")]
+        for marker in unique
+    ]
+    rendered = await render_intext(papers, style, groups)
+    return {
+        marker: text for marker, text in zip(unique, rendered) if text
+    }
+
+
 @router.get("/documents/{document_id}/export")
 async def export_document(document_id: str, user_id: str = CurrentUser) -> Response:
     row = await _get_owned_document(document_id, user_id)
@@ -215,6 +277,19 @@ async def export_document(document_id: str, user_id: str = CurrentUser) -> Respo
         row["run_id"],
         user_id,
     )
+    style = await _effective_style(row, user_id)
+    numeric = is_numeric(style)
+    papers = [dict(p) for p in papers]
+    try:
+        references = await render_bibliography(papers, style)
+    except Exception:
+        references = None
+    intext = None
+    if not numeric and papers:
+        try:
+            intext = await _intext_replacements(row["sections"] or [], papers, style)
+        except Exception:
+            numeric = True  # keep [n] markers rather than fail the export
     data = render_docx(
         {
             "title": row["title"],
@@ -223,6 +298,9 @@ async def export_document(document_id: str, user_id: str = CurrentUser) -> Respo
             "sections": row["sections"] or [],
         },
         papers,
+        references=references,
+        intext=intext,
+        numeric=numeric,
     )
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", row["title"]).strip("-").lower()[:60] or "article"
     return Response(
@@ -232,3 +310,47 @@ async def export_document(document_id: str, user_id: str = CurrentUser) -> Respo
             "Content-Disposition": f'attachment; filename="{slug}.docx"',
         },
     )
+
+
+@router.get("/documents/{document_id}/export-latex")
+async def export_document_latex(
+    document_id: str, user_id: str = CurrentUser
+) -> Response:
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] != "ready":
+        raise HTTPException(409, "The document is not ready to export yet.")
+    papers = await fetch_all(
+        "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
+        row["run_id"],
+        user_id,
+    )
+    data = render_project_zip(
+        {
+            "title": row["title"],
+            "template": row["template"],
+            "authors": row["authors"] or [],
+            "sections": row["sections"] or [],
+        },
+        [dict(p) for p in papers],
+    )
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", row["title"]).strip("-").lower()[:60] or "article"
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{slug}-latex.zip"',
+        },
+    )
+
+
+@router.get("/templates")
+async def list_templates() -> list[dict]:
+    return [
+        {
+            "id": t.id,
+            "label": t.label,
+            "description": t.description,
+            "latex": True,
+        }
+        for t in TEMPLATES.values()
+    ]
