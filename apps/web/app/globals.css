@@ -116,6 +116,25 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --animate-shimmer: shimmer 2s linear infinite;
+  --animate-shimmer-hue: shimmer-hue 8s linear infinite;
+  /* The shimmer highlight drifts through the logo palette (amber, green,
+     blue, pink) while the shine sweeps. Registered so the color
+     interpolates smoothly instead of stepping. */
+  @keyframes shimmer-hue {
+    0%,
+    100% {
+      --shimmer-hi: #f0ac3c;
+    }
+    25% {
+      --shimmer-hi: #7ccf86;
+    }
+    50% {
+      --shimmer-hi: #8db8ef;
+    }
+    75% {
+      --shimmer-hi: #ff9dc4;
+    }
+  }
 
   @keyframes shimmer {
     0% {
@@ -125,6 +144,14 @@
       background-position: -50% center;
     }
   }
+}
+
+/* Typed so the shimmer highlight color animates smoothly between the
+   palette stops (falls back to stepped changes where unsupported). */
+@property --shimmer-hi {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f0ac3c;
 }
 
 @layer base {
@@ -350,6 +377,13 @@
 .fa-page.fa-paged {
   padding: 0;
   min-height: 0;
+}
+/* The pagination extension pins the editor element to the full A4 width
+   (inline width: var(--rm-page-width)). When the AI chat squeezes the
+   column below that, the sheet must shrink with it instead of the text
+   overflowing under the panel; max-width wins over the inline width. */
+.fa-page.fa-paged .rm-with-pagination {
+  max-width: 100%;
 }
 .fa-page .fa-prose h2 {
   font-size: var(--pg-heading, 1.1em);
