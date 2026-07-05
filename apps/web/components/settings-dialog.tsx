@@ -20,13 +20,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { StylePicker } from "@/components/style-picker";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -186,38 +181,24 @@ function PreferencesPanel() {
             </span>
           </span>
         </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-44 justify-between">
-              <span className="truncate">
-                {languages.find(
-                  (l) => l.value === (prefs?.ai_language ?? "en-US")
-                )?.label ?? "English (US)"}
-              </span>
-              <ChevronDown className="size-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="max-h-72 w-56 overflow-y-auto"
-          >
+        <Select.Root
+          value={prefs?.ai_language ?? "en-US"}
+          onValueChange={(value) => save({ ai_language: value })}
+        >
+          <Select.Trigger className="w-56">
+            <Select.Value placeholder="English (US)" />
+          </Select.Trigger>
+          <Select.Content>
             {(languages.length > 0
               ? languages
               : [{ value: "en-US", label: "English (US)" }]
             ).map((lang) => (
-              <DropdownMenuItem
-                key={lang.value}
-                onSelect={() => save({ ai_language: lang.value })}
-                className="justify-between"
-              >
+              <Select.Item key={lang.value} value={lang.value}>
                 {lang.label}
-                {(prefs?.ai_language ?? "en-US") === lang.value && (
-                  <BadgeCheck className="size-4 text-primary" />
-                )}
-              </DropdownMenuItem>
+              </Select.Item>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </Select.Content>
+        </Select.Root>
       </div>
 
       {error && <Callout tone="error">{error}</Callout>}
@@ -347,24 +328,24 @@ function LlmPanel() {
       {mode === "byok" && (
         <>
           <Field label="Provider">
-            <select
+            <Select.Root
               value={provider}
-              onChange={(e) => {
-                setProvider(e.target.value);
-                setModel(defaultModels[e.target.value] ?? "");
+              onValueChange={(value) => {
+                setProvider(value);
+                setModel(defaultModels[value] ?? "");
               }}
-              className="h-9 w-full max-w-xs cursor-pointer rounded-xl border border-input bg-transparent px-3 text-sm focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-1"
             >
-              {byokProviders.map((p) => (
-                <option
-                  key={p.value}
-                  value={p.value}
-                  className="bg-popover text-popover-foreground"
-                >
-                  {p.label}
-                </option>
-              ))}
-            </select>
+              <Select.Trigger className="max-w-xs">
+                <Select.Value placeholder="Select a provider..." />
+              </Select.Trigger>
+              <Select.Content>
+                {byokProviders.map((p) => (
+                  <Select.Item key={p.value} value={p.value}>
+                    {p.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
           </Field>
           <Field label="Model">
             <Input
