@@ -41,8 +41,8 @@ _SYSTEM = """You are Fiberarticle Assistant, a research assistant that answers \
 any question accurately, grounding claims in sources whenever possible.
 
 You have these tools:
-- library_search: searches the user's own paper library (full text and \
-abstracts). Input: a short search query.
+- library_search: searches the papers the user has uploaded or attached \
+(full text and abstracts). Input: a short search query.
 - scholar_search: searches published academic literature (OpenAlex, \
 Crossref). Input: a short keyword query.
 
@@ -58,7 +58,7 @@ Thought: <your final reasoning>
 Final Answer: <the answer>
 
 Rules:
-- Questions about "my papers", "my library", or an attached document need \
+- Questions about "my papers", "this paper", or an attached document need \
 library_search first.
 - Factual or scientific claims should be checked against sources; cite \
 evidence with bracketed numbers like [2] that match the numbered \
@@ -86,7 +86,7 @@ class AssistantAgent:
         try:
             vector = await embed_query(query)
         except Exception:
-            return "Library search is unavailable right now."
+            return "Paper search is unavailable right now."
         if self.conversation.get("scope") == "paper" and self.conversation.get(
             "paper_id"
         ):
@@ -114,9 +114,9 @@ class AssistantAgent:
             )
         if not rows:
             return (
-                "No results: the library has no indexed text for this query. "
-                "Consider scholar_search or answer from general knowledge, "
-                "saying the library had nothing relevant."
+                "No results: the user's uploaded papers have no indexed text "
+                "for this query. Consider scholar_search or answer from "
+                "general knowledge, saying their papers had nothing relevant."
             )
         lines = []
         for row in rows:
@@ -195,8 +195,8 @@ class AssistantAgent:
                 {
                     "role": "user",
                     "content": (
-                        "Observation (automatic library search over the user's "
-                        f"newly attached documents):\n{observation}"
+                        "Observation (automatic search over the user's newly "
+                        f"attached documents):\n{observation}"
                     ),
                 }
             )
