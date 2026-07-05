@@ -167,7 +167,9 @@ async def send_message(
     history = list(reversed(history))
 
     agent = AssistantAgent(llm, user_id, dict(conversation))
-    result = await agent.run(body.content, history)
+    result = await agent.run(
+        body.content, history, search_library_first=body.search_library_first
+    )
     answer = result["answer"].strip()
     if not answer:
         raise HTTPException(502, "The model returned an empty answer. Try again.")
