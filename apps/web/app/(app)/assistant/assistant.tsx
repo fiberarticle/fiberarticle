@@ -45,7 +45,6 @@ import { cn } from "@/lib/utils";
 export function Assistant() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const paperIdParam = searchParams.get("paper");
   const chatIdParam = searchParams.get("chat");
 
   const [conversations, setConversations] = React.useState<Conversation[] | null>(null);
@@ -60,7 +59,6 @@ export function Assistant() {
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const followUpRef = React.useRef<HTMLTextAreaElement>(null);
-  const startedForPaper = React.useRef(false);
   // Set while the first message of a fresh chat is in flight so the
   // thread loader does not clobber the optimistic message with [].
   const sendingFirstFor = React.useRef<string | null>(null);
@@ -85,29 +83,6 @@ export function Assistant() {
   React.useEffect(() => {
     loadConversations();
   }, [loadConversations]);
-
-  // Deep link: /assistant?paper=<id> opens (or creates) a chat for that paper.
-  React.useEffect(() => {
-    if (!paperIdParam || startedForPaper.current || conversations === null) return;
-    startedForPaper.current = true;
-    const existing = conversations.find((c) => c.paper_id === paperIdParam);
-    if (existing) {
-      router.replace(`/assistant?chat=${existing.id}`);
-      return;
-    }
-    (async () => {
-      try {
-        const created = await apiFetch<Conversation>("/v1/chats", {
-          method: "POST",
-          body: JSON.stringify({ scope: "paper", paper_id: paperIdParam }),
-        });
-        await loadConversations();
-        router.replace(`/assistant?chat=${created.id}`);
-      } catch (e) {
-        setError(e instanceof ApiError ? e.message : "Could not open the chat.");
-      }
-    })();
-  }, [paperIdParam, conversations, loadConversations, router]);
 
   // Deep link from the New Task composer: /assistant?q=<question> starts a
   // fresh chat with that question straight away. attached=1 means files
