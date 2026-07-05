@@ -16,6 +16,8 @@ class PaperRecord(TypedDict, total=False):
     is_open_access: bool
     oa_pdf_url: str | None
     cited_by_count: int
+    issn: str | None
+    quartile: str | None
 
 
 def normalize_doi(doi: str | None) -> str | None:
