@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, BookOpenCheck, ChevronRight, FunnelPlus } from "lucide-react";
+import { ArrowUp, ClipboardCheck, ChevronRight, FunnelPlus } from "lucide-react";
 import { ReviewArt } from "@/components/art";
 import { quartileChipClass } from "@/components/quartile-badge";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
@@ -272,7 +272,7 @@ export function Review() {
           </div>
         ) : reviews.length === 0 ? (
           <Card className="flex flex-col items-center gap-2 p-8 text-center">
-            <BookOpenCheck className="size-6 text-muted-foreground" />
+            <ClipboardCheck className="size-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               No literature reviews yet. Describe a topic above to run your
               first one.
