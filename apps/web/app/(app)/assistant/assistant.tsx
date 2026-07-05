@@ -109,14 +109,16 @@ export function Assistant() {
   }, [paperIdParam, conversations, loadConversations, router]);
 
   // Deep link from the New Task composer: /assistant?q=<question> starts a
-  // fresh chat with that question straight away.
+  // fresh chat with that question straight away. attached=1 means files
+  // were just uploaded, so the agent must consult the library first.
   const autoAsked = React.useRef(false);
   const qParam = (searchParams.get("q") ?? "").trim();
+  const attachedParam = searchParams.get("attached") === "1";
   React.useEffect(() => {
     if (!qParam || autoAsked.current || chatIdParam) return;
     autoAsked.current = true;
     setStarting(true);
-    startChatWith(qParam);
+    startChatWith(qParam, attachedParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qParam, chatIdParam]);
 
@@ -135,6 +137,20 @@ export function Assistant() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, sending]);
 
+  // Real elapsed time while the agent works: reasoning models on the free
+  // tier can legitimately take minutes, and a static shimmer reads as hung.
+  const [thinkSeconds, setThinkSeconds] = React.useState(0);
+  React.useEffect(() => {
+    if (!sending) return;
+    setThinkSeconds(0);
+    const interval = setInterval(() => setThinkSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [sending]);
+  const thinkElapsed =
+    thinkSeconds >= 60
+      ? `${Math.floor(thinkSeconds / 60)}m ${thinkSeconds % 60}s`
+      : `${thinkSeconds}s`;
+
   function onAttach(files: File[]) {
     setError(null);
     setAttachments((prev) => {
@@ -150,11 +166,12 @@ export function Assistant() {
   }
 
   /** Upload every attachment into the library so the chat can read them.
-   * Returns false (and reports errors) if any upload failed. */
-  async function uploadAttachments(): Promise<boolean> {
-    if (attachments.length === 0) return true;
+   * Returns the created paper ids, or null if any upload failed. */
+  async function uploadAttachments(): Promise<string[] | null> {
+    if (attachments.length === 0) return [];
     setUploading(true);
     const failures: string[] = [];
+    const uploaded: string[] = [];
     try {
       const token = await getApiToken();
       for (const file of attachments) {
@@ -169,6 +186,9 @@ export function Assistant() {
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
             failures.push(`${file.name}: ${body.detail ?? "upload failed"}`);
+          } else {
+            const body = await res.json().catch(() => null);
+            if (body?.id) uploaded.push(body.id);
           }
         } catch {
           failures.push(`${file.name}: upload failed`);
@@ -183,14 +203,16 @@ export function Assistant() {
       setAttachments((prev) =>
         prev.filter((f) => failures.some((msg) => msg.startsWith(f.name)))
       );
-      return false;
+      return null;
     }
     setAttachments([]);
-    return true;
+    return uploaded;
   }
 
-  /** Create a library chat and send the question in one go. */
-  async function startChatWith(trimmed: string) {
+  /** Create a library chat and send the question in one go. When files were
+   * attached, the agent is told to search the library first so the freshly
+   * uploaded documents are always consulted. */
+  async function startChatWith(trimmed: string, searchLibraryFirst = false) {
     try {
       const created = await apiFetch<Conversation>("/v1/chats", {
         method: "POST",
@@ -213,7 +235,13 @@ export function Assistant() {
       router.push(`/assistant?chat=${created.id}`);
       const updated = await apiFetch<ChatMessage[]>(
         `/v1/chats/${created.id}/messages`,
-        { method: "POST", body: JSON.stringify({ content: trimmed }) }
+        {
+          method: "POST",
+          body: JSON.stringify({
+            content: trimmed,
+            search_library_first: searchLibraryFirst,
+          }),
+        }
       );
       setMessages(updated);
       loadConversations();
@@ -232,11 +260,12 @@ export function Assistant() {
     if (!trimmed || starting) return;
     setStarting(true);
     setError(null);
-    if (!(await uploadAttachments())) {
+    const uploadedIds = await uploadAttachments();
+    if (uploadedIds === null) {
       setStarting(false);
       return;
     }
-    await startChatWith(trimmed);
+    await startChatWith(trimmed, uploadedIds.length > 0);
   }
 
   async function onSend() {
@@ -384,9 +413,14 @@ export function Assistant() {
               </div>
             ))}
             {sending && (
-              <TextShimmer className="self-start text-sm">
-                Thinking, searching, and reading sources
-              </TextShimmer>
+              <div className="flex items-center gap-2 self-start">
+                <TextShimmer className="text-sm">
+                  Thinking, searching, and reading sources
+                </TextShimmer>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {thinkElapsed}
+                </span>
+              </div>
             )}
             <div ref={bottomRef} />
           </div>
