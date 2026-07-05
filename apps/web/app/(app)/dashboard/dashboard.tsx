@@ -218,9 +218,9 @@ export function Dashboard({ userName }: { userName: string }) {
             : "What should we research?";
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center">
-      <section className="-mt-10 flex w-full max-w-3xl flex-col gap-6">
-        <h1 className="text-center text-3xl font-semibold tracking-tight">
+    <div className="flex min-h-[calc(100svh-9.5rem)] flex-col items-center justify-center md:min-h-[calc(100vh-8rem)]">
+      <section className="flex w-full max-w-3xl flex-col gap-6 md:-mt-10">
+        <h1 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           {heading}
         </h1>
 
