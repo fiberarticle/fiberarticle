@@ -37,7 +37,15 @@ class ResolvedLlm:
         temperature: float = 0.3,
     ) -> str:
         if not self.reasoning:
-            content, _ = await self._call(messages, max_tokens, temperature)
+            content, finish = await self._call(messages, max_tokens, temperature)
+            # Even "fast" managed models can emit hidden reasoning that eats the
+            # token budget, leaving the visible answer truncated or empty. Both
+            # break JSON parsing and cut prose mid-sentence. Retry once with far
+            # more room whenever the reply was cut off or came back empty.
+            if not content or finish == "length":
+                content, _ = await self._call(
+                    messages, max(max_tokens * 4, 4000), temperature
+                )
             return content
 
         # Reasoning models spend most of the token budget on hidden reasoning
