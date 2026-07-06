@@ -210,10 +210,21 @@ class ResearchNodes:
             seen.add(key)
             unique.append(paper)
 
+        # Rank by topical relevance first so the screening budget is spent on
+        # on-topic papers; open access and citations only break ties.
+        terms = {
+            w
+            for w in re.findall(r"[a-z0-9]+", state["topic"].lower())
+            if len(w) > 2
+        }
+
         def score(p: PaperRecord) -> tuple:
+            text = ((p.get("title") or "") + " " + (p.get("abstract") or "")).lower()
+            hits = sum(1 for t in terms if t in text)
             return (
+                round(hits / len(terms), 2) if terms else 0,
+                min(p.get("cited_by_count") or 0, 100_000),
                 1 if (p.get("is_open_access") or p.get("oa_pdf_url")) else 0,
-                p.get("cited_by_count") or 0,
             )
 
         unique.sort(key=score, reverse=True)
