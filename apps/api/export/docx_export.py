@@ -23,6 +23,22 @@ from docx.shared import Inches, Pt
 _CITE_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _PLACEHOLDER_RE = re.compile(r"^\[.*placeholder.*\]$", re.IGNORECASE)
 
+# Block-level Markdown: list items and blockquotes.
+_LIST_BULLET_RE = re.compile(r"^[-*+]\s+(.+)$")
+_LIST_NUMBER_RE = re.compile(r"^\d+[.)]\s+(.+)$")
+_BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)$")
+
+# Inline Markdown marks, tried in priority order (bold before italic so
+# "**x**" is not swallowed by the single-marker italic alternatives).
+_INLINE_TOKEN_RE = re.compile(
+    r"\*\*(?P<bold>.+?)\*\*"
+    r"|__(?P<bold2>.+?)__"
+    r"|\*(?P<italic>[^*]+?)\*"
+    r"|_(?P<italic2>[^_]+?)_"
+    r"|~~(?P<strike>.+?)~~"
+    r"|`(?P<code>[^`]+?)`"
+)
+
 
 def _surname(author: str) -> str:
     parts = author.strip().split()
@@ -35,23 +51,110 @@ def _set_two_columns(section) -> None:
     cols.set(qn("w:space"), "360")
 
 
+def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
+    """Tokenize inline Markdown marks into (text, marks) segments.
+
+    Recurses into matched spans so nesting like ``**bold *italic***``
+    accumulates marks on the inner segment. Unmatched/unbalanced markers
+    (no closing pair found) are left as literal text rather than raising.
+    """
+    segments: list[tuple[str, frozenset]] = []
+    pos = 0
+    for m in _INLINE_TOKEN_RE.finditer(text):
+        if m.start() < pos:
+            continue
+        if m.start() > pos:
+            segments.append((text[pos : m.start()], frozenset()))
+        if m.group("bold") is not None:
+            inner, mark = m.group("bold"), "bold"
+        elif m.group("bold2") is not None:
+            inner, mark = m.group("bold2"), "bold"
+        elif m.group("italic") is not None:
+            inner, mark = m.group("italic"), "italic"
+        elif m.group("italic2") is not None:
+            inner, mark = m.group("italic2"), "italic"
+        elif m.group("strike") is not None:
+            inner, mark = m.group("strike"), "strike"
+        else:
+            inner, mark = m.group("code"), "code"
+        for seg_text, seg_marks in _parse_inline(inner):
+            segments.append((seg_text, seg_marks | {mark}))
+        pos = m.end()
+    if pos < len(text):
+        segments.append((text[pos:], frozenset()))
+    return segments
+
+
+def _write_runs(
+    p, text: str, style: dict, base_marks: frozenset = frozenset()
+) -> None:
+    """Write text into paragraph p as runs, applying inline Markdown marks."""
+    for seg_text, seg_marks in _parse_inline(text):
+        if not seg_text:
+            continue
+        marks = base_marks | seg_marks
+        run = p.add_run(seg_text)
+        run.font.name = "Consolas" if "code" in marks else style["font"]
+        run.font.size = style["body_size"]
+        if "bold" in marks:
+            run.bold = True
+        if "italic" in marks:
+            run.italic = True
+        if "strike" in marks:
+            run.font.strike = True
+
+
 def _add_body_paragraphs(
     doc, text: str, style: dict, intext: dict[str, str] | None
 ):
+    try:
+        doc.styles["Intense Quote"]
+        quote_style_exists = True
+    except KeyError:
+        quote_style_exists = False
+
     for raw in text.split("\n"):
         line = raw.strip()
         if not line:
             continue
         if intext:
             line = _CITE_RE.sub(lambda m: intext.get(m.group(0), m.group(0)), line)
-        p = doc.add_paragraph()
-        run = p.add_run(line)
-        run.font.name = style["font"]
-        run.font.size = style["body_size"]
-        if _PLACEHOLDER_RE.match(line):
-            run.italic = True
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        list_style = None
+        base_marks: frozenset = frozenset()
+
+        m = _LIST_BULLET_RE.match(line)
+        if m:
+            list_style, line = "List Bullet", m.group(1)
         else:
+            m = _LIST_NUMBER_RE.match(line)
+            if m:
+                list_style, line = "List Number", m.group(1)
+            else:
+                m = _BLOCKQUOTE_RE.match(line)
+                if m:
+                    line = m.group(1)
+                    if quote_style_exists:
+                        list_style = "Intense Quote"
+                    else:
+                        base_marks = frozenset({"italic"})
+
+        p = doc.add_paragraph()
+        if list_style:
+            try:
+                p.style = doc.styles[list_style]
+            except KeyError:
+                pass
+
+        is_placeholder = list_style is None and bool(_PLACEHOLDER_RE.match(line))
+        if is_placeholder:
+            base_marks = base_marks | {"italic"}
+
+        _write_runs(p, line, style, base_marks)
+
+        if is_placeholder:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        elif list_style is None:
             p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             p.paragraph_format.first_line_indent = style["indent"]
         if style["double_space"]:
