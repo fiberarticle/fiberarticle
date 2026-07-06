@@ -10,7 +10,7 @@ from export.docx_export import render_docx
 from latex.render import render_project_zip
 from latex.templates import TEMPLATES
 from llm.client import LlmNotConfigured, resolve_llm
-from prefs import get_prefs
+from prefs import LANGUAGES, get_prefs
 from models import (
     DocumentCreate,
     DocumentListItem,
@@ -222,24 +222,51 @@ async def edit_section(
     section = next((s for s in sections if s["id"] == body.section_id), None)
     if section is None:
         raise HTTPException(404, "Section not found")
+
+    if body.command == "custom" and not (body.instruction or "").strip():
+        raise HTTPException(422, "Describe how you want this text edited.")
+    if body.command == "tone" and not body.tone:
+        raise HTTPException(422, "Choose a tone.")
+    target_language = None
+    if body.command == "translate":
+        if body.language not in LANGUAGES:
+            raise HTTPException(422, "Choose a language to translate into.")
+        target_language = LANGUAGES[body.language]
+
+    original = section["content"] or ""
+
     try:
-        content = await run_edit_command(
-            user_id, body.command, section["heading"], section["content"]
+        revised = await run_edit_command(
+            user_id,
+            body.command,
+            section["heading"],
+            original,
+            instruction=body.instruction,
+            tone=body.tone,
+            target_language=target_language,
+            selected_text=body.selected_text,
+            context_before=body.context_before,
+            context_after=body.context_after,
         )
     except LlmNotConfigured as exc:
         raise HTTPException(409, str(exc))
-    if not content:
+    if not revised:
         raise HTTPException(502, "The model returned an empty revision.")
+
+    if body.selected_text is not None:
+        # Selection mode: return only the replacement passage. The editor
+        # splices it into the rich-text document and autosaves.
+        return SectionEditOut(section_id=body.section_id, content=revised)
 
     for s in sections:
         if s["id"] == body.section_id:
-            s["content"] = content
+            s["content"] = revised
     await execute(
         "UPDATE documents SET sections = %s, updated_at = now() WHERE id = %s",
         jsonb(sections),
         document_id,
     )
-    return SectionEditOut(section_id=body.section_id, content=content)
+    return SectionEditOut(section_id=body.section_id, content=revised)
 
 
 _CITE_GROUP_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
