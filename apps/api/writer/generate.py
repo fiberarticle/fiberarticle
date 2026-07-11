@@ -253,33 +253,113 @@ def start_generation(document_id: str, run_id: str, user_id: str) -> None:
 
 
 EDIT_COMMANDS = {
-    "rewrite": "Rewrite this section to improve clarity and flow while preserving every factual claim and every [n] citation marker.",
-    "expand": "Expand this section with additional depth and connective reasoning, preserving all [n] citation markers and adding no invented facts.",
-    "condense": "Condense this section to roughly two thirds of its length, preserving the key claims and all [n] citation markers.",
-    "academic_tone": "Revise this section into a more formal academic register, preserving all facts and [n] citation markers.",
+    "rewrite": "Rewrite this text to improve clarity and flow while preserving every factual claim and every [n] citation marker.",
+    "expand": "Expand this text with additional depth and connective reasoning, preserving all [n] citation markers and adding no invented facts.",
+    "condense": "Condense this text to roughly two thirds of its length, preserving the key claims and all [n] citation markers.",
+    "academic_tone": "Revise this text into a more formal academic register, preserving all facts and [n] citation markers.",
+    "improve": "Improve the writing: sharpen clarity, tighten wording, and smooth the flow while preserving the meaning, every factual claim, and every [n] citation marker.",
+    "simplify": "Simplify this text so a non-specialist can follow it: shorter sentences, plainer words, same structure of claims, and every [n] citation marker preserved.",
+    "humanize": "Rewrite this text so it reads as natural, varied human prose: vary sentence length, remove formulaic constructions and filler, and keep every fact and [n] citation marker.",
 }
 
 
-async def run_edit_command(
-    user_id: str, command: str, heading: str, content: str
+def _edit_instruction(
+    command: str,
+    instruction: str | None,
+    tone: str | None,
+    target_language: str | None,
 ) -> str:
+    if command == "tone":
+        return (
+            f"Rewrite this text in a {tone} tone, preserving all facts and "
+            "every [n] citation marker."
+        )
+    if command == "translate":
+        return (
+            f"Translate this text into {target_language}. Keep technical "
+            "terms, paper titles, proper nouns, and [n] citation markers "
+            "exactly as they are."
+        )
+    if command == "custom":
+        return (
+            "Follow this editing instruction from the author. Unless the "
+            "instruction says otherwise, preserve all factual claims and "
+            f"every [n] citation marker. Instruction: {instruction}"
+        )
+    return EDIT_COMMANDS[command]
+
+
+async def run_edit_command(
+    user_id: str,
+    command: str,
+    heading: str,
+    content: str,
+    *,
+    instruction: str | None = None,
+    tone: str | None = None,
+    target_language: str | None = None,
+    selected_text: str | None = None,
+    context_before: str = "",
+    context_after: str = "",
+) -> str:
+    """Run one AI edit. With selected_text, revise only that passage and
+    return the replacement; otherwise revise and return the whole section."""
     llm = await resolve_llm(user_id)
-    language = await language_instruction(user_id)
+    # Translation targets a specific language; do not also inject the
+    # user's default prose-language preference.
+    language = "" if command == "translate" else await language_instruction(user_id)
+    task = _edit_instruction(command, instruction, tone, target_language)
+
+    markdown_note = (
+        " The text may contain Markdown formatting (bold, italic, lists); "
+        "preserve that formatting unless the instruction says otherwise."
+    )
+
+    if selected_text is not None:
+        system = (
+            "You edit one passage from a section of an academic paper. "
+            + task
+            + markdown_note
+            + " You are given the full section for context, but revise ONLY "
+            "the passage. Respond with ONLY the revised passage: no headings, "
+            "no preamble, no quotation marks around it, and do not repeat the "
+            "surrounding text. The revision replaces the passage exactly "
+            "in place, so it must splice seamlessly into the surrounding "
+            "sentence: do not add trailing punctuation the original passage "
+            "did not have, and match how it starts (capitalized or not)."
+            + language
+        )
+        boundaries = ""
+        if context_before:
+            boundaries += (
+                f"\n\nText immediately BEFORE the passage (do not repeat it):"
+                f"\n...{context_before}"
+            )
+        if context_after:
+            boundaries += (
+                f"\n\nText immediately AFTER the passage (do not repeat or "
+                f"continue into it):\n{context_after}..."
+            )
+        user = (
+            f"Section: {heading}\n\n"
+            f"Full section for context:\n{content}\n\n"
+            f"Passage to revise:\n{selected_text}"
+            f"{boundaries}"
+        )
+    else:
+        system = (
+            "You edit one section of an academic paper. "
+            + task
+            + markdown_note
+            + " Respond with ONLY the revised section text, no headings, no preamble."
+            + language
+        )
+        user = f"Section: {heading}\n\n{content}"
+
     text = await llm.complete(
         [
-            {
-                "role": "system",
-                "content": (
-                    "You edit one section of an academic paper. "
-                    + EDIT_COMMANDS[command]
-                    + " Respond with ONLY the revised section text, no headings, no preamble."
-                    + language
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"Section: {heading}\n\n{content}",
-            },
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
         ],
         max_tokens=1400,
         temperature=0.4,
