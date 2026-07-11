@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BookOpenCheck,
   FileText,
   Home,
   Library,
@@ -36,12 +37,13 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
+  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/ask", label: "Ask", icon: Search },
+  { href: "/review", label: "Literature review", icon: BookOpenCheck },
   { href: "/assistant", label: "Assistant", icon: MessageSquareText },
   { href: "/library", label: "Library", icon: Library },
   { href: "/extract", label: "Extract", icon: Table2 },
-  { href: "/documents", label: "Documents", icon: FileText },
+  { href: "/documents", label: "Articles", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
