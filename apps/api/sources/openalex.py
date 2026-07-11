@@ -48,6 +48,7 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
                 is_open_access=bool((work.get("open_access") or {}).get("is_oa")),
                 oa_pdf_url=oa_location.get("pdf_url"),
                 cited_by_count=work.get("cited_by_count") or 0,
+                issn=source_info.get("issn_l"),
             )
         )
     return papers
