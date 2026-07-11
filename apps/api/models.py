@@ -33,13 +33,38 @@ class LlmConfigOut(BaseModel):
     reasoning: bool = True
 
 
+class PreferencesIn(BaseModel):
+    citation_style: str | None = Field(default=None, min_length=1, max_length=120)
+    ai_language: str | None = Field(default=None, min_length=2, max_length=20)
+
+
+class PreferencesOut(BaseModel):
+    citation_style: str
+    citation_style_title: str
+    ai_language: str
+
+
+class RunFilters(BaseModel):
+    year_from: int | None = Field(default=None, ge=1800, le=2100)
+    year_to: int | None = Field(default=None, ge=1800, le=2100)
+    quartiles: list[Literal["Q1", "Q2", "Q3", "Q4"]] | None = None
+    open_access_only: bool = False
+    min_citations: int | None = Field(default=None, ge=0)
+    max_papers: int | None = Field(default=None, ge=5, le=60)
+
+
 class RunCreate(BaseModel):
     topic: str = Field(min_length=10, max_length=2000)
+    mode: Literal["research", "literature_review"] = "research"
+    filters: RunFilters | None = None
+    # Inclusion/exclusion criteria applied during screening.
+    criteria: str | None = Field(default=None, max_length=2000)
 
 
 class RunOut(BaseModel):
     id: str
     topic: str
+    mode: str = "research"
     status: str
     stage: str | None
     paper_count: int
@@ -59,6 +84,7 @@ class PaperOut(BaseModel):
     source: str
     is_open_access: bool
     abstract: str | None
+    quartile: str | None = None
 
 
 class RunDetailOut(RunOut):
@@ -75,7 +101,9 @@ class RunEventOut(BaseModel):
     ts: datetime
 
 
-DocumentTemplate = Literal["generic", "ieee", "apa"]
+DocumentTemplate = Literal[
+    "generic", "ieee", "apa", "acm", "elsevier", "springer", "neurips"
+]
 
 
 class DocumentSection(BaseModel):
@@ -93,6 +121,7 @@ class DocumentUpdate(BaseModel):
     template: DocumentTemplate | None = None
     sections: list[DocumentSection] | None = None
     authors: list[str] | None = None
+    citation_style: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class DocumentOut(BaseModel):
@@ -103,6 +132,7 @@ class DocumentOut(BaseModel):
     status: str
     sections: list[DocumentSection]
     authors: list[str]
+    citation_style: str | None = None
     error: str | None
     references: list[PaperOut]
     created_at: datetime
@@ -153,6 +183,8 @@ class PaperAddIn(BaseModel):
     is_open_access: bool = False
     oa_pdf_url: str | None = None
     cited_by_count: int = 0
+    issn: str | None = None
+    quartile: str | None = None
 
 
 class PaperAddByDoiIn(BaseModel):
@@ -182,6 +214,7 @@ class SearchIn(BaseModel):
     open_access_only: bool = False
     full_text_only: bool = False
     min_citations: int | None = Field(default=None, ge=0)
+    quartiles: list[Literal["Q1", "Q2", "Q3", "Q4"]] | None = None
     answer: bool = True
 
 
