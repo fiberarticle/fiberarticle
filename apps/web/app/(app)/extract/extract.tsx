@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Download, Plus, Table2, Trash2, X } from "lucide-react";
+import { Download, Plus, Trash2, X } from "lucide-react";
+import { ExtractArt } from "@/components/art";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,12 +128,15 @@ export function Extract() {
     <TooltipProvider delayDuration={150}>
       <div className="mx-auto flex max-w-5xl flex-col gap-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Extract</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pull structured data from many papers into one table. Every cell
-              carries a source quote for verification.
-            </p>
+          <div className="flex items-start gap-6">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Extract</h1>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                Pull structured data from many papers into one table. Every cell
+                carries a source quote for verification.
+              </p>
+            </div>
+            <ExtractArt className="hidden w-32 shrink-0 md:block" />
           </div>
           <Button onClick={() => setWizardOpen((v) => !v)}>
             <Plus /> New extraction
@@ -277,7 +281,7 @@ export function Extract() {
           <Skeleton className="h-24 w-full rounded-2xl" />
         ) : extractions.length === 0 && !wizardOpen ? (
           <Card className="flex flex-col items-center gap-2 border-dashed bg-transparent p-10 text-center shadow-none">
-            <Table2 className="size-5 text-muted-foreground" />
+            <ExtractArt className="w-36" />
             <p className="text-sm text-muted-foreground">
               No extraction tables yet. Create one to compare papers side by side.
             </p>
