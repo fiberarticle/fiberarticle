@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
 
+import prefs as prefs_service
+from citations.catalog import style_title
 from db import execute, fetch_one
-from models import CAPS, LlmConfigIn, LlmConfigOut
+from models import CAPS, LlmConfigIn, LlmConfigOut, PreferencesIn, PreferencesOut
 from security import CurrentUser, encrypt_secret
 
 router = APIRouter(prefix="/v1/me", tags=["me"])
@@ -29,6 +31,41 @@ def _to_out(row: dict | None) -> LlmConfigOut:
         caps=CAPS.get(row["mode"], _DEFAULT_CAPS),
         reasoning=row["reasoning"] if row["reasoning"] is not None else True,
     )
+
+
+def _prefs_out(data: dict) -> PreferencesOut:
+    return PreferencesOut(
+        citation_style=data["citation_style"],
+        citation_style_title=style_title(data["citation_style"])
+        or data["citation_style"],
+        ai_language=data["ai_language"],
+    )
+
+
+@router.get("/preferences", response_model=PreferencesOut)
+async def get_preferences(user_id: str = CurrentUser) -> PreferencesOut:
+    return _prefs_out(await prefs_service.get_prefs(user_id))
+
+
+@router.put("/preferences", response_model=PreferencesOut)
+async def put_preferences(
+    body: PreferencesIn, user_id: str = CurrentUser
+) -> PreferencesOut:
+    if body.ai_language and body.ai_language not in prefs_service.LANGUAGES:
+        raise HTTPException(422, "Unknown language.")
+    if body.citation_style and style_title(body.citation_style) is None:
+        raise HTTPException(422, "Unknown citation style.")
+    return _prefs_out(
+        await prefs_service.set_prefs(user_id, body.citation_style, body.ai_language)
+    )
+
+
+@router.get("/languages")
+async def list_languages() -> list[dict]:
+    return [
+        {"value": value, "label": label}
+        for value, label in prefs_service.LANGUAGES.items()
+    ]
 
 
 @router.get("/llm-config", response_model=LlmConfigOut)
