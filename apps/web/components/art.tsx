@@ -52,7 +52,7 @@ export function ReviewArt({ className }: { className?: string }) {
           <line x1="155" y1="95" x2="172" y2="112" />
         </g>
         <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-          <path className="fa-art-draw" d="M128 78 l7 7 l14 -14" />
+          <path className="fa-art-draw" pathLength={60} d="M128 78 l7 7 l14 -14" />
         </g>
       </g>
     </svg>
@@ -73,7 +73,7 @@ export function WriterArt({ className }: { className?: string }) {
         <line x1="54" y1="50" x2="122" y2="50" />
         <line x1="54" y1="62" x2="116" y2="62" />
         <line x1="54" y1="74" x2="122" y2="74" />
-        <line className="fa-art-draw" x1="54" y1="86" x2="88" y2="86" />
+        <line className="fa-art-draw" pathLength={60} x1="54" y1="86" x2="88" y2="86" />
       </g>
       <g className="fa-art-float" style={floatStyle}>
         <g stroke="var(--leaf)" {...strokeProps(2)}>
@@ -159,33 +159,57 @@ export function CompassArt({ className }: { className?: string }) {
   );
 }
 
-/** Question mark card with an answering spark: Ask. */
+/** Question card answered by a reply card with a check: Ask. */
 export function AskArt({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 200 140"
       className={className}
       role="img"
-      aria-label="Question card with sources"
+      aria-label="Question card with an answered reply"
     >
       <g stroke="var(--border)" {...strokeProps()}>
-        <rect x="44" y="46" width="76" height="56" rx="8" fill="var(--card)" />
+        <rect x="40" y="52" width="72" height="54" rx="8" fill="var(--card)" />
       </g>
       <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <rect x="36" y="36" width="76" height="56" rx="8" fill="var(--card)" />
-        <path d="M64 56 c0 -7 12 -7 12 0 c0 5 -6 4 -6 10" />
-        <line x1="70" y1="74" x2="70" y2="75" />
-        <line x1="88" y1="58" x2="100" y2="58" />
-        <line x1="88" y1="68" x2="98" y2="68" />
+        <rect x="32" y="42" width="72" height="54" rx="8" fill="var(--card)" />
+        <path d="M58 60 c0 -7 12 -7 12 0 c0 5 -6 4 -6 10" />
+        <line x1="64" y1="78" x2="64" y2="79" />
+        <line x1="82" y1="62" x2="94" y2="62" />
+        <line x1="82" y1="72" x2="92" y2="72" />
       </g>
       <g className="fa-art-float" style={floatStyle}>
-        <g stroke="var(--leaf)" {...strokeProps(1.9)}>
-          <path
-            className="fa-art-pulse"
-            d="M142 52 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 Z"
-            fill="color-mix(in oklab, var(--leaf) 14%, transparent)"
+        <g stroke="var(--leaf)" {...strokeProps(1.8)}>
+          <rect
+            x="118"
+            y="38"
+            width="52"
+            height="42"
+            rx="9"
+            fill="color-mix(in oklab, var(--leaf) 8%, transparent)"
           />
-          <path className="fa-art-draw" d="M120 96 c14 6 30 6 44 -2" />
+          <path d="M130 80 l-4 9 l13 -9" fill="var(--background)" />
+          <line
+            className="fa-art-draw"
+            pathLength={60}
+            x1="128"
+            y1="50"
+            x2="160"
+            y2="50"
+          />
+          <line
+            className="fa-art-draw"
+            pathLength={60}
+            x1="128"
+            y1="58"
+            x2="154"
+            y2="58"
+          />
+          <path
+            className="fa-art-draw"
+            pathLength={60}
+            d="M128 68 l5 5 l10 -10"
+          />
         </g>
       </g>
     </svg>
@@ -209,7 +233,7 @@ export function ExtractArt({ className }: { className?: string }) {
         <line x1="40" y1="82" x2="64" y2="82" />
       </g>
       <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-        <path className="fa-art-draw" d="M92 72 h20 m-6 -6 l6 6 l-6 6" />
+        <path className="fa-art-draw" pathLength={60} d="M92 72 h20 m-6 -6 l6 6 l-6 6" />
       </g>
       <g className="fa-art-float" style={floatStyle}>
         <g stroke="var(--leaf)" {...strokeProps(1.7)}>
@@ -261,8 +285,8 @@ export function AssistantArt({ className }: { className?: string }) {
             fill="color-mix(in oklab, var(--leaf) 9%, transparent)"
           />
           <path d="M130 50 l-4 8 l12 -8" fill="var(--background)" />
-          <line className="fa-art-draw" x1="128" y1="34" x2="154" y2="34" />
-          <line className="fa-art-draw" x1="128" y1="41" x2="148" y2="41" />
+          <line className="fa-art-draw" pathLength={60} x1="128" y1="34" x2="154" y2="34" />
+          <line className="fa-art-draw" pathLength={60} x1="128" y1="41" x2="148" y2="41" />
         </g>
       </g>
       <g stroke="var(--border)" {...strokeProps(1.5)}>
