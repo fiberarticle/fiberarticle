@@ -44,13 +44,23 @@ async def find_duplicate(user_id: str, doi: str | None, title: str) -> dict | No
 
 
 async def insert_paper(user_id: str, record: PaperRecord) -> dict:
+    if not record.get("quartile") and (record.get("issn") or record.get("venue")):
+        from citations.quartiles import lookup as quartile_lookup
+
+        try:
+            record["quartile"] = await quartile_lookup(
+                record.get("issn"), record.get("venue")
+            )
+        except Exception:
+            pass
     row = await fetch_one(
         """
         INSERT INTO papers (
             run_id, user_id, source, external_id, title, authors, year,
-            venue, doi, url, abstract, is_open_access, oa_pdf_url, cited_by_count
+            venue, doi, url, abstract, is_open_access, oa_pdf_url,
+            cited_by_count, issn, quartile
         )
-        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING *
         """,
         user_id,
@@ -66,6 +76,8 @@ async def insert_paper(user_id: str, record: PaperRecord) -> dict:
         bool(record.get("is_open_access")),
         record.get("oa_pdf_url"),
         record.get("cited_by_count") or 0,
+        record.get("issn"),
+        record.get("quartile"),
     )
     return row
 
@@ -180,6 +192,9 @@ async def summarize_paper(paper_id: str, user_id: str) -> dict:
         )
 
     llm = await resolve_llm(user_id)
+    from prefs import language_instruction
+
+    language = await language_instruction(user_id)
     text = await llm.complete(
         [
             {
@@ -188,7 +203,7 @@ async def summarize_paper(paper_id: str, user_id: str) -> dict:
                     "Summarize an academic paper from the provided text. Respond "
                     "with ONLY a JSON object with keys: tldr (one sentence), "
                     "key_findings (array of 3-5 strings), methodology (one short "
-                    "paragraph), limitations (array of 1-3 strings)."
+                    "paragraph), limitations (array of 1-3 strings)." + language
                 ),
             },
             {
