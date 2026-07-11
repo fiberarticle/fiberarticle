@@ -44,6 +44,7 @@ async def lookup(doi: str) -> PaperRecord | None:
                 is_open_access=False,
                 oa_pdf_url=None,
                 cited_by_count=item.get("is-referenced-by-count") or 0,
+                issn=(item.get("ISSN") or [None])[0],
             )
 
     # Fallback: OpenAlex knows most DOIs Crossref rejects (e.g. DataCite).
@@ -76,4 +77,5 @@ async def lookup(doi: str) -> PaperRecord | None:
         is_open_access=bool((work.get("open_access") or {}).get("is_oa")),
         oa_pdf_url=oa_location.get("pdf_url"),
         cited_by_count=work.get("cited_by_count") or 0,
+        issn=((work.get("primary_location") or {}).get("source") or {}).get("issn_l"),
     )
