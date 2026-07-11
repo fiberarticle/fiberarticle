@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -218,6 +218,10 @@ const templateMenu: {
 
 export function RunView({ runId }: { runId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Article Writer flow: the dashboard set this flag; when the research
+  // completes we generate the article automatically.
+  const articleIntent = searchParams.get("intent") === "article";
   const [run, setRun] = useState<RunDetail | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -338,6 +342,24 @@ export function RunView({ runId }: { runId: string }) {
     }
   }, [activeStage, isActive]);
 
+  // Article Writer: auto-generate the article exactly once when the
+  // research run completes. The sessionStorage flag is consumed so a
+  // reload never generates a duplicate document.
+  useEffect(() => {
+    if (!articleIntent || run?.status !== "completed" || generatingDoc) return;
+    const key = `fa-article-intent-${runId}`;
+    if (sessionStorage.getItem(key) !== "1") return;
+    sessionStorage.removeItem(key);
+    if (run.paper_count === 0) {
+      setError(
+        "The research run found no papers, so no article was generated. Try a broader topic."
+      );
+      return;
+    }
+    onGenerateDocument("generic");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleIntent, run?.status, run?.paper_count, runId]);
+
   if (error && !run) {
     return (
       <div className="mx-auto max-w-3xl">
@@ -444,6 +466,18 @@ export function RunView({ runId }: { runId: string }) {
 
       {error && <Callout tone="error">{error}</Callout>}
       {run.error && <Callout tone="error">{run.error}</Callout>}
+      {articleIntent && isActive && (
+        <Callout tone="info">
+          Article Writer: a full article will be generated automatically as
+          soon as this research completes.
+        </Callout>
+      )}
+      {articleIntent && generatingDoc && (
+        <Callout tone="info">
+          Research complete. Writing your article now — you will be taken to
+          the editor.
+        </Callout>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
