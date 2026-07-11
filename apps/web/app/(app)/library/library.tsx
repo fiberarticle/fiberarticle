@@ -6,12 +6,13 @@ import {
   Download,
   FolderPlus,
   Import,
-  Library as LibraryIcon,
   Link2,
   Plus,
   Upload,
   X,
 } from "lucide-react";
+import { EmptyShelfArt } from "@/components/art";
+import { QuartileBadge } from "@/components/quartile-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -340,7 +341,7 @@ export function Library() {
         </div>
       ) : filtered && filtered.length === 0 ? (
         <Card className="flex flex-col items-center gap-2 border-dashed bg-transparent p-10 text-center shadow-none">
-          <LibraryIcon className="size-5 text-muted-foreground" />
+          <EmptyShelfArt className="w-36 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
             {query
               ? "No papers match your filter."
@@ -365,6 +366,7 @@ export function Library() {
                   {paper.venue ? ` · ${paper.venue}` : ""}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  <QuartileBadge quartile={paper.quartile} />
                   <Badge>{paper.source}</Badge>
                   {paper.full_text_parsed ? (
                     <Badge variant="leaf">full text</Badge>
