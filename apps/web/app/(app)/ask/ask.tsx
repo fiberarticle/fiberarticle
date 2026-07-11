@@ -20,8 +20,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import { AskArt } from "@/components/art";
+import { QuartileBadge, quartileChipClass } from "@/components/quartile-badge";
 import { apiFetch, ApiError } from "@/lib/api";
-import type { PaperDetail, SearchResponse, SearchResultPaper } from "@/lib/types";
+import type {
+  PaperDetail,
+  Quartile,
+  SearchResponse,
+  SearchResultPaper,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type YearMode = "all" | "recent" | "custom";
@@ -34,6 +41,7 @@ interface Filters {
   openAccessOnly: boolean;
   fullTextOnly: boolean;
   minCitations: string;
+  quartiles: Quartile[];
 }
 
 const defaultFilters: Filters = {
@@ -44,7 +52,10 @@ const defaultFilters: Filters = {
   openAccessOnly: false,
   fullTextOnly: false,
   minCitations: "",
+  quartiles: [],
 };
+
+const quartileOptions: Quartile[] = ["Q1", "Q2", "Q3", "Q4"];
 
 function activeFilterCount(f: Filters): number {
   let n = 0;
@@ -52,6 +63,7 @@ function activeFilterCount(f: Filters): number {
   if (f.openAccessOnly) n += 1;
   if (f.fullTextOnly) n += 1;
   if (f.minCitations.trim()) n += 1;
+  if (f.quartiles.length > 0) n += 1;
   return n;
 }
 
@@ -206,6 +218,40 @@ function FiltersPopover({
 
           <div className="h-px bg-border" />
 
+          <div>
+            <p className="text-sm font-medium">Journal quality</p>
+            <p className="mb-1.5 text-xs text-muted-foreground">
+              Scimago quartiles; Q1 is the top 25 percent of journals
+            </p>
+            <div className="flex gap-1.5">
+              {quartileOptions.map((q) => {
+                const active = filters.quartiles.includes(q);
+                return (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() =>
+                      onChange({
+                        ...filters,
+                        quartiles: active
+                          ? filters.quartiles.filter((x) => x !== q)
+                          : [...filters.quartiles, q],
+                      })
+                    }
+                    className={cn(
+                      "flex-1 cursor-pointer rounded-lg border px-2 py-1.5 text-xs font-bold transition-all",
+                      quartileChipClass(q, active)
+                    )}
+                  >
+                    {q}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="h-px bg-border" />
+
           <FilterRow label="Open access" hint="Free-to-read papers only">
             <Switch
               checked={filters.openAccessOnly}
@@ -271,6 +317,7 @@ export function Ask() {
           open_access_only: filters.openAccessOnly,
           full_text_only: filters.fullTextOnly,
           min_citations: filters.minCitations ? Number(filters.minCitations) : null,
+          quartiles: filters.quartiles.length > 0 ? filters.quartiles : null,
           answer: true,
         }),
       });
@@ -309,13 +356,16 @@ export function Ask() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Ask</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ask a research question. Fiberarticle searches arXiv, OpenAlex,
-          Semantic Scholar, and Crossref, then answers from the best papers with
-          citations.
-        </p>
+      <div className="flex items-start justify-between gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Ask</h1>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            Ask a research question. Fiberarticle searches arXiv, OpenAlex,
+            Semantic Scholar, and Crossref, then answers from the best papers
+            with citations.
+          </p>
+        </div>
+        <AskArt className="hidden w-36 shrink-0 sm:block" />
       </div>
 
       <PromptInput
@@ -428,6 +478,7 @@ export function Ask() {
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-1.5">
+                      <QuartileBadge quartile={paper.quartile} />
                       <Badge>{paper.source}</Badge>
                       {paper.cited_by_count > 0 && (
                         <Badge variant="leaf">
