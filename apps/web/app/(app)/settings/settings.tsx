@@ -1,17 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BadgeCheck, Cpu, KeyRound, Lightbulb, Scroll } from "lucide-react";
+import {
+  BadgeCheck,
+  BookMarked,
+  ChevronDown,
+  Cpu,
+  KeyRound,
+  Languages,
+  Lightbulb,
+  Scroll,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StylePicker } from "@/components/style-picker";
 import { apiFetch, ApiError } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import type { LlmConfig, LlmMode } from "@/lib/types";
+import type {
+  LanguageOption,
+  LlmConfig,
+  LlmMode,
+  Preferences,
+} from "@/lib/types";
 
 const byokProviders = [
   { value: "openai", label: "OpenAI" },
@@ -92,6 +113,11 @@ export function Settings({
   const [nameSaved, setNameSaved] = useState(false);
   const [namePending, setNamePending] = useState(false);
 
+  const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [languages, setLanguages] = useState<LanguageOption[]>([]);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
+
   const [config, setConfig] = useState<LlmConfig | null>(null);
   const [mode, setMode] = useState<LlmMode>("fiberarticle_ai");
   const [provider, setProvider] = useState("openai");
@@ -118,7 +144,31 @@ export function Settings({
       .catch((e) => {
         if (!(e instanceof ApiError)) setApiDown(true);
       });
+    apiFetch<Preferences>("/v1/me/preferences").then(setPrefs).catch(() => {});
+    apiFetch<LanguageOption[]>("/v1/me/languages")
+      .then(setLanguages)
+      .catch(() => {});
   }, []);
+
+  async function savePrefs(patch: {
+    citation_style?: string;
+    ai_language?: string;
+  }) {
+    setPrefsError(null);
+    setPrefsSaved(false);
+    try {
+      const updated = await apiFetch<Preferences>("/v1/me/preferences", {
+        method: "PUT",
+        body: JSON.stringify(patch),
+      });
+      setPrefs(updated);
+      setPrefsSaved(true);
+    } catch (e) {
+      setPrefsError(
+        e instanceof ApiError ? e.message : "Could not save preferences."
+      );
+    }
+  }
 
   async function onSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -205,11 +255,101 @@ export function Settings({
         </Callout>
       )}
 
-      <Tabs defaultValue="llm">
+      <Tabs defaultValue="preferences">
         <TabsList>
-          <TabsTrigger value="llm">Fiberarticle AI</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="llm">AI Model</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle>Writing preferences</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-start gap-3">
+                  <BookMarked className="mt-0.5 size-5 text-muted-foreground" />
+                  <span className="flex flex-col">
+                    <span className="text-sm font-semibold">Citation style</span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      Used everywhere Fiberarticle formats a reference: Cite
+                      buttons, bibliographies, and exported articles. Search the
+                      full catalog of 10,000+ CSL styles.
+                    </span>
+                  </span>
+                </span>
+                <StylePicker
+                  value={prefs?.citation_style ?? "apa"}
+                  valueTitle={prefs?.citation_style_title}
+                  onSelect={(style) => savePrefs({ citation_style: style.id })}
+                >
+                  <Button variant="outline" className="max-w-xs justify-between">
+                    <span className="truncate">
+                      {prefs?.citation_style_title ?? "APA Style 7th edition"}
+                    </span>
+                    <ChevronDown className="size-4 text-muted-foreground" />
+                  </Button>
+                </StylePicker>
+              </div>
+
+              <div className="h-px bg-border" />
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-start gap-3">
+                  <Languages className="mt-0.5 size-5 text-muted-foreground" />
+                  <span className="flex flex-col">
+                    <span className="text-sm font-semibold">
+                      AI generation language
+                    </span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      The language Fiberarticle writes in: answers, summaries,
+                      reviews, and articles. Citations stay untouched.
+                    </span>
+                  </span>
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-44 justify-between">
+                      <span className="truncate">
+                        {languages.find(
+                          (l) => l.value === (prefs?.ai_language ?? "en-US")
+                        )?.label ?? "English (US)"}
+                      </span>
+                      <ChevronDown className="size-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="max-h-72 w-56 overflow-y-auto"
+                  >
+                    {(languages.length > 0
+                      ? languages
+                      : [{ value: "en-US", label: "English (US)" }]
+                    ).map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.value}
+                        onSelect={() => savePrefs({ ai_language: lang.value })}
+                        className="justify-between"
+                      >
+                        {lang.label}
+                        {(prefs?.ai_language ?? "en-US") === lang.value && (
+                          <BadgeCheck className="size-4 text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {prefsError && <Callout tone="error">{prefsError}</Callout>}
+              {prefsSaved && (
+                <Callout tone="success">Preferences saved.</Callout>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="llm">
           <Card>
