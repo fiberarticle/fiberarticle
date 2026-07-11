@@ -54,7 +54,36 @@ async def _sub_queries(llm, query: str) -> list[str]:
     return [query]
 
 
-def _dedupe_rank(candidates: list[PaperRecord], limit: int = 25) -> list[PaperRecord]:
+_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does",
+    "for", "from", "has", "have", "how", "in", "is", "it", "of", "on", "or",
+    "than", "that", "the", "their", "there", "this", "to", "vs", "was",
+    "what", "when", "which", "why", "with",
+}
+
+
+def _query_terms(query: str) -> set[str]:
+    return {
+        w for w in re.findall(r"[a-z0-9]+", query.lower())
+        if len(w) > 2 and w not in _STOPWORDS
+    }
+
+
+def _relevance(paper: PaperRecord, terms: set[str]) -> float:
+    """Fraction of query terms present in the title/abstract. Title hits count
+    double so on-topic papers beat papers that merely mention a term once."""
+    if not terms:
+        return 0.0
+    title = (paper.get("title") or "").lower()
+    abstract = (paper.get("abstract") or "").lower()
+    title_hits = sum(1 for t in terms if t in title)
+    abstract_hits = sum(1 for t in terms if t in abstract)
+    return (2 * title_hits + abstract_hits) / (3 * len(terms))
+
+
+def _dedupe_rank(
+    candidates: list[PaperRecord], query: str, limit: int = 25
+) -> list[PaperRecord]:
     seen: set[str] = set()
     unique: list[PaperRecord] = []
     for paper in candidates:
@@ -63,14 +92,23 @@ def _dedupe_rank(candidates: list[PaperRecord], limit: int = 25) -> list[PaperRe
             continue
         seen.add(key)
         unique.append(paper)
-    unique.sort(
-        key=lambda p: (
-            1 if (p.get("is_open_access") or p.get("oa_pdf_url")) else 0,
-            p.get("cited_by_count") or 0,
+
+    # Relevance to the question comes first; open-access availability must
+    # never outrank it (an OA paper about the wrong topic is useless).
+    # Citations break ties among comparably relevant papers.
+    terms = _query_terms(query)
+    scored = [(_relevance(p, terms), p) for p in unique]
+    if any(score > 0 for score, _ in scored):
+        scored = [(score, p) for score, p in scored if score > 0]
+    scored.sort(
+        key=lambda item: (
+            round(item[0], 2),
+            min(item[1].get("cited_by_count") or 0, 100_000),
+            1 if (item[1].get("is_open_access") or item[1].get("oa_pdf_url")) else 0,
         ),
         reverse=True,
     )
-    return unique[:limit]
+    return [p for _, p in scored[:limit]]
 
 
 async def _synthesize_answer(
@@ -135,12 +173,23 @@ async def search_papers(body: SearchIn, user_id: str = CurrentUser) -> SearchRes
         candidates = [
             p for p in candidates if (p.get("year") or 0) >= body.year_from
         ]
+    if body.year_to:
+        candidates = [
+            p for p in candidates if (p.get("year") or 9999) <= body.year_to
+        ]
     if body.open_access_only:
         candidates = [
             p for p in candidates if p.get("is_open_access") or p.get("oa_pdf_url")
         ]
+    if body.full_text_only:
+        # A reachable open-access PDF is what makes full-text reading possible.
+        candidates = [p for p in candidates if p.get("oa_pdf_url")]
+    if body.min_citations:
+        candidates = [
+            p for p in candidates if (p.get("cited_by_count") or 0) >= body.min_citations
+        ]
 
-    ranked = _dedupe_rank(candidates)
+    ranked = _dedupe_rank(candidates, body.query)
     if not ranked:
         return SearchResultOut(
             results=[],
