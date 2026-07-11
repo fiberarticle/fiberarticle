@@ -7,7 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
 from db import close_pool, open_pool
 from db import execute
-from routers import chats, documents, extractions, me, papers, runs, search
+from routers import (
+    chats,
+    citations,
+    documents,
+    extractions,
+    me,
+    papers,
+    runs,
+    search,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -70,6 +79,7 @@ app.include_router(documents.router)
 app.include_router(search.router)
 app.include_router(chats.router)
 app.include_router(extractions.router)
+app.include_router(citations.router)
 
 
 @app.get("/health")
