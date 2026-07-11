@@ -8,9 +8,11 @@ import re
 
 from fastapi import APIRouter, HTTPException
 
+from citations.quartiles import annotate_quartiles
 from db import fetch_all
 from llm.client import LlmNotConfigured, resolve_llm
 from models import PaperAddIn, SearchIn, SearchResultOut
+from prefs import language_instruction
 from security import CurrentUser
 from sources import arxiv, crossref, openalex, semantic_scholar
 from sources.base import PaperRecord
@@ -112,7 +114,7 @@ def _dedupe_rank(
 
 
 async def _synthesize_answer(
-    llm, query: str, papers: list[PaperRecord]
+    llm, query: str, papers: list[PaperRecord], language: str = ""
 ) -> tuple[str, list[int]]:
     top = [p for p in papers if p.get("abstract")][:10]
     if not top:
@@ -130,7 +132,7 @@ async def _synthesize_answer(
                     "abstracts provided. Cite claims with bracketed numbers like "
                     "[2]. Be balanced: note agreement, disagreement, and gaps. "
                     "2 to 4 paragraphs, no headings. If the abstracts cannot "
-                    "answer the question, say so plainly."
+                    "answer the question, say so plainly." + language
                 ),
             },
             {"role": "user", "content": f"Question: {query}\n\nPapers:\n{digest}"},
@@ -189,7 +191,15 @@ async def search_papers(body: SearchIn, user_id: str = CurrentUser) -> SearchRes
             p for p in candidates if (p.get("cited_by_count") or 0) >= body.min_citations
         ]
 
+    if body.quartiles:
+        # Quartile filtering needs journal ranks before ranking; papers from
+        # unranked venues are excluded when the filter is active.
+        await annotate_quartiles(candidates)
+        wanted = set(body.quartiles)
+        candidates = [p for p in candidates if p.get("quartile") in wanted]
+
     ranked = _dedupe_rank(candidates, body.query)
+    await annotate_quartiles(ranked)
     if not ranked:
         return SearchResultOut(
             results=[],
@@ -203,7 +213,10 @@ async def search_papers(body: SearchIn, user_id: str = CurrentUser) -> SearchRes
     answer_sources: list[int] = []
     if body.answer:
         try:
-            answer, answer_sources = await _synthesize_answer(llm, body.query, ranked)
+            language = await language_instruction(user_id)
+            answer, answer_sources = await _synthesize_answer(
+                llm, body.query, ranked, language
+            )
             answer = answer or None
         except Exception:
             answer = None
