@@ -180,6 +180,61 @@
   background: transparent;
 }
 
+/* Rich text (TipTap) content inside the document editor. */
+.fa-prose {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fa-prose p {
+  margin: 0 0 0.9em;
+}
+.fa-prose p:last-child {
+  margin-bottom: 0;
+}
+.fa-prose ul,
+.fa-prose ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.4em;
+}
+.fa-prose ul {
+  list-style: disc;
+}
+.fa-prose ol {
+  list-style: decimal;
+}
+.fa-prose li {
+  margin: 0.15em 0;
+}
+.fa-prose li p {
+  margin: 0;
+}
+.fa-prose blockquote {
+  margin: 0 0 0.9em;
+  border-left: 3px solid var(--border);
+  padding-left: 0.9em;
+  color: var(--muted-foreground);
+}
+.fa-prose code {
+  background: var(--muted);
+  border-radius: 0.35em;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+}
+.fa-prose:focus,
+.fa-prose:focus-visible {
+  outline: none;
+}
+/* Caret and empty-state affordance */
+.fa-prose p.is-editor-empty:first-child::before {
+  content: "Write, or hover the left margin to ask AI...";
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 /* Illustration motion: gentle float and a one-time stroke draw-in. */
 @keyframes fa-float {
   0%, 100% { transform: translateY(0); }
