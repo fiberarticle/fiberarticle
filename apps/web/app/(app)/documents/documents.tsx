@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { WriterArt } from "@/components/art";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
 import { Badge } from "@/components/ui/badge";
 import { Callout } from "@/components/ui/callout";
@@ -15,6 +16,10 @@ const templateLabels: Record<string, string> = {
   generic: "Generic manuscript",
   ieee: "IEEE",
   apa: "APA 7",
+  acm: "ACM",
+  elsevier: "Elsevier",
+  springer: "Springer Nature",
+  neurips: "NeurIPS",
 };
 
 export function Documents() {
@@ -39,11 +44,14 @@ export function Documents() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Publication-ready articles generated from your research runs.
-        </p>
+      <div className="flex items-start justify-between gap-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Articles</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Publication-ready articles generated from your research runs.
+          </p>
+        </div>
+        <WriterArt className="hidden w-36 shrink-0 sm:block" />
       </div>
 
       {error && <Callout tone="error">{error}</Callout>}
@@ -54,10 +62,10 @@ export function Documents() {
           <Skeleton className="h-16 w-full rounded-2xl" />
         </div>
       ) : documents && documents.length === 0 ? (
-        <Card className="flex flex-col items-center gap-1 border-dashed bg-transparent p-10 text-center shadow-none">
-          <FileText className="size-5 text-muted-foreground" />
+        <Card className="flex flex-col items-center gap-2 border-dashed bg-transparent p-10 text-center shadow-none">
+          <WriterArt className="w-36" />
           <p className="text-sm text-muted-foreground">
-            No documents yet. Open a completed research run and choose
+            No articles yet. Open a completed research run and choose
             &quot;Generate article&quot;.
           </p>
         </Card>
