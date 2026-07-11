@@ -11,7 +11,7 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
     params = {
         "query": query,
         "rows": limit,
-        "select": "DOI,title,author,issued,container-title,URL,abstract,is-referenced-by-count",
+        "select": "DOI,title,author,issued,container-title,URL,abstract,is-referenced-by-count,ISSN",
         "mailto": get_settings().contact_email,
     }
     res = await get_with_retry("https://api.crossref.org/works", params=params)
@@ -47,6 +47,7 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
                 is_open_access=False,
                 oa_pdf_url=None,
                 cited_by_count=item.get("is-referenced-by-count") or 0,
+                issn=(item.get("ISSN") or [None])[0],
             )
         )
     return papers
