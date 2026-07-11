@@ -3,14 +3,11 @@ import asyncio
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
+from citations import catalog
+from citations.engine import StyleNotFound, render_citation
 from db import execute, fetch_all, fetch_one
-from export.citations import (
-    STYLES,
-    format_citation,
-    parse_bibtex,
-    to_bibtex,
-    to_ris,
-)
+from export.citations import parse_bibtex, to_bibtex, to_ris
+from prefs import get_prefs
 from library.service import (
     MAX_PDF_BYTES,
     fetch_and_ingest_oa_pdf,
@@ -46,6 +43,7 @@ def _paper_out(p: dict) -> PaperOut:
         source=p["source"],
         is_open_access=p["is_open_access"],
         abstract=p["abstract"],
+        quartile=p.get("quartile"),
     )
 
 
@@ -286,16 +284,36 @@ async def summarize(paper_id: str, user_id: str = CurrentUser) -> PaperDetailOut
     return await _paper_detail(fresh, user_id)
 
 
+# Legacy short names from the first citation implementation.
+_LEGACY_STYLES = {
+    "mla": "modern-language-association",
+    "chicago": "chicago-author-date",
+    "vancouver": "vancouver-nlm",
+    "harvard": "harvard-cite-them-right",
+}
+
+
 @router.get("/papers/{paper_id}/citation")
 async def get_citation(
     paper_id: str,
-    style: str = Query(default="apa"),
+    style: str | None = Query(default=None, max_length=120),
     user_id: str = CurrentUser,
 ) -> dict:
-    if style not in STYLES:
-        raise HTTPException(422, f"Unknown style. Choose one of: {', '.join(STYLES)}")
+    if style is None:
+        style = (await get_prefs(user_id))["citation_style"]
+    style = _LEGACY_STYLES.get(style, style)
+    if catalog.entry(style) is None:
+        raise HTTPException(422, "Unknown citation style.")
     row = await _get_owned_paper(paper_id, user_id)
-    return {"style": style, "citation": format_citation(row, style)}
+    try:
+        citation = await render_citation(dict(row), style)
+    except StyleNotFound as exc:
+        raise HTTPException(422, str(exc))
+    return {
+        "style": style,
+        "style_title": catalog.style_title(style),
+        "citation": citation,
+    }
 
 
 # ------------------------------------------------------------- collections
