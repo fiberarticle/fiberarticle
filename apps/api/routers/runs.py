@@ -5,9 +5,10 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from agent.runner import start_run
-from db import fetch_all, fetch_one, jsonb
+from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
-from models import PaperOut, RunCreate, RunDetailOut, RunOut
+from llm.titles import schedule_title
+from models import PaperOut, RunCreate, RunDetailOut, RunOut, RunUpdate
 from security import CurrentUser
 
 router = APIRouter(prefix="/v1/runs", tags=["runs"])
@@ -19,6 +20,8 @@ def _run_out(row: dict) -> RunOut:
     return RunOut(
         id=str(row["id"]),
         topic=row["topic"],
+        title=row.get("title") or row["topic"],
+        pinned=bool(row.get("pinned")),
         mode=row.get("mode") or "research",
         status=row["status"],
         stage=row["stage"],
@@ -53,6 +56,8 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
         criteria,
     )
     start_run(str(row["id"]), user_id, body.topic.strip(), body.mode, filters, criteria)
+    # Sidebar history shows an AI title, not the raw topic. Background only.
+    schedule_title("run", str(row["id"]), user_id, body.topic.strip())
     return _run_out(row)
 
 
@@ -118,6 +123,35 @@ async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
             for p in papers
         ],
     )
+
+
+@router.patch("/{run_id}", response_model=RunOut)
+async def update_run(
+    run_id: str, body: RunUpdate, user_id: str = CurrentUser
+) -> RunOut:
+    await _get_owned_run(run_id, user_id)
+    if body.title is not None:
+        await execute(
+            "UPDATE runs SET title = %s, updated_at = now() WHERE id = %s",
+            body.title.strip(),
+            run_id,
+        )
+    if body.pinned is not None:
+        await execute(
+            "UPDATE runs SET pinned = %s, updated_at = now() WHERE id = %s",
+            body.pinned,
+            run_id,
+        )
+    return _run_out(await _get_owned_run(run_id, user_id))
+
+
+@router.delete("/{run_id}", status_code=204)
+async def delete_run(run_id: str, user_id: str = CurrentUser) -> None:
+    # Papers, chunks, and events cascade; documents keep their sections and
+    # just lose the run link (run_id SET NULL). A still-running task fails
+    # its next write harmlessly and stops.
+    await _get_owned_run(run_id, user_id)
+    await execute("DELETE FROM runs WHERE id = %s", run_id)
 
 
 @router.get("/{run_id}/events")
