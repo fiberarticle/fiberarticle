@@ -21,7 +21,12 @@ from models import (
     SectionEditOut,
 )
 from security import CurrentUser
-from writer.generate import run_edit_command, start_generation
+from writer.generate import (
+    PLANNED_SECTION_COUNT,
+    cancel_generation,
+    run_edit_command,
+    start_generation,
+)
 
 router = APIRouter(prefix="/v1", tags=["documents"])
 
@@ -86,13 +91,17 @@ async def _effective_style(row: dict, user_id: str) -> str:
 
 
 async def _document_out(row: dict, user_id: str) -> DocumentOut:
+    sections = row["sections"] or []
     return DocumentOut(
         id=str(row["id"]),
         run_id=str(row["run_id"]) if row["run_id"] else None,
         title=row["title"],
         template=row["template"],
         status=row["status"],
-        sections=row["sections"] or [],
+        total_sections=(
+            PLANNED_SECTION_COUNT if row["status"] == "generating" else len(sections)
+        ),
+        sections=sections,
         authors=row["authors"] or [],
         citation_style=row.get("citation_style"),
         error=row["error"],
@@ -206,6 +215,24 @@ async def update_document(
         jsonb(authors),
         citation_style,
         pinned,
+        document_id,
+    )
+    updated = await _get_owned_document(document_id, user_id)
+    return await _document_out(updated, user_id)
+
+
+@router.post("/documents/{document_id}/cancel", response_model=DocumentOut)
+async def cancel_document_generation(
+    document_id: str, user_id: str = CurrentUser
+) -> DocumentOut:
+    """Stop generation without destroying anything: sections written so far
+    are kept and the document becomes editable."""
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] != "generating":
+        raise HTTPException(409, "The document is not generating.")
+    cancel_generation(document_id)
+    await execute(
+        "UPDATE documents SET status = 'ready', updated_at = now() WHERE id = %s AND status = 'generating'",
         document_id,
     )
     updated = await _get_owned_document(document_id, user_id)
