@@ -180,6 +180,49 @@
   background: transparent;
 }
 
+/* Auto-growing writing textareas (prompt editors, topic/criteria boxes):
+   a thinner, near-invisible-until-needed scrollbar than the app default,
+   matching modern AI product writing surfaces (ChatGPT/Claude/Notion AI). */
+.fa-textarea-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 200, 200, 0.55) transparent;
+}
+.fa-textarea-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.fa-textarea-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fa-textarea-scroll::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.55);
+  border-radius: 9999px;
+}
+.fa-textarea-scroll:hover::-webkit-scrollbar-thumb,
+.fa-textarea-scroll:focus::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.9);
+}
+.fa-textarea-scroll::-webkit-scrollbar-button,
+.fa-textarea-scroll::-webkit-scrollbar-button:single-button,
+.fa-textarea-scroll::-webkit-scrollbar-button:start,
+.fa-textarea-scroll::-webkit-scrollbar-button:end,
+.fa-textarea-scroll::-webkit-scrollbar-button:vertical:start,
+.fa-textarea-scroll::-webkit-scrollbar-button:vertical:end,
+.fa-textarea-scroll::-webkit-scrollbar-button:vertical:start:decrement,
+.fa-textarea-scroll::-webkit-scrollbar-button:vertical:end:increment,
+.fa-textarea-scroll::-webkit-scrollbar-button:horizontal:start:decrement,
+.fa-textarea-scroll::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent;
+}
+.fa-textarea-scroll::-webkit-scrollbar-corner {
+  display: none;
+  background: transparent;
+}
+
 /* Rich text (TipTap) content inside the document editor. */
 .fa-prose {
   white-space: pre-wrap;
