@@ -98,43 +98,6 @@ export function WriterArt({ className }: { className?: string }) {
   );
 }
 
-/** Empty bookshelf: the library before anything is added. */
-export function EmptyShelfArt({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 200 140"
-      className={className}
-      role="img"
-      aria-label="Bookshelf with a few books"
-    >
-      <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <line x1="30" y1="110" x2="170" y2="110" />
-        <rect x="48" y="66" width="14" height="44" rx="2" fill="var(--card)" />
-        <rect x="66" y="58" width="14" height="52" rx="2" fill="var(--card)" />
-        <rect x="84" y="70" width="14" height="40" rx="2" fill="var(--card)" />
-      </g>
-      <g>
-        <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-          <rect
-            x="106"
-            y="54"
-            width="16"
-            height="56"
-            rx="2"
-            fill="color-mix(in oklab, var(--leaf) 8%, transparent)"
-            transform="rotate(8 114 82)"
-          />
-        </g>
-      </g>
-      <g stroke="var(--border)" {...strokeProps()}>
-        <line x1="52" y1="76" x2="58" y2="76" />
-        <line x1="70" y1="68" x2="76" y2="68" />
-        <line x1="88" y1="80" x2="94" y2="80" />
-      </g>
-    </svg>
-  );
-}
-
 /** Compass over a document: starting a new research direction. */
 export function CompassArt({ className }: { className?: string }) {
   return (
