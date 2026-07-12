@@ -164,7 +164,12 @@ class AssistantAgent:
             )
         return "\n".join(lines)
 
-    async def run(self, question: str, history: list[dict]) -> dict[str, Any]:
+    async def run(
+        self,
+        question: str,
+        history: list[dict],
+        search_library_first: bool = False,
+    ) -> dict[str, Any]:
         from prefs import language_instruction
 
         language = await language_instruction(self.user_id)
@@ -173,6 +178,28 @@ class AssistantAgent:
             *[{"role": h["role"], "content": h["content"]} for h in history],
             {"role": "user", "content": question},
         ]
+
+        if search_library_first:
+            # The user attached documents with this message: consult them
+            # unconditionally instead of leaving retrieval to the model.
+            observation = await self._library_search(question)
+            self.steps.append(
+                {
+                    "type": "action",
+                    "tool": "library_search",
+                    "input": question[:200],
+                    "result": _snippet(observation)[:220],
+                }
+            )
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "Observation (automatic library search over the user's "
+                        f"newly attached documents):\n{observation}"
+                    ),
+                }
+            )
 
         answer = ""
         for _ in range(_MAX_STEPS):
@@ -236,13 +263,23 @@ class AssistantAgent:
             answer = (final.group(1) if final else text).strip()
 
         # Only evidence actually cited in the answer becomes a citation chip.
+        # No [n] markers means the answer used no sources: show none, rather
+        # than passing off unused (possibly irrelevant) evidence as citations.
         cited = {
             int(n)
             for n in re.findall(r"\[(\d+)\]", answer)
             if 0 < int(n) <= len(self.evidence)
         }
-        citations = [
-            self.evidence[n - 1] for n in sorted(cited)
-        ] or self.evidence[:4]
+        citations: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for n in sorted(cited):
+            item = self.evidence[n - 1]
+            # One chip per paper: several chunks of the same source are not
+            # several sources.
+            key = item.get("paper_id") or item.get("url") or item["title"]
+            if key in seen:
+                continue
+            seen.add(key)
+            citations.append(item)
 
         return {"answer": answer, "steps": self.steps, "citations": citations}
