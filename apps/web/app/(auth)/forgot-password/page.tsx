@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Wordmark } from "@/components/wordmark";
 import { authClient } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
@@ -31,6 +32,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
+    <div className="flex min-h-screen flex-col">
+      <header className="flex items-center px-6 py-4">
+        <Wordmark />
+      </header>
+      <div className="flex flex-1 items-center justify-center px-4 pb-20">
+        <div className="w-full max-w-sm">
     <Card>
       <CardHeader>
         <h1 className="text-xl font-semibold tracking-tight">
@@ -78,5 +85,8 @@ export default function ForgotPasswordPage() {
         </p>
       </CardContent>
     </Card>
+        </div>
+      </div>
+    </div>
   );
 }
