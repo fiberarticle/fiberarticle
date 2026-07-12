@@ -17,6 +17,60 @@ import styles from "./auth-screen.module.css";
  * panel on the right. One component serves both sign-up and sign-in; the
  * link row switches modes in place.
  */
+/**
+ * Shared full-screen auth shell: black brand panel with effects on the
+ * left, sand content panel on the right. Every auth page renders inside it.
+ */
+export function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={styles.shell}>
+      <div className={styles.card}>
+        <div className={styles.topFade} />
+
+        <div className={styles.stripeLayer}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className={styles.stripe} />
+          ))}
+        </div>
+
+        <div className={styles.warmMist} />
+        <div className={styles.orangeBlob} />
+        <div className={styles.whiteGlow} />
+
+        <div className={styles.leftPanel}>
+          <div className={styles.leftContent}>
+            <h1 className={styles.leftBrand}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/Fiberarticle_Logo_Without_Background.svg"
+                alt=""
+                className={styles.leftBrandLogo}
+              />
+              <span className={styles.leftBrandWord}>Fiberarticle</span>
+            </h1>
+            <p className={styles.leftDescription}>
+              <span className={styles.descLine}>An Agentic AI that,</span>
+              <span className={`${styles.descLine} ${styles.hlAmber}`}>
+                Researches.
+              </span>
+              <span className={`${styles.descLine} ${styles.hlGreen}`}>
+                Performs literature reviews.
+              </span>
+              <span className={`${styles.descLine} ${styles.hlPink}`}>
+                Writes article papers.
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.rightPanel}>
+          <div className={styles.rightContent}>{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AuthScreen({
   initialMode,
 }: {
@@ -138,48 +192,7 @@ export function AuthScreen({
   };
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.card}>
-        <div className={styles.topFade} />
-
-        <div className={styles.stripeLayer}>
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className={styles.stripe} />
-          ))}
-        </div>
-
-        <div className={styles.warmMist} />
-        <div className={styles.orangeBlob} />
-        <div className={styles.whiteGlow} />
-
-        <div className={styles.leftPanel}>
-          <div className={styles.leftContent}>
-            <h1 className={styles.leftBrand}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/Fiberarticle_Logo_Without_Background.svg"
-                alt=""
-                className={styles.leftBrandLogo}
-              />
-              <span className={styles.leftBrandWord}>Fiberarticle</span>
-            </h1>
-            <p className={styles.leftDescription}>
-              <span className={styles.descLine}>An Agentic AI that,</span>
-              <span className={`${styles.descLine} ${styles.hlAmber}`}>
-                Researches.
-              </span>
-              <span className={`${styles.descLine} ${styles.hlGreen}`}>
-                Performs literature reviews.
-              </span>
-              <span className={`${styles.descLine} ${styles.hlPink}`}>
-                Writes article papers.
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className={styles.rightPanel}>
-          <div className={styles.rightContent}>
+    <AuthShell>
             <div className={styles.header}>
               <h3 className={styles.heading}>
                 <span>Get Started</span>
@@ -355,9 +368,6 @@ export function AuthScreen({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>
+    </AuthShell>
   );
 }
