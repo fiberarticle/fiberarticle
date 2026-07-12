@@ -13,9 +13,14 @@ async def lookup(doi: str) -> PaperRecord | None:
     if not doi or not re.match(r"^10\.\d{4,9}/\S+$", doi):
         return None
 
+    # A user is watching this lookup (Add by DOI button), so the retry
+    # budget is deliberately tight; background jobs keep the patient default.
     res = await get_with_retry(
         f"https://api.crossref.org/works/{doi}",
         params={"mailto": get_settings().contact_email},
+        timeout=8,
+        attempts=2,
+        base_delay=1.0,
     )
     if res.status_code == 200:
         item = res.json().get("message", {})
@@ -51,6 +56,9 @@ async def lookup(doi: str) -> PaperRecord | None:
     res = await get_with_retry(
         f"https://api.openalex.org/works/https://doi.org/{doi}",
         params={"mailto": get_settings().contact_email},
+        timeout=8,
+        attempts=2,
+        base_delay=1.0,
     )
     if res.status_code != 200:
         return None
