@@ -10,6 +10,9 @@ export type RunMode = "research" | "literature_review";
 export interface Run {
   id: string;
   topic: string;
+  /** AI-generated one-line title; the API falls back to the topic. */
+  title: string;
+  pinned: boolean;
   mode: RunMode;
   status: RunStatus;
   stage: string | null;
@@ -154,14 +157,27 @@ export interface Conversation {
   paper_id: string | null;
   paper_title: string | null;
   title: string;
+  pinned: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface ChatCitation {
-  paper_id: string;
+  /** null for sources found live on the web rather than in the library. */
+  paper_id: string | null;
   title: string;
   quote: string;
+  url: string | null;
+}
+
+export interface ChatStep {
+  type: "thought" | "action";
+  /** thought steps */
+  text?: string;
+  /** action steps */
+  tool?: string;
+  input?: string;
+  result?: string;
 }
 
 export interface ChatMessage {
@@ -169,6 +185,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations: ChatCitation[] | null;
+  steps: ChatStep[] | null;
   created_at: string;
 }
 
@@ -188,6 +205,7 @@ export interface Extraction {
   id: string;
   name: string;
   status: "running" | "ready" | "failed";
+  pinned: boolean;
   columns: ExtractionColumn[];
   rows: ExtractionRow[];
   error: string | null;
@@ -200,6 +218,7 @@ export interface DocumentListItem {
   title: string;
   template: DocumentTemplate;
   status: "generating" | "ready" | "failed";
+  pinned: boolean;
   section_count: number;
   created_at: string;
   updated_at: string;
