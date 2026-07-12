@@ -13,6 +13,7 @@ from library.service import (
     fetch_and_ingest_oa_pdf,
     find_duplicate,
     ingest_pdf_bytes,
+    ingest_text,
     insert_paper,
     summarize_paper,
 )
@@ -142,19 +143,35 @@ async def add_paper_by_doi(
     return await _paper_detail(row, user_id)
 
 
+def _extract_docx_text(data: bytes) -> str:
+    import io
+
+    from docx import Document as DocxDocument
+
+    doc = DocxDocument(io.BytesIO(data))
+    return "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+
+
+_TEXT_EXTENSIONS = {".txt", ".md"}
+
+
 @router.post("/papers/upload", response_model=PaperDetailOut, status_code=201)
 async def upload_paper(
     file: UploadFile = File(...), user_id: str = CurrentUser
 ) -> PaperDetailOut:
-    if not (file.filename or "").lower().endswith(".pdf"):
-        raise HTTPException(422, "Only PDF files are supported.")
+    name = (file.filename or "").lower()
+    extension = "." + name.rsplit(".", 1)[-1] if "." in name else ""
+    if extension not in {".pdf", ".docx", *_TEXT_EXTENSIONS}:
+        raise HTTPException(
+            422, "Supported files: PDF, Word (.docx), and plain text (.txt, .md)."
+        )
     data = await file.read()
     if len(data) > MAX_PDF_BYTES:
-        raise HTTPException(413, "PDF is larger than the 25 MB limit.")
-    if not data[:5].startswith(b"%PDF"):
+        raise HTTPException(413, "The file is larger than the 25 MB limit.")
+    if extension == ".pdf" and not data[:5].startswith(b"%PDF"):
         raise HTTPException(422, "That file is not a valid PDF.")
 
-    title = (file.filename or "Uploaded paper").rsplit(".", 1)[0].replace("_", " ")
+    title = (file.filename or "Uploaded document").rsplit(".", 1)[0].replace("_", " ")
     row = await insert_paper(
         user_id,
         {
@@ -165,13 +182,23 @@ async def upload_paper(
         },
     )
     try:
-        chunks = await ingest_pdf_bytes(str(row["id"]), user_id, data)
+        if extension == ".pdf":
+            chunks = await ingest_pdf_bytes(str(row["id"]), user_id, data)
+        elif extension == ".docx":
+            text = _extract_docx_text(data)
+            chunks = await ingest_text(str(row["id"]), user_id, text)
+        else:
+            text = data.decode("utf-8", errors="replace")
+            chunks = await ingest_text(str(row["id"]), user_id, text)
     except ValueError as exc:
         await execute("DELETE FROM papers WHERE id = %s", row["id"])
         raise HTTPException(422, str(exc))
+    except Exception:
+        await execute("DELETE FROM papers WHERE id = %s", row["id"])
+        raise HTTPException(422, "The file could not be read. Is it valid?")
     if chunks == 0:
         await execute("DELETE FROM papers WHERE id = %s", row["id"])
-        raise HTTPException(422, "No text could be extracted from that PDF.")
+        raise HTTPException(422, "No text could be extracted from that file.")
     fresh = await _get_owned_paper(str(row["id"]), user_id)
     return await _paper_detail(fresh, user_id)
 
