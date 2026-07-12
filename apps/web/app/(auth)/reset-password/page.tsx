@@ -1,14 +1,17 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import "@radix-ui/themes/styles.css";
+import { Button, Theme } from "@radix-ui/themes";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Callout } from "@/components/ui/callout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Wordmark } from "@/components/wordmark";
+import { Suspense, useState } from "react";
+import type { FormEvent } from "react";
+
+import { AuthShell } from "@/components/auth-screen";
 import { authClient } from "@/lib/auth-client";
+
+import styles from "@/components/auth-screen.module.css";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -17,20 +20,29 @@ function ResetPasswordForm() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
   const [pending, setPending] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    let valid = true;
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
+      setPasswordError("Password must be at least 8 characters.");
+      valid = false;
+    } else {
+      setPasswordError("");
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
-      return;
+      setConfirmError("Passwords do not match.");
+      valid = false;
+    } else {
+      setConfirmError("");
     }
+    if (!valid) return;
     if (!token) {
       setError("This reset link is invalid or has expired. Request a new one.");
       return;
@@ -42,83 +54,120 @@ function ResetPasswordForm() {
     });
     setPending(false);
     if (error) {
-      setError(error.message ?? "Could not reset the password. Request a new link.");
+      setError(
+        error.message ?? "Could not reset the password. Request a new link."
+      );
       return;
     }
     router.push("/sign-in");
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Choose a new password
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Set a new password for your Fiberarticle account.
+    <AuthShell>
+      <div className={styles.header}>
+        <h3 className={styles.heading}>
+          <span>Choose a new password</span>
+        </h3>
+        <p className={styles.subHeading}>
+          Set a new password for your Fiberarticle account
         </p>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {error && <Callout tone="error">{error}</Callout>}
+      </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm font-medium">
-              New password
-            </label>
-            <Input
+      <form className={styles.form} onSubmit={onSubmit} noValidate>
+        <div className={styles.field}>
+          <label htmlFor="password" className={styles.label}>
+            New password
+          </label>
+          <div className={styles.passwordWrap}>
+            <input
+              type={showPassword ? "text" : "password"}
               id="password"
-              type="password"
-              placeholder="At least 8 characters"
+              placeholder="minimum 8 characters"
+              className={`${styles.input} ${passwordError ? styles.inputError : ""}`}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              aria-invalid={!!passwordError}
+              aria-describedby="password-error"
             />
+            <button
+              type="button"
+              className={styles.eyeBtn}
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="confirm" className="text-sm font-medium">
-              Confirm password
-            </label>
-            <Input
-              id="confirm"
-              type="password"
-              placeholder="Repeat the new password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" loading={pending}>
+          {passwordError && (
+            <p id="password-error" className={styles.errorText}>
+              {passwordError}
+            </p>
+          )}
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="confirm" className={styles.label}>
+            Confirm password
+          </label>
+          <input
+            type={showPassword ? "text" : "password"}
+            id="confirm"
+            placeholder="repeat the new password"
+            className={`${styles.input} ${confirmError ? styles.inputError : ""}`}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            aria-invalid={!!confirmError}
+            aria-describedby="confirm-error"
+          />
+          {confirmError && (
+            <p id="confirm-error" className={styles.errorText}>
+              {confirmError}
+            </p>
+          )}
+        </div>
+
+        {error && (
+          <p role="alert" className={styles.errorText}>
+            {error}
+          </p>
+        )}
+
+        <Theme
+          appearance="light"
+          accentColor="brown"
+          grayColor="sand"
+          radius="large"
+          hasBackground={false}
+          className={styles.themeScope}
+        >
+          <Button
+            type="submit"
+            variant="classic"
+            color="brown"
+            radius="large"
+            size="3"
+            className={styles.primaryButton}
+            loading={pending}
+          >
             Reset password
           </Button>
-        </form>
+        </Theme>
+      </form>
 
-        <p className="text-center text-sm">
-          <Link
-            href="/sign-in"
-            className="font-medium text-primary hover:underline"
-          >
-            Back to sign in
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+      <div className={styles.loginRow}>
+        <Link href="/sign-in" className={styles.loginLinkButton}>
+          Back to sign in
+        </Link>
+      </div>
+    </AuthShell>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center px-6 py-4">
-        <Wordmark />
-      </header>
-      <div className="flex flex-1 items-center justify-center px-4 pb-20">
-        <div className="w-full max-w-sm">
-          <Suspense>
-            <ResetPasswordForm />
-          </Suspense>
-        </div>
-      </div>
-    </div>
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
