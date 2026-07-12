@@ -240,6 +240,11 @@ async def _create_schema(conn) -> None:
         )
         """
     )
+    # ReAct assistant: the reasoning steps behind each assistant reply, shown
+    # as a chain of thought in the chat UI.
+    await conn.execute(
+        "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS steps JSONB"
+    )
     # Per-user preferences: global citation style (any CSL id) and the
     # language Fiberarticle AI writes in.
     await conn.execute(
@@ -282,6 +287,19 @@ async def _create_schema(conn) -> None:
     await conn.execute(
         "CREATE INDEX IF NOT EXISTS journal_ranks_title_idx ON journal_ranks (norm_title)"
     )
+    # Sidebar history: AI-written one-line titles and ChatGPT-style pinning.
+    # runs.title is NULL until the background title task fills it (topic is
+    # the fallback); documents already carry an AI title.
+    await conn.execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS title TEXT")
+    await conn.execute(
+        "ALTER TABLE runs ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false"
+    )
+    await conn.execute(
+        "ALTER TABLE documents ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false"
+    )
+    await conn.execute(
+        "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false"
+    )
     await conn.execute(
         """
         CREATE TABLE IF NOT EXISTS extractions (
@@ -297,4 +315,7 @@ async def _create_schema(conn) -> None:
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
         """
+    )
+    await conn.execute(
+        "ALTER TABLE extractions ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false"
     )
