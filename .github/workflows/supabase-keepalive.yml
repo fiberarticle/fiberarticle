@@ -1,0 +1,30 @@
+# Supabase free-tier projects pause after about a week of inactivity, which
+# would take the whole product down. This ping keeps the database awake.
+#
+# Required repository secret:
+#   SUPABASE_KEEPALIVE_DATABASE_URL - the session-pooler connection string
+#   (postgresql://USER:PASSWORD@HOST:5432/postgres, password percent-encoded).
+
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Twice a week (Mon and Thu, 03:17 UTC) so a single failed run never
+    # lets the ~7-day inactivity window elapse.
+    - cron: "17 3 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the database
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_KEEPALIVE_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "SUPABASE_KEEPALIVE_DATABASE_URL secret is not set." >&2
+            exit 1
+          fi
+          psql "$DATABASE_URL" -c "SELECT 'fiberarticle keep-alive', now();"
