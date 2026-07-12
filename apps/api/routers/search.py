@@ -131,8 +131,10 @@ async def _synthesize_answer(
                     "Answer the research question using ONLY the numbered paper "
                     "abstracts provided. Cite claims with bracketed numbers like "
                     "[2]. Be balanced: note agreement, disagreement, and gaps. "
-                    "2 to 4 paragraphs, no headings. If the abstracts cannot "
-                    "answer the question, say so plainly." + language
+                    "2 to 4 paragraphs. Plain prose only: no headings and no "
+                    "markdown formatting such as ** or bullet lists. If the "
+                    "abstracts cannot answer the question, say so plainly."
+                    + language
                 ),
             },
             {"role": "user", "content": f"Question: {query}\n\nPapers:\n{digest}"},
@@ -154,11 +156,27 @@ async def search_papers(body: SearchIn, user_id: str = CurrentUser) -> SearchRes
 
     queries = await _sub_queries(llm, body.query)
 
+    # A rate-limited source (arXiv and Semantic Scholar throttle hard) must
+    # not stall the whole search; bound each source by a time budget and
+    # keep whatever partial results arrived.
+    _SOURCE_BUDGET = 30.0
+    _PER_QUERY_TIMEOUT = 20.0
+
     async def run_source(fn) -> list[PaperRecord]:
         found: list[PaperRecord] = []
+        loop = asyncio.get_event_loop()
+        deadline = loop.time() + _SOURCE_BUDGET
         for q in queries:
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                break
             try:
-                found.extend(await fn(q, limit=8))
+                found.extend(
+                    await asyncio.wait_for(
+                        fn(q, limit=8),
+                        timeout=min(_PER_QUERY_TIMEOUT, remaining),
+                    )
+                )
             except Exception:
                 continue
         return found
