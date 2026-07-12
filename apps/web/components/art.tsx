@@ -2,15 +2,25 @@
  * Hand-drawn-style inline SVG illustrations in the Fiberarticle palette.
  * Stroke-based, no external assets, no emoji. Accent strokes use var(--leaf).
  *
- * Motion: .fa-art-float (gentle bob), .fa-art-draw (stroke draw-in),
- * .fa-art-pulse (soft opacity pulse) - defined in globals.css and disabled
- * under prefers-reduced-motion. SVG groups need fill-box transform origins.
+ * Motion: .fa-art-draw (stroke draw-in) and .fa-art-pulse (soft opacity
+ * pulse) - defined in globals.css and disabled under prefers-reduced-motion.
  */
 
-const floatStyle: React.CSSProperties = {
-  transformBox: "fill-box",
-  transformOrigin: "center",
-};
+import { LibraryBig } from "lucide-react";
+
+/** A big library: the Researcher page. */
+export function ResearcherArt({ className }: { className?: string }) {
+  return (
+    <div className={className} role="img" aria-label="Library">
+      <div className="flex h-28 items-center justify-center">
+        <LibraryBig
+          className="size-20 text-muted-foreground"
+          strokeWidth={1.3}
+        />
+      </div>
+    </div>
+  );
+}
 
 function strokeProps(width = 1.6) {
   return {
@@ -41,7 +51,7 @@ export function ReviewArt({ className }: { className?: string }) {
         <line x1="58" y1="68" x2="118" y2="68" />
         <line x1="58" y1="78" x2="96" y2="78" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(2.2)}>
           <circle
             cx="138"
@@ -75,7 +85,7 @@ export function WriterArt({ className }: { className?: string }) {
         <line x1="54" y1="74" x2="122" y2="74" />
         <line className="fa-art-draw" pathLength={60} x1="54" y1="86" x2="88" y2="86" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(2)}>
           <path
             d="M96 96 C 120 60, 148 40, 168 28 C 160 52, 140 84, 112 104 Z"
@@ -103,7 +113,7 @@ export function EmptyShelfArt({ className }: { className?: string }) {
         <rect x="66" y="58" width="14" height="52" rx="2" fill="var(--card)" />
         <rect x="84" y="70" width="14" height="40" rx="2" fill="var(--card)" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(1.8)}>
           <rect
             x="106"
@@ -140,7 +150,7 @@ export function CompassArt({ className }: { className?: string }) {
         <line x1="50" y1="66" x2="96" y2="66" />
         <line x1="50" y1="78" x2="102" y2="78" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(2)}>
           <circle
             cx="134"
@@ -178,7 +188,7 @@ export function AskArt({ className }: { className?: string }) {
         <line x1="82" y1="62" x2="94" y2="62" />
         <line x1="82" y1="72" x2="92" y2="72" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(1.8)}>
           <rect
             x="118"
@@ -235,7 +245,7 @@ export function ExtractArt({ className }: { className?: string }) {
       <g stroke="var(--leaf)" {...strokeProps(1.8)}>
         <path className="fa-art-draw" pathLength={60} d="M92 72 h20 m-6 -6 l6 6 l-6 6" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(1.7)}>
           <rect
             x="122"
@@ -274,7 +284,7 @@ export function AssistantArt({ className }: { className?: string }) {
         <line x1="110" y1="72" x2="134" y2="72" />
         <line x1="110" y1="82" x2="132" y2="82" />
       </g>
-      <g className="fa-art-float" style={floatStyle}>
+      <g>
         <g stroke="var(--leaf)" {...strokeProps(1.8)}>
           <rect
             x="118"
