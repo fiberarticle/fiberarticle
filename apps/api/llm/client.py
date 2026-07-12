@@ -89,18 +89,18 @@ _PROVIDER_PREFIXES = {
 async def resolve_llm(user_id: str) -> ResolvedLlm:
     row = await fetch_one("SELECT * FROM llm_config WHERE user_id = %s", user_id)
     if row is None:
-        raise LlmNotConfigured(
-            "No LLM configured. Choose Fiberarticle AI, bring your own key, or connect a local endpoint in Settings."
-        )
+        # Zero-setup default: accounts without a saved config use managed
+        # Fiberarticle AI with the fast (non-reasoning) model.
+        row = {"mode": "fiberarticle_ai", "reasoning": False}
 
     mode = row["mode"]
     settings = get_settings()
 
     if mode == "fiberarticle_ai":
         # Per-user toggle: max reasoning uses the (slow, thorough) reasoning
-        # model; off uses a fast non-reasoning model. Falls back to the
-        # reasoning model if no fast model is configured.
-        want_reasoning = row["reasoning"] if row["reasoning"] is not None else True
+        # model; off (the default) uses the fast non-reasoning model. Falls
+        # back to the reasoning model if no fast model is configured.
+        want_reasoning = bool(row.get("reasoning"))
         reasoning_model = settings.fiberarticle_ai_model
         fast_model = settings.fiberarticle_ai_fast_model or reasoning_model
         model = reasoning_model if want_reasoning else fast_model
