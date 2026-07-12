@@ -11,7 +11,7 @@ import {
 } from "@/components/agent-composer";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
 import { Callout } from "@/components/ui/callout";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import type { LlmConfig, Run } from "@/lib/types";
 
 const MODE_STORAGE_KEY = "fa-agent-mode";
@@ -32,6 +32,8 @@ export function Dashboard({ userName }: { userName: string }) {
   const [llmConfig, setLlmConfig] = useState<LlmConfig | null>(null);
   const [mode, setMode] = useState<AgentMode>("researcher");
   const [topic, setTopic] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiDown, setApiDown] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -66,6 +68,64 @@ export function Dashboard({ userName }: { userName: string }) {
     return () => clearInterval(interval);
   }, [load]);
 
+  function onAttach(files: File[]) {
+    setError(null);
+    setAttachments((prev) => {
+      const merged = [...prev];
+      for (const file of files) {
+        const duplicate = merged.some(
+          (f) => f.name === file.name && f.size === file.size
+        );
+        if (!duplicate) merged.push(file);
+      }
+      return merged.slice(0, 10);
+    });
+  }
+
+  function onRemoveAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /** Upload every attachment into the Library so runs and chat can use
+   * them. Returns false (and reports errors) if any upload failed. */
+  async function uploadAttachments(): Promise<boolean> {
+    if (attachments.length === 0) return true;
+    setUploading(true);
+    const failures: string[] = [];
+    try {
+      const token = await getApiToken();
+      for (const file of attachments) {
+        const form = new FormData();
+        form.append("file", file);
+        try {
+          const res = await fetch(apiUrl("/v1/papers/upload"), {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: form,
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            failures.push(`${file.name}: ${body.detail ?? "upload failed"}`);
+          }
+        } catch {
+          failures.push(`${file.name}: upload failed`);
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+    if (failures.length > 0) {
+      setError(`Some attachments were not added: ${failures.join("; ")}`);
+      // Keep only the failed files so the user can fix or remove them.
+      setAttachments((prev) =>
+        prev.filter((f) => failures.some((msg) => msg.startsWith(f.name)))
+      );
+      return false;
+    }
+    setAttachments([]);
+    return true;
+  }
+
   async function onStart() {
     setError(null);
     const trimmed = topic.trim();
@@ -76,6 +136,10 @@ export function Dashboard({ userName }: { userName: string }) {
         return;
       }
       setStarting(true);
+      if (!(await uploadAttachments())) {
+        setStarting(false);
+        return;
+      }
       router.push(`/ask?q=${encodeURIComponent(trimmed)}`);
       return;
     }
@@ -85,6 +149,10 @@ export function Dashboard({ userName }: { userName: string }) {
       return;
     }
     setStarting(true);
+    if (!(await uploadAttachments())) {
+      setStarting(false);
+      return;
+    }
     try {
       const run = await apiFetch<Run>("/v1/runs", {
         method: "POST",
@@ -159,6 +227,9 @@ export function Dashboard({ userName }: { userName: string }) {
           onValueChange={setTopic}
           onSubmit={onStart}
           isLoading={starting}
+          attachments={attachments}
+          onAttach={onAttach}
+          onRemoveAttachment={onRemoveAttachment}
           footerRight={
             mode !== "assistant" && llmConfig?.caps ? (
               <span className="text-xs text-muted-foreground">
@@ -190,7 +261,11 @@ export function Dashboard({ userName }: { userName: string }) {
 
         {starting && (
           <div className="text-center">
-            <TextShimmer className="text-sm">{startingLabel[mode]}</TextShimmer>
+            <TextShimmer className="text-sm">
+              {uploading
+                ? "Adding your attachments to the library"
+                : startingLabel[mode]}
+            </TextShimmer>
           </div>
         )}
       </section>
