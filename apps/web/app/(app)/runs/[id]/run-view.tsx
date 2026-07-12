@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
-  BookOpenCheck,
+  ClipboardCheck,
   Boxes,
   Check,
   Download,
@@ -79,7 +79,7 @@ const stageMeta: Record<string, { label: string; icon: React.ElementType }> = {
   extract: { label: "Extracting key findings", icon: Quote },
   coverage_check: { label: "Checking coverage", icon: Target },
   synthesize: { label: "Synthesizing the review", icon: PenLine },
-  report: { label: "Writing the report", icon: BookOpenCheck },
+  report: { label: "Writing the report", icon: ClipboardCheck },
 };
 
 const stageOrder = Object.keys(stageMeta);
@@ -408,7 +408,7 @@ export function RunView({ runId }: { runId: string }) {
         <div className="mt-2 flex flex-wrap items-center gap-2.5">
           {run.mode === "literature_review" && (
             <Badge variant="leaf">
-              <BookOpenCheck className="size-3" /> literature review
+              <ClipboardCheck className="size-3" /> literature review
             </Badge>
           )}
           <Badge variant={statusVariant[run.status]}>
