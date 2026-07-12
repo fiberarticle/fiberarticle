@@ -1,11 +1,22 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { bearer, jwt } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+// Server-side password policy. The sign-up form mirrors this, but the API
+// must enforce it itself: any direct caller could otherwise bypass the
+// client-side check entirely.
+const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,64}$/;
+const PASSWORD_PATHS = new Set([
+  "/sign-up/email",
+  "/change-password",
+  "/reset-password",
+]);
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
@@ -15,6 +26,26 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (!PASSWORD_PATHS.has(ctx.path)) return;
+      const body = ctx.body as
+        | { password?: string; newPassword?: string }
+        | undefined;
+      const password = body?.newPassword ?? body?.password;
+      if (typeof password === "string" && !PASSWORD_RE.test(password)) {
+        throw new APIError("BAD_REQUEST", {
+          message:
+            "Password must be 8-64 characters and include an uppercase letter, a lowercase letter, and a number.",
+        });
+      }
+    }),
+  },
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
