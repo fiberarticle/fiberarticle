@@ -10,14 +10,16 @@ import {
   Library,
   LogOut,
   MessageSquareText,
+  Moon,
   PanelLeft,
   Search,
   Settings,
   SquarePen,
+  Sun,
   Table2,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Wordmark, FiberMark } from "@/components/wordmark";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -57,6 +59,9 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   async function onSignOut() {
     await authClient.signOut();
@@ -195,11 +200,18 @@ export function Sidebar({
                   <Settings /> Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <div className="flex items-center justify-between">
+              {/* Toggle on the item itself: an inner button never receives the
+                  click because Radix closes the menu on item select. */}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setTheme(resolvedTheme === "dark" ? "light" : "dark");
+                }}
+              >
+                <span className="flex w-full items-center justify-between">
                   <span className="text-sm">Theme</span>
-                  <ThemeToggle />
-                </div>
+                  {mounted && resolvedTheme === "dark" ? <Sun /> : <Moon />}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
