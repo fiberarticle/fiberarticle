@@ -3,16 +3,15 @@
 import * as React from "react";
 import {
   ArrowUp,
-  BookOpen,
   BookOpenCheck,
   Check,
+  FileText,
   HatGlasses,
+  Paperclip,
   PenLine,
-  Search,
-  Settings2,
   UserRound,
+  X,
 } from "lucide-react";
-import Link from "next/link";
 import {
   PromptInput,
   PromptInputAction,
@@ -21,6 +20,60 @@ import {
 } from "@/components/prompt-kit/prompt-input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const ACCEPTED_FILES = ".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp";
+
+/** Small rectangle badge for one attachment: preview, name, remove cross. */
+function AttachmentBadge({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) {
+  const [preview, setPreview] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const sizeLabel =
+    file.size > 1_048_576
+      ? `${(file.size / 1_048_576).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+
+  return (
+    <span className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 py-1.5 pl-1.5 pr-1 text-xs">
+      {preview ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={preview}
+          alt=""
+          className="size-7 shrink-0 rounded-md object-cover"
+        />
+      ) : (
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_oklab,var(--primary)_14%,transparent)] text-primary">
+          <FileText className="size-4" />
+        </span>
+      )}
+      <span className="flex min-w-0 flex-col">
+        <span className="max-w-40 truncate font-medium">{file.name}</span>
+        <span className="text-[10px] text-muted-foreground">{sizeLabel}</span>
+      </span>
+      <button
+        type="button"
+        aria-label={`Remove ${file.name}`}
+        onClick={onRemove}
+        className="ml-0.5 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <X className="size-3.5" />
+      </button>
+    </span>
+  );
+}
 
 export type AgentMode = "researcher" | "article" | "review" | "assistant";
 
@@ -230,7 +283,9 @@ export function AgentComposer({
   onSubmit,
   isLoading = false,
   disabled = false,
-  footerLeft,
+  attachments = [],
+  onAttach,
+  onRemoveAttachment,
   footerRight,
   className,
 }: {
@@ -241,13 +296,16 @@ export function AgentComposer({
   onSubmit: () => void;
   isLoading?: boolean;
   disabled?: boolean;
-  /** Extra chips rendered on the left of the action row. */
-  footerLeft?: React.ReactNode;
+  /** Files attached via the paperclip, shown as removable badges. */
+  attachments?: File[];
+  onAttach?: (files: File[]) => void;
+  onRemoveAttachment?: (index: number) => void;
   /** Extra info rendered next to the submit button. */
   footerRight?: React.ReactNode;
   className?: string;
 }) {
   const agent = agentDef(mode);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   function moveSelection(from: AgentMode, dir: -1 | 1) {
     const index = AGENTS.findIndex((a) => a.id === from);
@@ -324,47 +382,44 @@ export function AgentComposer({
               disabled={disabled}
               className="min-h-24 px-5 pt-5"
             />
+            {attachments.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2 px-4">
+                {attachments.map((file, index) => (
+                  <AttachmentBadge
+                    key={`${file.name}-${file.size}-${index}`}
+                    file={file}
+                    onRemove={() => onRemoveAttachment?.(index)}
+                  />
+                ))}
+              </div>
+            )}
             <PromptInputActions className="mt-3 w-full justify-between px-3 pb-3">
               <div className="flex items-center gap-2">
-                {footerLeft ?? (
-                  <>
-                    <PromptInputAction tooltip="Searches arXiv, OpenAlex, Semantic Scholar, and Crossref">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full"
-                        type="button"
-                      >
-                        <Search />
-                        4 scholarly indexes
-                      </Button>
-                    </PromptInputAction>
-                    <PromptInputAction tooltip="Open-access papers are read in full; paywalled ones abstract-only">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hidden rounded-full md:inline-flex"
-                        type="button"
-                      >
-                        <BookOpen />
-                        Open access
-                      </Button>
-                    </PromptInputAction>
-                    <PromptInputAction tooltip="LLM settings">
-                      <Link href="/settings">
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          className="rounded-full"
-                          type="button"
-                          aria-label="LLM settings"
-                        >
-                          <Settings2 />
-                        </Button>
-                      </Link>
-                    </PromptInputAction>
-                  </>
-                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_FILES}
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length > 0) onAttach?.(files);
+                    e.target.value = "";
+                  }}
+                />
+                <PromptInputAction tooltip="Attach files (PDF, Word, text, images)">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-full"
+                    type="button"
+                    aria-label="Attach files"
+                    disabled={disabled || isLoading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip />
+                  </Button>
+                </PromptInputAction>
               </div>
               <div className="flex items-center gap-3">
                 {footerRight}
