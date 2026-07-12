@@ -15,7 +15,6 @@ from routers import (
     me,
     papers,
     runs,
-    search,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -79,7 +78,6 @@ app.include_router(me.router)
 app.include_router(runs.router)
 app.include_router(papers.router)
 app.include_router(documents.router)
-app.include_router(search.router)
 app.include_router(chats.router)
 app.include_router(extractions.router)
 app.include_router(citations.router)
