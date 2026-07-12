@@ -31,6 +31,7 @@ async def _execute(
     mode: str = "research",
     filters: dict | None = None,
     criteria: str | None = None,
+    seed_paper_ids: list[str] | None = None,
 ) -> None:
     try:
         llm = await resolve_llm(user_id)
@@ -50,12 +51,26 @@ async def _execute(
                     "mode": mode,
                     "filters": filters or {},
                     "criteria": criteria or "",
+                    "seed_paper_ids": seed_paper_ids or [],
                 },
                 {"recursion_limit": 60},
             ),
             timeout=_RUN_TIMEOUT_SECONDS,
         )
         await _set_status(run_id, "completed")
+    except asyncio.CancelledError:
+        # User pressed Stop: keep everything found so far, mark cancelled.
+        await _set_status(run_id, "cancelled")
+        try:
+            await emit(
+                run_id,
+                user_id,
+                "report",
+                "Run stopped by you. Papers and findings collected so far are kept.",
+                type="warning",
+            )
+        except Exception:
+            pass
     except LlmNotConfigured as exc:
         await _set_status(run_id, "failed", str(exc))
         await emit(run_id, user_id, "plan", str(exc), type="error")
@@ -82,8 +97,19 @@ def start_run(
     mode: str = "research",
     filters: dict | None = None,
     criteria: str | None = None,
+    seed_paper_ids: list[str] | None = None,
 ) -> None:
     task = asyncio.create_task(
-        _execute(run_id, user_id, topic, mode, filters, criteria)
+        _execute(run_id, user_id, topic, mode, filters, criteria, seed_paper_ids)
     )
     _active_tasks[run_id] = task
+
+
+def cancel_run(run_id: str) -> bool:
+    """Cancel the in-process task for a run. Returns False when no task is
+    live (already finished, or lost to an API restart)."""
+    task = _active_tasks.get(run_id)
+    if task is None or task.done():
+        return False
+    task.cancel()
+    return True
