@@ -78,7 +78,97 @@ class ResearchNodes:
         plan = [str(q) for q in plan][:5]
         for i, question in enumerate(plan, 1):
             await self._emit("plan", f"Research question {i}: {question}")
-        return {"plan": plan, "loops": 0, "used_queries": [], "candidates": []}
+        seeds = await self._ingest_seed_papers(state)
+        return {
+            "plan": plan,
+            "loops": 0,
+            "used_queries": [],
+            "candidates": [],
+            "papers": seeds,
+        }
+
+    async def _ingest_seed_papers(self, state: ResearchState) -> list[dict[str, Any]]:
+        """Copy the user's attached library papers (and their embedded chunks)
+        into this run so they are always among the sources."""
+        seed_ids = state.get("seed_paper_ids") or []
+        if not seed_ids:
+            return []
+        rows = await fetch_all(
+            "SELECT * FROM papers WHERE user_id = %s AND id = ANY(%s::uuid[])",
+            self.user_id,
+            seed_ids,
+        )
+        seeds: list[dict[str, Any]] = []
+        for row in rows:
+            inserted = await fetch_all(
+                """
+                INSERT INTO papers (
+                    run_id, user_id, source, external_id, title, authors, year,
+                    venue, doi, url, abstract, is_open_access, oa_pdf_url,
+                    cited_by_count, issn, quartile, full_text_parsed
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                self.run_id,
+                self.user_id,
+                row["source"],
+                row["external_id"],
+                row["title"],
+                jsonb(row["authors"] or []),
+                row["year"],
+                row["venue"],
+                row["doi"],
+                row["url"],
+                row["abstract"],
+                row["is_open_access"],
+                row["oa_pdf_url"],
+                row["cited_by_count"] or 0,
+                row["issn"],
+                row["quartile"],
+                row["full_text_parsed"],
+            )
+            new_id = str(inserted[0]["id"])
+            # Reuse the library paper's existing embeddings for this run's
+            # retrieval; no re-parsing or re-embedding needed.
+            await execute(
+                """
+                INSERT INTO chunks (paper_id, run_id, user_id, content, embedding)
+                SELECT %s, %s, user_id, content, embedding
+                FROM chunks WHERE paper_id = %s AND user_id = %s
+                """,
+                new_id,
+                self.run_id,
+                row["id"],
+                self.user_id,
+            )
+            seeds.append(
+                {
+                    "id": new_id,
+                    "source": row["source"],
+                    "title": row["title"],
+                    "authors": row["authors"] or [],
+                    "year": row["year"],
+                    "venue": row["venue"],
+                    "doi": row["doi"],
+                    "url": row["url"],
+                    "abstract": row["abstract"],
+                    "is_open_access": row["is_open_access"],
+                    "oa_pdf_url": row["oa_pdf_url"],
+                    "cited_by_count": row["cited_by_count"] or 0,
+                    "issn": row["issn"],
+                    "quartile": row["quartile"],
+                    "full_text_parsed": row["full_text_parsed"],
+                    # Chunks are already indexed; skip fetch/parse/embed.
+                    "_done": True,
+                }
+            )
+        if seeds:
+            await self._emit(
+                "plan",
+                f"Including {len(seeds)} attached paper(s) from your library as guaranteed sources.",
+            )
+        return seeds
 
     # -------------------------------------------------- generate_queries
     async def generate_queries(self, state: ResearchState) -> dict:
@@ -724,64 +814,79 @@ class ResearchNodes:
                 for question in state.get("plan", [state["topic"]])
             ]
 
-        for heading, query, instruction in section_plan:
-            await self._emit("synthesize", f"Writing section: {heading}")
-            try:
-                vector = await embed_query(query)
-                rows = await fetch_all(
-                    """
-                    SELECT paper_id, content
-                    FROM chunks
-                    WHERE run_id = %s AND user_id = %s
-                    ORDER BY embedding <=> %s::vector
-                    LIMIT 6
-                    """,
-                    self.run_id,
-                    self.user_id,
-                    str(vector),
+        # Sections are independent of each other: write them concurrently.
+        # The semaphore keeps concurrency polite toward free-tier providers.
+        slots: list[dict[str, str] | None] = [None] * len(section_plan)
+        semaphore = asyncio.Semaphore(3)
+
+        async def write_section(index: int, heading: str, query: str, instruction: str) -> None:
+            async with semaphore:
+                await self._emit("synthesize", f"Writing section: {heading}")
+                try:
+                    vector = await embed_query(query)
+                    rows = await fetch_all(
+                        """
+                        SELECT paper_id, content
+                        FROM chunks
+                        WHERE run_id = %s AND user_id = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT 6
+                        """,
+                        self.run_id,
+                        self.user_id,
+                        str(vector),
+                    )
+                except Exception:
+                    # No retrieval without embeddings; the abstract fallback
+                    # below still produces a grounded section.
+                    rows = []
+                evidence = "\n\n".join(
+                    f"[{paper_index.get(str(r['paper_id']), '?')}] {r['content'][:900]}" for r in rows
                 )
-            except Exception:
-                # No retrieval without embeddings; the abstract fallback
-                # below still produces a grounded section.
-                rows = []
-            evidence = "\n\n".join(
-                f"[{paper_index.get(str(r['paper_id']), '?')}] {r['content'][:900]}" for r in rows
+                if not evidence:
+                    evidence = "\n".join(
+                        f"[{i + 1}] {p.get('abstract') or ''}" for i, p in enumerate(papers[:8])
+                    )
+                try:
+                    body = await self.llm.complete(
+                        [
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You write one section of an academic literature review. "
+                                    "Use ONLY the provided evidence excerpts. Cite with bracketed "
+                                    "numbers like [3] matching the reference key. No headings. "
+                                    + instruction
+                                    + language
+                                ),
+                            },
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"Section: {heading}\n\n"
+                                    f"Reference key:\n{reference_key}\n\n"
+                                    f"Evidence excerpts:\n{evidence}"
+                                ),
+                            },
+                        ],
+                        max_tokens=900,
+                    )
+                    slots[index] = {"heading": heading, "body": body.strip()}
+                    await self._emit(
+                        "synthesize",
+                        f"Section \"{heading}\" drafted ({len(body):,} characters) "
+                        f"with evidence from {len(rows)} chunks.",
+                    )
+                except Exception as exc:
+                    await self._emit("synthesize", f"Section failed: {exc}", type="warning")
+
+        await asyncio.gather(
+            *(
+                write_section(i, heading, query, instruction)
+                for i, (heading, query, instruction) in enumerate(section_plan)
             )
-            if not evidence:
-                evidence = "\n".join(
-                    f"[{i + 1}] {p.get('abstract') or ''}" for i, p in enumerate(papers[:8])
-                )
-            try:
-                body = await self.llm.complete(
-                    [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You write one section of an academic literature review. "
-                                "Use ONLY the provided evidence excerpts. Cite with bracketed "
-                                "numbers like [3] matching the reference key. No headings. "
-                                + instruction
-                                + language
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": (
-                                f"Section: {heading}\n\n"
-                                f"Reference key:\n{reference_key}\n\n"
-                                f"Evidence excerpts:\n{evidence}"
-                            ),
-                        },
-                    ],
-                    max_tokens=900,
-                )
-                sections.append({"heading": heading, "body": body.strip()})
-                await self._emit(
-                    "synthesize",
-                    f"Section drafted ({len(body):,} characters) with evidence from {len(rows)} chunks.",
-                )
-            except Exception as exc:
-                await self._emit("synthesize", f"Section failed: {exc}", type="warning")
+        )
+        sections = [slot for slot in slots if slot is not None]
         return {"sections": sections}
 
     # -------------------------------------------------------------- report
