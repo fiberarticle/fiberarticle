@@ -86,12 +86,13 @@ export function Dashboard({ userName }: { userName: string }) {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   }
 
-  /** Upload every attachment into the Library so runs and chat can use
-   * them. Returns false (and reports errors) if any upload failed. */
-  async function uploadAttachments(): Promise<boolean> {
-    if (attachments.length === 0) return true;
+  /** Upload every attachment so the task can use them. Returns the created
+   * paper ids, or null (and reports errors) if any upload failed. */
+  async function uploadAttachments(): Promise<string[] | null> {
+    if (attachments.length === 0) return [];
     setUploading(true);
     const failures: string[] = [];
+    const uploaded: string[] = [];
     try {
       const token = await getApiToken();
       for (const file of attachments) {
@@ -106,6 +107,9 @@ export function Dashboard({ userName }: { userName: string }) {
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
             failures.push(`${file.name}: ${body.detail ?? "upload failed"}`);
+          } else {
+            const body = await res.json().catch(() => null);
+            if (body?.id) uploaded.push(body.id);
           }
         } catch {
           failures.push(`${file.name}: upload failed`);
@@ -120,10 +124,10 @@ export function Dashboard({ userName }: { userName: string }) {
       setAttachments((prev) =>
         prev.filter((f) => failures.some((msg) => msg.startsWith(f.name)))
       );
-      return false;
+      return null;
     }
     setAttachments([]);
-    return true;
+    return uploaded;
   }
 
   async function onStart() {
@@ -136,12 +140,18 @@ export function Dashboard({ userName }: { userName: string }) {
         return;
       }
       setStarting(true);
-      if (!(await uploadAttachments())) {
+      const uploadedIds = await uploadAttachments();
+      if (uploadedIds === null) {
         setStarting(false);
         return;
       }
-      // The Assistant page creates the chat and sends this question.
-      router.push(`/assistant?q=${encodeURIComponent(trimmed)}`);
+      // The Assistant page creates the chat and sends this question;
+      // attached=1 forces a library search over the just-uploaded files.
+      router.push(
+        `/assistant?q=${encodeURIComponent(trimmed)}${
+          uploadedIds.length > 0 ? "&attached=1" : ""
+        }`
+      );
       return;
     }
 
@@ -150,7 +160,8 @@ export function Dashboard({ userName }: { userName: string }) {
       return;
     }
     setStarting(true);
-    if (!(await uploadAttachments())) {
+    const seedIds = await uploadAttachments();
+    if (seedIds === null) {
       setStarting(false);
       return;
     }
@@ -160,6 +171,8 @@ export function Dashboard({ userName }: { userName: string }) {
         body: JSON.stringify({
           topic: trimmed,
           mode: mode === "review" ? "literature_review" : "research",
+          // Attached papers are guaranteed sources for the run.
+          seed_paper_ids: seedIds.length > 0 ? seedIds : null,
         }),
       });
       if (mode === "article") {
