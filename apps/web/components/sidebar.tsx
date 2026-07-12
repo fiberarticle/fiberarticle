@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  BookOpenCheck,
+  ClipboardCheck,
   ChevronRight,
   HatGlasses,
   LogOut,
@@ -118,7 +118,7 @@ const SECTIONS: SectionDef[] = [
   runsSection(
     "review",
     "Literature Reviewer",
-    BookOpenCheck,
+    ClipboardCheck,
     "#50c158",
     "/review",
     "literature_review"
