@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { StylePicker } from "@/components/style-picker";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type {
@@ -233,7 +233,8 @@ function LlmPanel() {
   const [model, setModel] = React.useState("");
   const [apiKey, setApiKey] = React.useState("");
   const [baseUrl, setBaseUrl] = React.useState("");
-  const [reasoning, setReasoning] = React.useState(true);
+  // Fast model is the default; max reasoning is an explicit opt-in.
+  const [reasoning, setReasoning] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [saved, setSaved] = React.useState(false);
   const [pending, setPending] = React.useState(false);
@@ -495,6 +496,9 @@ function LlmPanel() {
   );
 }
 
+// Mirrors the server-side policy in lib/auth.ts.
+const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,64}$/;
+
 function AccountPanel({
   userName,
   userEmail,
@@ -504,10 +508,24 @@ function AccountPanel({
   userEmail: string;
   emailVerified: boolean;
 }) {
+  const router = useRouter();
   const [name, setName] = React.useState(userName);
   const [saved, setSaved] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [verifySent, setVerifySent] = React.useState(false);
+
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [pwPending, setPwPending] = React.useState(false);
+  const [pwError, setPwError] = React.useState<string | null>(null);
+  const [pwSaved, setPwSaved] = React.useState(false);
+
+  const [exportError, setExportError] = React.useState<string | null>(null);
+  const [exporting, setExporting] = React.useState(false);
+
+  const [confirmDelete, setConfirmDelete] = React.useState("");
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   async function onSaveName(e: React.FormEvent) {
     e.preventDefault();
@@ -524,6 +542,84 @@ function AccountPanel({
       callbackURL: "/dashboard?settings=account",
     });
     setVerifySent(true);
+  }
+
+  async function onChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwError(null);
+    setPwSaved(false);
+    if (!PASSWORD_RE.test(newPassword)) {
+      setPwError(
+        "Use 8-64 characters with an uppercase letter, a lowercase letter, and a number."
+      );
+      return;
+    }
+    setPwPending(true);
+    const { error } = await authClient.changePassword({
+      currentPassword,
+      newPassword,
+      revokeOtherSessions: true,
+    });
+    setPwPending(false);
+    if (error) {
+      setPwError(
+        error.message ??
+          "Could not change the password. Check your current password."
+      );
+      return;
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setPwSaved(true);
+  }
+
+  async function onExportData() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const token = await getApiToken();
+      const res = await fetch(apiUrl("/v1/me/export"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "fiberarticle-export.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      setExportError("Export failed. Is the Fiberarticle API running?");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function onDeleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      // Purge all API data first, then remove the auth account itself.
+      await apiFetch("/v1/me", { method: "DELETE" });
+      const { error } = await authClient.deleteUser();
+      if (error) {
+        setDeleteError(
+          error.message ??
+            "Your data was deleted, but the account could not be removed. Sign in again and retry."
+        );
+        return;
+      }
+      router.push("/sign-up");
+      router.refresh();
+    } catch (e) {
+      setDeleteError(
+        e instanceof ApiError
+          ? e.message
+          : "Could not delete your data. Try again."
+      );
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -574,6 +670,98 @@ function AccountPanel({
               Resend verification email
             </Button>
           ))}
+      </div>
+
+      <div className="h-px bg-border" />
+
+      <form onSubmit={onChangePassword} className="flex flex-col gap-3">
+        <Field
+          label="Change password"
+          hint="Accounts created with Google have no password to change."
+        >
+          <Input
+            type="password"
+            placeholder="Current password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+            className="max-w-sm"
+          />
+        </Field>
+        <Input
+          type="password"
+          placeholder="New password (min 8 chars, upper, lower, number)"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          autoComplete="new-password"
+          className="max-w-sm"
+        />
+        {pwError && <Callout tone="error">{pwError}</Callout>}
+        {pwSaved && (
+          <Callout tone="success">
+            Password changed. Other sessions were signed out.
+          </Callout>
+        )}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="w-fit"
+          loading={pwPending}
+          disabled={!currentPassword || !newPassword}
+        >
+          Change password
+        </Button>
+      </form>
+
+      <div className="h-px bg-border" />
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">Export your data</span>
+        <span className="text-xs text-muted-foreground">
+          Download everything you own — runs, papers, articles, chats, and
+          extractions — as one JSON file.
+        </span>
+        {exportError && <Callout tone="error">{exportError}</Callout>}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-fit"
+          loading={exporting}
+          onClick={onExportData}
+        >
+          Download my data
+        </Button>
+      </div>
+
+      <div className="h-px bg-border" />
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-destructive">
+          Delete account
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Permanently deletes your account and all of your data: runs, papers,
+          articles, chats, and extractions. This cannot be undone. Type{" "}
+          <span className="font-semibold">DELETE</span> to confirm.
+        </span>
+        {deleteError && <Callout tone="error">{deleteError}</Callout>}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="DELETE"
+            value={confirmDelete}
+            onChange={(e) => setConfirmDelete(e.target.value)}
+            className="max-w-36"
+          />
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={confirmDelete !== "DELETE"}
+            loading={deleting}
+            onClick={onDeleteAccount}
+          >
+            Delete my account
+          </Button>
+        </div>
       </div>
     </div>
   );
