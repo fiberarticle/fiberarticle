@@ -18,11 +18,20 @@ const PASSWORD_PATHS = new Set([
   "/reset-password",
 ]);
 
+// Origins allowed to send authenticated requests. Env-driven so production
+// (e.g. https://app.fiberarticle.com) works without a code change; the dev
+// default covers both localhost spellings.
+const trustedOrigins = (
+  process.env.TRUSTED_ORIGINS ?? "http://localhost:3000,http://127.0.0.1:3000"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
-  // In dev the app is reachable as both localhost and 127.0.0.1.
-  trustedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  trustedOrigins,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),

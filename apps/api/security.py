@@ -41,7 +41,6 @@ async def verify_bearer_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     kid = header.get("kid")
-    alg = header.get("alg", "EdDSA")
 
     for attempt in range(2):
         keys = await _get_jwks()
@@ -58,10 +57,12 @@ async def verify_bearer_token(token: str) -> dict:
             raise HTTPException(status_code=401, detail="Unknown signing key")
         try:
             key = PyJWK.from_dict(jwk_data).key
+            # Better Auth signs with Ed25519 only; never trust the alg an
+            # attacker can put in the token header.
             payload = jwt.decode(
                 token,
                 key=key,
-                algorithms=[alg],
+                algorithms=["EdDSA"],
                 issuer=settings.web_url,
                 audience=settings.web_url,
             )
