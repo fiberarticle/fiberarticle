@@ -56,6 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import type { DocumentDetail, DocumentTemplate } from "@/lib/types";
@@ -1120,27 +1121,27 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
               placeholder="Authors (comma separated)"
               className="max-w-xs"
             />
-            <select
+            <Select.Root
               value={doc.template}
               disabled={generating}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 mutate((d) => ({
                   ...d,
-                  template: e.target.value as DocumentTemplate,
+                  template: value as DocumentTemplate,
                 }))
               }
-              className="h-9 cursor-pointer rounded-xl border border-input bg-transparent px-3 text-sm focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-1"
             >
-              {templates.map((t) => (
-                <option
-                  key={t.value}
-                  value={t.value}
-                  className="bg-popover text-popover-foreground"
-                >
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              <Select.Trigger className="w-56">
+                <Select.Value placeholder="Journal template" />
+              </Select.Trigger>
+              <Select.Content>
+                {templates.map((t) => (
+                  <Select.Item key={t.value} value={t.value}>
+                    {t.label}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
             {/* Per-document citation style; falls back to the global
                 preference from Settings when unset. */}
             <StylePicker
