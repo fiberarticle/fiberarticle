@@ -165,8 +165,8 @@
   font-size: clamp(2.2rem, 3vw, 3rem);
   line-height: 1;
   letter-spacing: -0.02em;
-  /* Left-to-right gradient in the logo's f colors (amber into brown). */
-  background: linear-gradient(90deg, #fca91e 0%, #d98b28 55%, #b3782d 100%);
+  /* Left-to-right gradient in the logo's f colors (brown into amber). */
+  background: linear-gradient(90deg, #b3782d 0%, #c2842b 62%, #fca91e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
