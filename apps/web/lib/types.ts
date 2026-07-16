@@ -106,17 +106,8 @@ export interface DocumentDetail {
 }
 
 export interface PaperDetail extends Paper {
-  notes: string | null;
-  summary: {
-    tldr?: string;
-    key_findings?: string[];
-    methodology?: string;
-    limitations?: string[];
-  } | null;
   cited_by_count: number;
   full_text_parsed: boolean;
-  collection_ids: string[];
-  chunk_count: number;
   run_id: string | null;
   created_at: string;
 }
