@@ -205,50 +205,9 @@ class SectionEditOut(BaseModel):
 
 
 class PaperDetailOut(PaperOut):
-    notes: str | None
-    summary: dict[str, Any] | None
     cited_by_count: int
     full_text_parsed: bool
-    collection_ids: list[str]
-    chunk_count: int
     run_id: str | None
-    created_at: datetime
-
-
-class PaperAddIn(BaseModel):
-    source: str = "search"
-    external_id: str | None = None
-    title: str = Field(min_length=1, max_length=1000)
-    authors: list[str] = []
-    year: int | None = None
-    venue: str | None = None
-    doi: str | None = None
-    url: str | None = None
-    abstract: str | None = None
-    is_open_access: bool = False
-    oa_pdf_url: str | None = None
-    cited_by_count: int = 0
-    issn: str | None = None
-    quartile: str | None = None
-
-
-class PaperAddByDoiIn(BaseModel):
-    doi: str = Field(min_length=6, max_length=300)
-
-
-class PaperUpdateIn(BaseModel):
-    notes: str | None = None
-    collection_ids: list[str] | None = None
-
-
-class CollectionIn(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-
-
-class CollectionOut(BaseModel):
-    id: str
-    name: str
-    paper_count: int
     created_at: datetime
 
 
