@@ -180,11 +180,6 @@ async def render_bibliography(papers: list[dict], style_id: str) -> list[str]:
     return entries
 
 
-async def render_citation(paper: dict, style_id: str) -> str:
-    entries = await render_bibliography([paper], style_id)
-    return entries[0] if entries else ""
-
-
 async def render_intext(
     papers: list[dict], style_id: str, groups: list[list[int]]
 ) -> list[str]:
