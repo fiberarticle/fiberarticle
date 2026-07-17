@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Globe,
   Library,
   Lightbulb,
   Paperclip,
@@ -44,6 +45,87 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import type { ChatMessage, Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+interface ChatContext {
+  used_tokens: number;
+  context_window: number;
+  percent: number;
+}
+
+/** "3.4k", "128k", "999" - compact token counts for the context meter. */
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(n);
+}
+
+/** Inline markdown marks: **bold**, *italic*, `code`. Anything unmatched
+ * stays literal, so a stray asterisk can never corrupt the message. */
+function renderInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*\n]+?\*\*|\*[^*\n]+?\*|`[^`\n]+?`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+      return (
+        <code key={i} className="rounded bg-muted px-1 py-0.5 text-[13px]">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
+/** Lightweight markdown for assistant replies: paragraphs, bullet and
+ * numbered lists, and inline marks. No raw ** ever reaches the screen. */
+function MessageText({ content }: { content: string }) {
+  const blocks = content.split(/\n{2,}/);
+  return (
+    <div className="flex flex-col gap-2.5 text-sm leading-6">
+      {blocks.map((block, bi) => {
+        const lines = block.split("\n").filter((l) => l.trim() !== "");
+        if (lines.length === 0) return null;
+        const isBullet = lines.every((l) => /^\s*[-*+]\s+/.test(l));
+        const isNumbered = lines.every((l) => /^\s*\d+[.)]\s+/.test(l));
+        if (isBullet || isNumbered) {
+          const List = isBullet ? "ul" : "ol";
+          return (
+            <List
+              key={bi}
+              className={cn(
+                "flex list-outside flex-col gap-1 pl-5",
+                isBullet ? "list-disc" : "list-decimal"
+              )}
+            >
+              {lines.map((line, li) => (
+                <li key={li}>
+                  {renderInline(
+                    line.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "")
+                  )}
+                </li>
+              ))}
+            </List>
+          );
+        }
+        return (
+          <p key={bi} className="whitespace-pre-wrap">
+            {lines.map((line, li) => (
+              <React.Fragment key={li}>
+                {li > 0 && <br />}
+                {renderInline(line.replace(/^#{1,4}\s+/, ""))}
+              </React.Fragment>
+            ))}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 /** "25 July 2026 10:33 PM" - full date so old messages stay unambiguous. */
 function formatMessageTime(iso: string): string {
@@ -83,6 +165,8 @@ export function Assistant() {
   const sendingFirstFor = React.useRef<string | null>(null);
   // Which message's copy icon shows the "copied" check right now.
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
+  // Approximate context-window usage of the open conversation.
+  const [chatContext, setChatContext] = React.useState<ChatContext | null>(null);
 
   async function onCopyMessage(key: string, text: string) {
     try {
@@ -143,6 +227,17 @@ export function Assistant() {
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, sending]);
+
+  // Refresh the context meter when the chat opens and after every exchange.
+  React.useEffect(() => {
+    if (!activeId) {
+      setChatContext(null);
+      return;
+    }
+    apiFetch<ChatContext>(`/v1/chats/${activeId}/context`)
+      .then(setChatContext)
+      .catch(() => setChatContext(null));
+  }, [activeId, messages.length]);
 
   // Real elapsed time while the agent works: reasoning models on the free
   // tier can legitimately take minutes, and a static shimmer reads as hung.
@@ -361,7 +456,9 @@ export function Assistant() {
               <Badge variant={active.scope === "paper" ? "default" : "leaf"}>
                 {active.scope === "paper" ? "Paper" : "Chat"}
               </Badge>
-              <span className="truncate text-sm font-medium">{active.title}</span>
+              <span className="min-w-0 truncate text-sm font-medium">
+                {active.title}
+              </span>
             </>
           )}
         </div>
@@ -383,7 +480,7 @@ export function Assistant() {
               <div
                 key={`${message.id}-${i}`}
                 className={cn(
-                  "max-w-[85%]",
+                  "group/msg max-w-[85%]",
                   message.role === "user" ? "self-end" : "self-start"
                 )}
               >
@@ -408,13 +505,17 @@ export function Assistant() {
                                   <span className="flex items-start gap-1.5">
                                     {step.tool === "library_search" ? (
                                       <Library className="mt-0.5 size-3.5 shrink-0" />
+                                    ) : step.tool === "web_search" ? (
+                                      <Globe className="mt-0.5 size-3.5 shrink-0" />
                                     ) : (
                                       <Search className="mt-0.5 size-3.5 shrink-0" />
                                     )}
                                     <span>
                                       {step.tool === "library_search"
                                         ? "Searched your papers"
-                                        : "Searched the literature"}
+                                        : step.tool === "web_search"
+                                          ? "Searched the web"
+                                          : "Searched the literature"}
                                       {step.input ? `: "${step.input}"` : ""}
                                     </span>
                                   </span>
@@ -435,9 +536,13 @@ export function Assistant() {
                       "border-transparent bg-[color-mix(in_oklab,var(--primary)_14%,transparent)]"
                   )}
                 >
-                  <p className="whitespace-pre-wrap text-sm leading-6">
-                    {message.content}
-                  </p>
+                  {message.role === "assistant" ? (
+                    <MessageText content={message.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-6">
+                      {message.content}
+                    </p>
+                  )}
                 </Card>
                 {message.citations && message.citations.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -452,10 +557,12 @@ export function Assistant() {
                     ))}
                   </div>
                 )}
-                {/* Sent time plus a bare copy icon: no border, no background. */}
+                {/* Sent time plus a bare copy icon, ChatGPT/Claude style:
+                    hidden until the message is hovered (or just copied). */}
                 <div
                   className={cn(
-                    "mt-1 flex items-center gap-1.5",
+                    "mt-1 flex items-center gap-1.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/msg:opacity-100",
+                    copiedKey === `${message.id}-${i}` && "opacity-100",
                     message.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
@@ -566,6 +673,24 @@ export function Assistant() {
           </div>
         </div>
         </StarBorder>
+        {chatContext && (
+          <div
+            className="mt-1.5 flex items-center justify-end gap-2 px-2"
+            title="Approximate share of the model's context window this conversation uses"
+          >
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              Context {formatTokens(chatContext.used_tokens)} /{" "}
+              {formatTokens(chatContext.context_window)} (
+              {Math.round(chatContext.percent)}%)
+            </span>
+            <span className="h-1 w-24 overflow-hidden rounded-full bg-muted">
+              <span
+                className="block h-full rounded-full bg-[#4f90e4] transition-[width] duration-500"
+                style={{ width: `${Math.min(100, chatContext.percent)}%` }}
+              />
+            </span>
+          </div>
+        )}
         </div>
       </div>
     );
