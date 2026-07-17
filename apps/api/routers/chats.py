@@ -127,6 +127,56 @@ async def delete_conversation(
     await execute("DELETE FROM conversations WHERE id = %s", conversation_id)
 
 
+# Used when a model's window is not in LiteLLM's registry (e.g. the managed
+# Zen models): a safe modern default so the meter stays meaningful.
+_FALLBACK_CONTEXT_WINDOW = 128_000
+
+
+@router.get("/{conversation_id}/context")
+async def conversation_context(
+    conversation_id: str, user_id: str = CurrentUser
+) -> dict:
+    """Approximate context-window usage for the next turn: the system prompt
+    plus the rolling message history the agent will actually send."""
+    await _get_owned_conversation(conversation_id, user_id)
+    try:
+        llm = await resolve_llm(user_id)
+    except LlmNotConfigured:
+        raise HTTPException(409, "No model configured.")
+
+    rows = await fetch_all(
+        "SELECT role, content FROM chat_messages WHERE conversation_id = %s ORDER BY id DESC LIMIT %s",
+        conversation_id,
+        _HISTORY_LIMIT,
+    )
+    from agent.assistant import _SYSTEM
+
+    messages = [{"role": "system", "content": _SYSTEM.format(language="")}] + [
+        {"role": r["role"], "content": r["content"]} for r in reversed(rows)
+    ]
+
+    import litellm
+
+    try:
+        used = litellm.token_counter(model=llm.model, messages=messages)
+    except Exception:
+        # Tokenizer unavailable for this model: rough 4-chars-per-token guess.
+        used = sum(len(m["content"]) for m in messages) // 4
+    window = None
+    try:
+        info = litellm.get_model_info(llm.model)
+        window = info.get("max_input_tokens") or info.get("max_tokens")
+    except Exception:
+        pass
+    if not window:
+        window = _FALLBACK_CONTEXT_WINDOW
+    return {
+        "used_tokens": used,
+        "context_window": window,
+        "percent": round(used / window * 100, 1),
+    }
+
+
 @router.get("/{conversation_id}/messages", response_model=list[ChatMessageOut])
 async def list_messages(
     conversation_id: str, user_id: str = CurrentUser
