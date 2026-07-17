@@ -233,7 +233,7 @@ export function Extract() {
                 </p>
                 {papers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Your library is empty. Add papers first.
+                    No papers yet. Upload or research papers first.
                   </p>
                 ) : (
                   <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-xl border border-border p-2">
