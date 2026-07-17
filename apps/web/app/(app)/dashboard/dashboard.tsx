@@ -78,7 +78,7 @@ export function Dashboard({ userName }: { userName: string }) {
         );
         if (!duplicate) merged.push(file);
       }
-      return merged.slice(0, 10);
+      return merged;
     });
   }
 
