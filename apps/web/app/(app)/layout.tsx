@@ -16,7 +16,9 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    // Inset shell: the sidebar sits flat on the window background and the
+    // content floats as a raised panel with one big top-left corner.
+    <div className="flex h-screen bg-sidebar">
       {/* Suspense: the sidebar and settings dialog read useSearchParams for
           deep links (assistant chats, extraction tables, ?settings=<tab>). */}
       <Suspense>
@@ -29,7 +31,7 @@ export default async function AppLayout({
           emailVerified={session.user.emailVerified}
         />
       </Suspense>
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 overflow-y-auto rounded-tl-[44px] border-l border-t border-border bg-background shadow-[-6px_0_24px_rgba(0,0,0,0.05)]">
         <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
       </main>
     </div>
