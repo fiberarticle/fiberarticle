@@ -109,9 +109,28 @@ def _inline_html(text: str, intext: dict[str, str] | None) -> str:
     return _segments_html(parse_inline(text))
 
 
+def _segments_with_intext(
+    segments: list[Segment], intext: dict[str, str] | None
+) -> list[Segment]:
+    if not intext:
+        return segments
+    return [
+        (_CITE_RE.sub(lambda m: intext.get(m.group(0), m.group(0)), text), marks)
+        for text, marks in segments
+    ]
+
+
 def _block_html(block: Block, intext: dict[str, str] | None) -> str:
     if block.kind == "pagebreak":
         return '<div class="pagebreak"></div>'
+    if block.segments is not None and block.align:
+        # Explicitly aligned block from the editor.
+        inner = _segments_html(_segments_with_intext(block.segments, intext))
+        tag = "h3" if block.kind == "heading" else "p"
+        return (
+            f'<{tag} style="text-align: {block.align}; text-indent: 0">'
+            f"{inner}</{tag}>"
+        )
     if block.kind == "image":
         # Only data-URI images are embedded; anything else is dropped
         # rather than fetched from an external host.
@@ -192,6 +211,8 @@ def _css(style: dict, word: bool) -> str:
       text-align: justify; text-indent: {indent};
       margin: 0 0 {style['space_after_pt']}pt;
     }}
+    /* First paragraph after a heading carries no indent. */
+    h2.sec + p, h3 + p {{ text-indent: 0; }}
     p.placeholder {{ text-align: center; text-indent: 0; font-style: italic; }}
     ul, ol {{ margin: 0 0 {max(style['space_after_pt'], 4)}pt; padding-left: 0.35in; }}
     li {{ margin: 2pt 0; }}
