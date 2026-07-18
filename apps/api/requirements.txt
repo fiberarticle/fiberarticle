@@ -17,3 +17,4 @@ python-docx==1.2.0
 python-multipart==0.0.32
 citeproc-py==0.9.3
 pyarrow==24.0.0
+reportlab==4.4.4
