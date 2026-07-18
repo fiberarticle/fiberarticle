@@ -7,11 +7,16 @@ from citations import catalog
 from citations.engine import is_numeric, render_bibliography, render_intext
 from db import execute, fetch_all, fetch_one, jsonb
 from export.docx_export import render_docx
+from export.html_export import render_html
+from export.pdf_export import render_pdf
 from latex.render import render_project_zip
 from latex.templates import TEMPLATES
 from llm.client import LlmNotConfigured, resolve_llm
 from prefs import LANGUAGES, get_prefs
 from models import (
+    BibliographyOut,
+    DocumentChatIn,
+    DocumentChatOut,
     DocumentCreate,
     DocumentListItem,
     DocumentOut,
@@ -24,6 +29,7 @@ from security import CurrentUser
 from writer.generate import (
     PLANNED_SECTION_COUNT,
     cancel_generation,
+    run_document_agent,
     run_edit_command,
     start_generation,
 )
@@ -326,19 +332,36 @@ async def _intext_replacements(
     }
 
 
-@router.get("/documents/{document_id}/export")
-async def export_document(document_id: str, user_id: str = CurrentUser) -> Response:
-    row = await _get_owned_document(document_id, user_id)
-    if row["status"] != "ready":
-        raise HTTPException(409, "The document is not ready to export yet.")
-    papers = await fetch_all(
-        "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
-        row["run_id"],
-        user_id,
+def _slug(row: dict) -> str:
+    return (
+        re.sub(r"[^a-zA-Z0-9]+", "-", row["title"]).strip("-").lower()[:60]
+        or "article"
     )
+
+
+def _doc_payload(row: dict) -> dict:
+    return {
+        "title": row["title"],
+        "template": row["template"],
+        "authors": row["authors"] or [],
+        "sections": row["sections"] or [],
+    }
+
+
+async def _export_bundle(
+    row: dict, user_id: str
+) -> tuple[list[dict], str, bool, list[str] | None, dict[str, str] | None]:
+    """(papers, style, numeric, references, intext) shared by every export."""
+    papers = [
+        dict(p)
+        for p in await fetch_all(
+            "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
+            row["run_id"],
+            user_id,
+        )
+    ]
     style = await _effective_style(row, user_id)
     numeric = is_numeric(style)
-    papers = [dict(p) for p in papers]
     try:
         references = await render_bibliography(papers, style)
     except Exception:
@@ -349,25 +372,186 @@ async def export_document(document_id: str, user_id: str = CurrentUser) -> Respo
             intext = await _intext_replacements(row["sections"] or [], papers, style)
         except Exception:
             numeric = True  # keep [n] markers rather than fail the export
+    return papers, style, numeric, references, intext
+
+
+async def _exportable(document_id: str, user_id: str) -> dict:
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] != "ready":
+        raise HTTPException(409, "The document is not ready to export yet.")
+    return row
+
+
+@router.get("/documents/{document_id}/export")
+async def export_document(document_id: str, user_id: str = CurrentUser) -> Response:
+    row = await _exportable(document_id, user_id)
+    papers, _, numeric, references, intext = await _export_bundle(row, user_id)
     data = render_docx(
-        {
-            "title": row["title"],
-            "template": row["template"],
-            "authors": row["authors"] or [],
-            "sections": row["sections"] or [],
-        },
+        _doc_payload(row),
         papers,
         references=references,
         intext=intext,
         numeric=numeric,
     )
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", row["title"]).strip("-").lower()[:60] or "article"
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={
-            "Content-Disposition": f'attachment; filename="{slug}.docx"',
+            "Content-Disposition": f'attachment; filename="{_slug(row)}.docx"',
         },
+    )
+
+
+@router.get("/documents/{document_id}/export-pdf")
+async def export_document_pdf(
+    document_id: str, user_id: str = CurrentUser
+) -> Response:
+    row = await _exportable(document_id, user_id)
+    papers, _, numeric, references, intext = await _export_bundle(row, user_id)
+    data = render_pdf(
+        _doc_payload(row),
+        papers,
+        references=references,
+        intext=intext,
+        numeric=numeric,
+    )
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{_slug(row)}.pdf"',
+        },
+    )
+
+
+@router.get("/documents/{document_id}/export-html")
+async def export_document_html(
+    document_id: str, user_id: str = CurrentUser
+) -> Response:
+    row = await _exportable(document_id, user_id)
+    papers, _, numeric, references, intext = await _export_bundle(row, user_id)
+    data = render_html(
+        _doc_payload(row),
+        papers,
+        references=references,
+        intext=intext,
+        numeric=numeric,
+    )
+    return Response(
+        content=data,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{_slug(row)}.html"',
+        },
+    )
+
+
+@router.get("/documents/{document_id}/export-doc")
+async def export_document_doc(
+    document_id: str, user_id: str = CurrentUser
+) -> Response:
+    """Legacy Word .doc: Word opens HTML documents natively, so this serves
+    the HTML render (single-column variant) with the msword content type."""
+    row = await _exportable(document_id, user_id)
+    papers, _, numeric, references, intext = await _export_bundle(row, user_id)
+    data = render_html(
+        _doc_payload(row),
+        papers,
+        references=references,
+        intext=intext,
+        numeric=numeric,
+        word=True,
+    )
+    return Response(
+        content=data,
+        media_type="application/msword",
+        headers={
+            "Content-Disposition": f'attachment; filename="{_slug(row)}.doc"',
+        },
+    )
+
+
+@router.get("/documents/{document_id}/bibliography", response_model=BibliographyOut)
+async def document_bibliography(
+    document_id: str, user_id: str = CurrentUser
+) -> BibliographyOut:
+    """Rendered reference entries in the document's effective citation style,
+    so the editor page can show the reference list exactly as exported."""
+    row = await _get_owned_document(document_id, user_id)
+    papers, style, numeric, references, _ = await _export_bundle(row, user_id)
+    if references is None:
+        references = [
+            f"{', '.join((p.get('authors') or [])[:6])} "
+            f"({p.get('year') or 'n.d.'}). {p['title']}.".strip()
+            for p in papers
+        ]
+    entries = (
+        list(references) if numeric else sorted(references, key=str.lower)
+    )
+    return BibliographyOut(style=style, numeric=numeric, entries=entries)
+
+
+@router.post("/documents/{document_id}/chat", response_model=DocumentChatOut)
+async def document_chat(
+    document_id: str, body: DocumentChatIn, user_id: str = CurrentUser
+) -> DocumentChatOut:
+    """One AI side-panel turn: answer the user and, when asked, edit the
+    document (rewrite/insert/delete sections) server-side in the same turn."""
+    row = await _get_owned_document(document_id, user_id)
+    if row["status"] == "generating":
+        raise HTTPException(409, "Wait for generation to finish first.")
+    papers = await fetch_all(
+        "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
+        row["run_id"],
+        user_id,
+    )
+
+    # Attached files: pull each owned paper's indexed text (or abstract) as
+    # reference material for the agent.
+    attachments: list[dict] = []
+    for paper_id in body.attachment_paper_ids[:5]:
+        paper = await fetch_one(
+            "SELECT * FROM papers WHERE id = %s AND user_id = %s",
+            paper_id,
+            user_id,
+        )
+        if paper is None:
+            continue
+        chunks = await fetch_all(
+            "SELECT content FROM chunks WHERE paper_id = %s AND user_id = %s ORDER BY id LIMIT 6",
+            paper_id,
+            user_id,
+        )
+        text = "\n\n".join(c["content"] for c in chunks) or (
+            paper.get("abstract") or ""
+        )
+        if text.strip():
+            attachments.append({"title": paper["title"], "text": text[:6000]})
+
+    try:
+        reply, new_sections = await run_document_agent(
+            user_id,
+            dict(row),
+            [dict(p) for p in papers],
+            body.message,
+            [turn.model_dump() for turn in body.history],
+            attachments,
+        )
+    except LlmNotConfigured as exc:
+        raise HTTPException(409, str(exc))
+
+    changed = new_sections is not None
+    if changed:
+        await execute(
+            "UPDATE documents SET sections = %s, updated_at = now() WHERE id = %s",
+            jsonb(new_sections),
+            document_id,
+        )
+    updated = await _get_owned_document(document_id, user_id)
+    return DocumentChatOut(
+        reply=reply,
+        changed=changed,
+        document=await _document_out(updated, user_id),
     )
 
 
