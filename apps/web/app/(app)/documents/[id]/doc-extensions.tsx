@@ -209,6 +209,21 @@ function nodeInnerHtml(node: any): string {
   ).replace(/\n/g, " ");
 }
 
+/* Headings always take the template's font, so a per-character font mark on
+   heading text is meaningless; serializing it would leak a raw <span> into
+   the "## " line and from there into section titles. */
+function withoutFontMarks(node: any): any {
+  const textStyle = node.type.schema.marks.textStyle;
+  if (!textStyle) return node;
+  const cleaned: any[] = [];
+  node.content.forEach((child: any) => {
+    cleaned.push(
+      child.mark(child.marks.filter((m: any) => m.type !== textStyle))
+    );
+  });
+  return node.copy(Fragment.from(cleaned));
+}
+
 export const MdParagraph = Paragraph.extend({
   addStorage() {
     return {
@@ -240,12 +255,12 @@ export const MdHeading = Heading.extend({
           const align = node.attrs.textAlign;
           if (level >= 3 && EXPLICIT_ALIGNMENTS.has(align)) {
             state.write(
-              `<h${level} style="text-align: ${align}">${nodeInnerHtml(node)}</h${level}>`
+              `<h${level} style="text-align: ${align}">${nodeInnerHtml(withoutFontMarks(node))}</h${level}>`
             );
             state.closeBlock(node);
           } else {
             state.write(state.repeat("#", level) + " ");
-            state.renderInline(node);
+            state.renderInline(withoutFontMarks(node));
             state.closeBlock(node);
           }
         },
