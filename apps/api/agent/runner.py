@@ -11,7 +11,10 @@ from models import CAPS
 
 logger = logging.getLogger("fiberarticle.runner")
 
-_RUN_TIMEOUT_SECONDS = 30 * 60
+# Wall-clock backstop for a whole run. Generous on purpose: real runs on the
+# small production VM can legitimately take a long time, so this only exists
+# to reap a genuinely hung run, not to police slow ones.
+_RUN_TIMEOUT_SECONDS = 2 * 60 * 60
 _active_tasks: dict[str, asyncio.Task] = {}
 
 
@@ -75,7 +78,7 @@ async def _execute(
         await _set_status(run_id, "failed", str(exc))
         await emit(run_id, user_id, "plan", str(exc), type="error")
     except asyncio.TimeoutError:
-        message = "The run exceeded the 30 minute budget and was stopped."
+        message = "The run exceeded the 2 hour budget and was stopped."
         await _set_status(run_id, "failed", message)
         await emit(run_id, user_id, "report", message, type="error")
     except Exception as exc:
