@@ -14,10 +14,16 @@ import {
   TableRow,
 } from "@tiptap/extension-table";
 import { Image as ImageExtension } from "@tiptap/extension-image";
+import { TextAlign } from "@tiptap/extension-text-align";
 import { FontFamily, FontSize, TextStyle } from "@tiptap/extension-text-style";
 import { Markdown } from "tiptap-markdown";
 import { PaginationPlus } from "tiptap-pagination-plus";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   ArrowLeft,
   ArrowUp,
   Bold as BoldIcon,
@@ -28,6 +34,7 @@ import {
   Code,
   Columns2,
   Download,
+  Eye,
   FoldVertical,
   Heading2,
   Heading3,
@@ -80,7 +87,13 @@ import type {
   DocumentTemplate,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { SectionNumbering, TitleBlock, type FaDocMeta } from "./doc-extensions";
+import {
+  MdHeading,
+  MdParagraph,
+  SectionNumbering,
+  TitleBlock,
+  type FaDocMeta,
+} from "./doc-extensions";
 
 const templates: { value: DocumentTemplate; label: string }[] = [
   { value: "generic", label: "Generic manuscript" },
@@ -587,6 +600,31 @@ function FormatToolbar({
       >
         <Code />
       </ToolbarButton>
+      <div className="mx-1 h-5 w-px bg-border" />
+      {(
+        [
+          { value: "left", title: "Align left", icon: AlignLeft },
+          { value: "center", title: "Align center", icon: AlignCenter },
+          { value: "right", title: "Align right", icon: AlignRight },
+          { value: "justify", title: "Justify", icon: AlignJustify },
+        ] as const
+      ).map(({ value, title, icon: Icon }) => (
+        <ToolbarButton
+          key={value}
+          title={title}
+          disabled={!ready}
+          active={ready && editor?.isActive({ textAlign: value })}
+          onClick={() => {
+            if (editor?.isActive({ textAlign: value })) {
+              editor.chain().focus().unsetTextAlign().run();
+            } else {
+              editor?.chain().focus().setTextAlign(value).run();
+            }
+          }}
+        >
+          <Icon />
+        </ToolbarButton>
+      ))}
       <div className="mx-1 h-5 w-px bg-border" />
       <ToolbarButton
         title="Section heading"
@@ -1187,7 +1225,153 @@ function AiDocPanel({
   );
 }
 
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Export preview: the real server-rendered PDF (exact pagination) or the
+   standalone HTML, shown in a dialog before downloading anything. */
+
+function PreviewDialog({
+  open,
+  onClose,
+  documentId,
+  ensureSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  documentId: string;
+  ensureSaved: () => Promise<void>;
+}) {
+  const [format, setFormat] = React.useState<"pdf" | "html">("pdf");
+  const [urls, setUrls] = React.useState<{ pdf?: string; html?: string }>({});
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(
+    async (fmt: "pdf" | "html") => {
+      setLoading(true);
+      setError(null);
+      try {
+        await ensureSaved();
+        const token = await getApiToken();
+        const path =
+          fmt === "pdf"
+            ? `/v1/documents/${documentId}/export-pdf`
+            : `/v1/documents/${documentId}/export-html`;
+        const res = await fetch(apiUrl(path), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        setUrls((prev) => {
+          if (prev[fmt]) URL.revokeObjectURL(prev[fmt]!);
+          return { ...prev, [fmt]: url };
+        });
+      } catch {
+        setError(
+          "The preview could not be generated. Is the document ready and the API running?"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [documentId, ensureSaved]
+  );
+
+  React.useEffect(() => {
+    if (open && !urls[format] && !loading) load(format);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, format, urls]);
+
+  // Closing drops the cached previews, so reopening always regenerates
+  // from the latest saved content.
+  React.useEffect(() => {
+    if (open) return;
+    setUrls((prev) => {
+      Object.values(prev).forEach((u) => u && URL.revokeObjectURL(u));
+      return {};
+    });
+    setFormat("pdf");
+    setError(null);
+  }, [open]);
+
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          className="fixed left-1/2 top-1/2 z-50 flex h-[92vh] w-[min(960px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card outline-none"
+          aria-describedby={undefined}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+            <DialogPrimitive.Title className="flex items-center gap-2 text-sm font-semibold">
+              <Eye className="size-4 text-muted-foreground" /> Export preview
+            </DialogPrimitive.Title>
+            <div className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-0.5">
+              {(
+                [
+                  { key: "pdf", label: "PDF" },
+                  { key: "html", label: "Web page" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFormat(tab.key)}
+                  className={cn(
+                    "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                    format === tab.key
+                      ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <span className="hidden text-[11px] text-muted-foreground sm:block">
+              The PDF is the exact page-by-page result; Word follows the same
+              layout.
+            </span>
+            <DialogPrimitive.Close asChild>
+              <button
+                aria-label="Close preview"
+                className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </DialogPrimitive.Close>
+          </div>
+          <div className="relative min-h-0 flex-1 bg-[#525659]">
+            {error ? (
+              <div className="flex h-full items-center justify-center p-6">
+                <Callout tone="error">{error}</Callout>
+              </div>
+            ) : loading || !urls[format] ? (
+              <div className="flex h-full items-center justify-center">
+                <TextShimmer className="text-sm">
+                  Generating the export preview
+                </TextShimmer>
+              </div>
+            ) : format === "pdf" ? (
+              <iframe
+                title="PDF preview"
+                src={urls.pdf}
+                className="h-full w-full border-0"
+              />
+            ) : (
+              <iframe
+                title="Web page preview"
+                src={urls.html}
+                sandbox=""
+                className="h-full w-full border-0 bg-white"
+              />
+            )}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
 
 /** File-type icon in the Untitled UI style: white sheet, folded corner,
  * colored format pill. Inline SVG so no external icon assets are needed. */
@@ -1293,6 +1477,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [exportBusy, setExportBusy] = React.useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
   const [aiBusy, setAiBusy] = React.useState(false);
   const [aiOpen, setAiOpen] = React.useState(false);
   const [stopping, setStopping] = React.useState(false);
@@ -1359,8 +1544,16 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     extensions: [
       // Level 2 headings delimit sections; level 3 are in-section
       // subheadings. The horizontal rule ("---") is the manual page break.
-      // StarterKit v3 already bundles underline.
-      StarterKit.configure({ heading: { levels: [2, 3] } }),
+      // StarterKit v3 already bundles underline. Paragraph and heading are
+      // swapped for alignment-aware variants that serialize explicit
+      // alignment as single-line HTML blocks.
+      StarterKit.configure({ paragraph: false, heading: false }),
+      MdParagraph,
+      MdHeading.configure({ levels: [2, 3] }),
+      TextAlign.configure({
+        types: ["paragraph", "heading"],
+        alignments: ["left", "center", "right", "justify"],
+      }),
       Superscript,
       Subscript,
       TextStyle,
@@ -1953,6 +2146,14 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
                 >
                   Save
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPreviewOpen(true)}
+                  title="See exactly how the exported document will look"
+                >
+                  <Eye /> Preview
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" loading={exportBusy !== null}>
@@ -2219,6 +2420,14 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
           </button>
         </div>
       )}
+
+      {/* The real export, rendered before downloading anything. */}
+      <PreviewDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        documentId={doc.id}
+        ensureSaved={ensureSaved}
+      />
 
       {/* AI side panel: chat with (and edit) the whole document. */}
       <AiDocPanel
