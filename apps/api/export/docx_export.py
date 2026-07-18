@@ -16,20 +16,30 @@ import re
 
 from docx import Document as DocxDocument
 from docx.enum.section import WD_SECTION_START
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
 from docx.oxml.ns import qn
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Mm, Pt
+
+from export.md import decode_data_image, isolate_images, span_props
 
 _CITE_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _PLACEHOLDER_RE = re.compile(r"^\[.*placeholder.*\]$", re.IGNORECASE)
 
-# Block-level Markdown: list items and blockquotes.
+# Block-level Markdown: list items, blockquotes, subheadings, and tables.
 _LIST_BULLET_RE = re.compile(r"^[-*+]\s+(.+)$")
 _LIST_NUMBER_RE = re.compile(r"^\d+[.)]\s+(.+)$")
 _BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)$")
+_SUBHEADING_RE = re.compile(r"^(#{2,6})\s+(.+)$")
+_TABLE_ROW_RE = re.compile(r"^\|.*\|$")
+_TABLE_SEPARATOR_RE = re.compile(r"^\|[\s\-:|]+\|$")
+# Thematic break "---": the manual page break.
+_PAGE_BREAK_RE = re.compile(r"^(?:-{3,}|\*{3,}|_{3,})\s*$")
+_IMAGE_LINE_RE = re.compile(r"^!\[([^\]]*)\]\((\S+?)\)$")
 
 # Inline Markdown marks, tried in priority order (bold before italic so
 # "**x**" is not swallowed by the single-marker italic alternatives).
+# The editor serializes underline/superscript/subscript as inline HTML tags,
+# the only representation Markdown has for them.
 _INLINE_TOKEN_RE = re.compile(
     r"\*\*(?P<bold>.+?)\*\*"
     r"|__(?P<bold2>.+?)__"
@@ -37,6 +47,10 @@ _INLINE_TOKEN_RE = re.compile(
     r"|_(?P<italic2>[^_]+?)_"
     r"|~~(?P<strike>.+?)~~"
     r"|`(?P<code>[^`]+?)`"
+    r"|<u>(?P<underline>.+?)</u>"
+    r"|<sup>(?P<superscript>.+?)</sup>"
+    r"|<sub>(?P<subscript>.+?)</sub>"
+    r'|<span style="(?P<spanstyle>[^"]*)">(?P<span>.+?)</span>'
 )
 
 
@@ -65,7 +79,10 @@ def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
             continue
         if m.start() > pos:
             segments.append((text[pos : m.start()], frozenset()))
-        if m.group("bold") is not None:
+        if m.group("spanstyle") is not None:
+            # Font span: the mark carries the style declaration itself.
+            inner, mark = m.group("span"), f"style:{m.group('spanstyle')}"
+        elif m.group("bold") is not None:
             inner, mark = m.group("bold"), "bold"
         elif m.group("bold2") is not None:
             inner, mark = m.group("bold2"), "bold"
@@ -75,6 +92,12 @@ def _parse_inline(text: str) -> list[tuple[str, frozenset]]:
             inner, mark = m.group("italic2"), "italic"
         elif m.group("strike") is not None:
             inner, mark = m.group("strike"), "strike"
+        elif m.group("underline") is not None:
+            inner, mark = m.group("underline"), "underline"
+        elif m.group("superscript") is not None:
+            inner, mark = m.group("superscript"), "superscript"
+        elif m.group("subscript") is not None:
+            inner, mark = m.group("subscript"), "subscript"
         else:
             inner, mark = m.group("code"), "code"
         for seg_text, seg_marks in _parse_inline(inner):
@@ -96,12 +119,55 @@ def _write_runs(
         run = p.add_run(seg_text)
         run.font.name = "Consolas" if "code" in marks else style["font"]
         run.font.size = style["body_size"]
+        # Per-selection font family/size from the editor's font controls.
+        family, size = span_props(marks)
+        if family and "code" not in marks:
+            run.font.name = family
+        if size:
+            run.font.size = Pt(size)
         if "bold" in marks:
             run.bold = True
         if "italic" in marks:
             run.italic = True
         if "strike" in marks:
             run.font.strike = True
+        if "underline" in marks:
+            run.underline = True
+        if "superscript" in marks:
+            run.font.superscript = True
+        if "subscript" in marks:
+            run.font.subscript = True
+
+
+def _add_table(
+    doc, lines: list[str], style: dict, intext: dict[str, str] | None
+) -> None:
+    """Render buffered GFM table lines as a bordered Word table."""
+    rows: list[list[str]] = []
+    for line in lines:
+        if _TABLE_SEPARATOR_RE.match(line):
+            continue
+        rows.append([c.strip() for c in line.strip().strip("|").split("|")])
+    if not rows:
+        return
+    columns = max(len(r) for r in rows)
+    table = doc.add_table(rows=len(rows), cols=columns)
+    table.style = "Table Grid"
+    for r, cells in enumerate(rows):
+        for c in range(columns):
+            cell_text = cells[c] if c < len(cells) else ""
+            if intext:
+                cell_text = _CITE_RE.sub(
+                    lambda m: intext.get(m.group(0), m.group(0)), cell_text
+                )
+            paragraph = table.rows[r].cells[c].paragraphs[0]
+            # GFM's first row is the header row.
+            base = frozenset({"bold"}) if r == 0 else frozenset()
+            _write_runs(paragraph, cell_text, style, base)
+            paragraph.paragraph_format.space_after = Pt(2)
+    # Spacer so back-to-back tables do not merge into one in Word.
+    spacer = doc.add_paragraph()
+    spacer.paragraph_format.space_after = Pt(4)
 
 
 def _add_body_paragraphs(
@@ -113,12 +179,58 @@ def _add_body_paragraphs(
     except KeyError:
         quote_style_exists = False
 
-    for raw in text.split("\n"):
+    table_buffer: list[str] = []
+
+    def flush_table() -> None:
+        if table_buffer:
+            _add_table(doc, list(table_buffer), style, intext)
+            table_buffer.clear()
+
+    for raw in isolate_images(text).split("\n"):
         line = raw.strip()
         if not line:
+            flush_table()
+            continue
+        if _TABLE_ROW_RE.match(line):
+            table_buffer.append(line)
+            continue
+        flush_table()
+        if _PAGE_BREAK_RE.match(line):
+            p = doc.add_paragraph()
+            p.add_run().add_break(WD_BREAK.PAGE)
+            continue
+
+        image_match = _IMAGE_LINE_RE.match(line)
+        if image_match:
+            decoded = decode_data_image(image_match.group(2))
+            if decoded is not None:
+                import io as _io
+
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                picture = p.add_run().add_picture(_io.BytesIO(decoded[1]))
+                max_width = Inches(3.4 if style["two_column"] else 6.2)
+                if picture.width > max_width:
+                    ratio = max_width / picture.width
+                    picture.height = int(picture.height * ratio)
+                    picture.width = max_width
+                p.paragraph_format.space_after = Pt(6)
             continue
         if intext:
             line = _CITE_RE.sub(lambda m: intext.get(m.group(0), m.group(0)), line)
+
+        subheading = _SUBHEADING_RE.match(line)
+        if subheading:
+            p = doc.add_paragraph()
+            run = p.add_run(subheading.group(2).strip())
+            run.font.name = style["font"]
+            run.font.size = style["heading_size"]
+            run.bold = True
+            if style["double_space"]:
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
+            p.paragraph_format.space_before = Pt(8)
+            p.paragraph_format.space_after = Pt(4)
+            continue
 
         list_style = None
         base_marks: frozenset = frozenset()
@@ -160,6 +272,8 @@ def _add_body_paragraphs(
         if style["double_space"]:
             p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.DOUBLE
         p.paragraph_format.space_after = style["space_after"]
+
+    flush_table()
 
 
 _STYLES = {
@@ -232,6 +346,9 @@ def render_docx(
 
     doc = DocxDocument()
     section = doc.sections[0]
+    # A4 paper for every template.
+    section.page_width = Mm(210)
+    section.page_height = Mm(297)
     section.top_margin = Inches(1)
     section.bottom_margin = Inches(1)
     section.left_margin = Inches(1 if not style["two_column"] else 0.75)
@@ -264,6 +381,8 @@ def render_docx(
     if style["two_column"]:
         # IEEE-style: title spans the page, body flows in two columns.
         body_section = doc.add_section(WD_SECTION_START.CONTINUOUS)
+        body_section.page_width = Mm(210)
+        body_section.page_height = Mm(297)
         body_section.left_margin = Inches(0.75)
         body_section.right_margin = Inches(0.75)
         _set_two_columns(body_section)
