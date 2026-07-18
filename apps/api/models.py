@@ -204,6 +204,33 @@ class SectionEditOut(BaseModel):
     content: str
 
 
+class DocumentChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class DocumentChatIn(BaseModel):
+    message: str = Field(min_length=1, max_length=8000)
+    # Rolling client-side history for conversational context; server caps it.
+    history: list[DocumentChatTurn] = []
+    # Library papers (freshly uploaded files) attached to this turn; their
+    # text is fed to the agent as reference material.
+    attachment_paper_ids: list[str] = Field(default_factory=list, max_length=5)
+
+
+class DocumentChatOut(BaseModel):
+    reply: str
+    # True when the agent edited the document (the client refreshes state).
+    changed: bool = False
+    document: DocumentOut
+
+
+class BibliographyOut(BaseModel):
+    style: str
+    numeric: bool
+    entries: list[str]
+
+
 class PaperDetailOut(PaperOut):
     cited_by_count: int
     full_text_parsed: bool
