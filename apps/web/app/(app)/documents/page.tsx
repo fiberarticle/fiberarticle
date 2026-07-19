@@ -1,7 +1,7 @@
-import { Documents } from "./documents";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Articles" };
-
-export default function DocumentsPage() {
-  return <Documents />;
+// Legacy URL kept for old links: the Article Writer now lives at
+// /article-writer.
+export default function LegacyDocumentsPage() {
+  redirect("/article-writer");
 }
