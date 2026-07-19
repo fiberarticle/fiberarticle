@@ -979,7 +979,7 @@ function AiDocPanel({
     });
   }
 
-  /** Upload attachments into the paper library so their text is readable
+  /** Upload attachments into the user's paper pool so their text is readable
    * by the agent. Returns the created paper ids, or null on failure. */
   async function uploadAttachments(): Promise<string[] | null> {
     if (attachments.length === 0) return [];
@@ -1724,6 +1724,30 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     return () => dom.removeEventListener("load", onLoad, true);
   }, [editor]);
 
+  // The sheet narrows when the AI chat squeezes the column (max-width
+  // clamp in globals.css); content reflows, so the page bands must
+  // re-measure at the new width or every break lands in the wrong place.
+  React.useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    let lastWidth = dom.clientWidth;
+    let raf = 0;
+    const observer = new ResizeObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (editor.isDestroyed || dom.clientWidth === lastWidth) return;
+        lastWidth = dom.clientWidth;
+        editor.view.dispatch(editor.state.tr);
+      });
+    });
+    observer.observe(dom);
+    return () => {
+      observer.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [editor]);
+
   // Rebuild the editor from sections whenever they changed outside the
   // editor itself (initial load, generation polling, AI edits).
   React.useEffect(() => {
@@ -2038,7 +2062,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
     if (!doc) return;
     if (!window.confirm("Delete this document? This cannot be undone.")) return;
     await apiFetch(`/v1/documents/${doc.id}`, { method: "DELETE" });
-    router.push("/documents");
+    router.push("/article-writer");
   }
 
   if (error && !doc) {
@@ -2107,7 +2131,7 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
 
       <div className="flex min-w-0 max-w-4xl flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/documents">
+          <Link href="/article-writer">
             <Button
               variant="ghost"
               size="sm"
