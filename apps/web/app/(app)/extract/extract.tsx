@@ -300,7 +300,7 @@ export function Extract({ tableId }: { tableId?: string }) {
             </p>
           </Card>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="fa-textarea-scroll -mr-3 flex max-h-[30vh] flex-wrap gap-2 overflow-y-auto pr-3">
             {extractions.map((e) => (
               <button
                 key={e.id}
