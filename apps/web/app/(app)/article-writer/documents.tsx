@@ -72,7 +72,7 @@ export function Documents() {
       ) : (
         <div className="flex flex-col gap-2">
           {documents?.map((doc) => (
-            <Link key={doc.id} href={`/documents/${doc.id}`}>
+            <Link key={doc.id} href={`/article-writer/${doc.id}`}>
               <Card className="group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-accent">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{doc.title}</p>
