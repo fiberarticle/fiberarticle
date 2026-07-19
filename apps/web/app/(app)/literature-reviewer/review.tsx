@@ -95,7 +95,7 @@ export function Review() {
           filters: Object.keys(filters).length > 0 ? filters : null,
         }),
       });
-      router.push(`/runs/${run.id}`);
+      router.push(`/literature-reviewer/${run.id}`);
     } catch (e) {
       setError(
         e instanceof ApiError
@@ -281,7 +281,7 @@ export function Review() {
         ) : (
           <div className="flex flex-col gap-2">
             {reviews.map((run) => (
-              <Link key={run.id} href={`/runs/${run.id}`}>
+              <Link key={run.id} href={`/literature-reviewer/${run.id}`}>
                 <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
