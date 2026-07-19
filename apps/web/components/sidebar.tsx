@@ -8,6 +8,7 @@ import {
   ChevronRight,
   HatGlasses,
   LogOut,
+  Menu,
   MoreHorizontal,
   PanelLeft,
   Pencil,
@@ -18,6 +19,7 @@ import {
   Table2,
   Trash2,
   UserRound,
+  X,
 } from "lucide-react";
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -257,7 +259,9 @@ function HistoryRow({
           <button
             aria-label={`Options for ${item.title}`}
             className={cn(
-              "mr-1 shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-[color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100",
+              // Touch screens have no hover: the menu button stays visible
+              // below md and appears on hover from md up.
+              "mr-1 shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-[color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100 max-md:opacity-100",
               menuOpen && "opacity-100"
             )}
           >
@@ -390,7 +394,7 @@ function Section({
         <CollapsiblePrimitive.Trigger asChild>
           <button
             aria-label={`Toggle ${def.label} history`}
-            className="mr-1.5 shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-[color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:text-foreground focus-visible:opacity-100 group-hover/section:opacity-100 data-[state=open]:opacity-100"
+            className="mr-1.5 shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-[color-mix(in_oklab,var(--foreground)_8%,transparent)] hover:text-foreground focus-visible:opacity-100 group-hover/section:opacity-100 data-[state=open]:opacity-100 max-md:opacity-100"
           >
             <ChevronRight
               className={cn("size-3.5 transition-transform", open && "rotate-90")}
@@ -448,6 +452,22 @@ export function Sidebar({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(false);
+  // Phone layout: the sidebar lives in a slide-in drawer behind a top bar.
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  // Navigating (tapping a row or the New Task button) closes the drawer.
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname, searchParams]);
+
+  React.useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
 
   // The active row is matched on the path; legacy query-param deep links
   // (?chat=, ?id=) map onto the same path-shaped hrefs the rows use now.
@@ -527,13 +547,158 @@ export function Sidebar({
     router.refresh();
   }
 
+  // Shared between the desktop rail and the phone drawer.
+  const sectionsNav = (
+    <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
+      {SECTIONS.map((section) => (
+        <Section
+          key={section.key}
+          def={section}
+          items={history[section.key] ?? []}
+          loaded={history[section.key] !== undefined}
+          open={!!openSections[section.key]}
+          onOpenChange={(open) => toggleSection(section.key, open)}
+          activeHref={activeHref}
+          onMutate={onMutate}
+        />
+      ))}
+    </nav>
+  );
+
+  const accountFooter = (
+    <div className="flex flex-col gap-1 px-3 py-4">
+      <div className="mb-1 h-px bg-border" />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-accent",
+              collapsed && "md:justify-center md:px-0"
+            )}
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--primary)_20%,transparent)] text-sm font-semibold text-primary">
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+            {!collapsed && (
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">
+                  {userName}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {userEmail}
+                </span>
+              </span>
+            )}
+          </button>
+        </DropdownMenuTrigger>
+        {/* Centered over the account card, lifted above the divider. */}
+        <DropdownMenuContent
+          side="top"
+          align="center"
+          sideOffset={14}
+          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-52"
+        >
+          <DropdownMenuLabel className="truncate">
+            {userEmail}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {/* Opens the centered settings modal (settings-dialog.tsx). */}
+          <DropdownMenuItem
+            onSelect={() => router.push(`${pathname}?settings=preferences`)}
+          >
+            <Settings /> Settings
+          </DropdownMenuItem>
+          {/* Plain row, not a menu item: only the pill is interactive,
+              so the row itself never shows a hover highlight. */}
+          <div className="flex items-center justify-between px-2.5 py-1.5">
+            <span className="text-sm">Theme</span>
+            <ThemeToggle />
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive [&_svg]:text-destructive"
+            onSelect={onSignOut}
+          >
+            <LogOut /> Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
   return (
     <TooltipProvider delayDuration={200}>
-      {/* No border or own background: the inset shell's window background
-          shows through, and the content panel provides the separation. */}
+      {/* Phone top bar: hamburger opens the drawer, quick New Task on the
+          right. Sits on the window background above the raised panel. */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-sidebar px-2.5 md:hidden">
+        <button
+          type="button"
+          aria-label="Open menu"
+          onClick={() => setMobileOpen(true)}
+          className="flex size-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <Menu className="size-5" />
+        </button>
+        <Wordmark href="/dashboard" />
+        <Link href="/dashboard" aria-label="New Task">
+          <Button variant="secondary" size="icon-sm">
+            <SquarePen />
+          </Button>
+        </Link>
+      </header>
+
+      {/* Phone drawer: backdrop plus the full expanded sidebar sliding in
+          from the left edge. */}
+      <div
+        className={cn(
+          "fixed inset-0 z-50 md:hidden",
+          !mobileOpen && "pointer-events-none"
+        )}
+        aria-hidden={!mobileOpen}
+      >
+        <div
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200",
+            mobileOpen ? "opacity-100" : "opacity-0"
+          )}
+        />
+        <aside
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col justify-between bg-sidebar shadow-[8px_0_40px_rgba(0,0,0,0.25)] transition-transform duration-200 ease-out",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 py-4">
+            <div className="flex items-center justify-between pl-1">
+              <Wordmark href="/dashboard" />
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setMobileOpen(false)}
+                className="flex size-9 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <Link href="/dashboard">
+              <Button variant="secondary" className="w-full justify-start">
+                <SquarePen />
+                New Task
+              </Button>
+            </Link>
+            {sectionsNav}
+          </div>
+          {accountFooter}
+        </aside>
+      </div>
+
+      {/* Desktop rail. No border or own background: the inset shell's
+          window background shows through, and the content panel provides
+          the separation. */}
       <aside
         className={cn(
-          "flex h-screen shrink-0 flex-col justify-between transition-[width] duration-200",
+          "hidden h-svh shrink-0 flex-col justify-between transition-[width] duration-200 md:flex",
           collapsed ? "w-14" : "w-64"
         )}
       >
@@ -625,81 +790,11 @@ export function Sidebar({
               })}
             </nav>
           ) : (
-            <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
-              {SECTIONS.map((section) => (
-                <Section
-                  key={section.key}
-                  def={section}
-                  items={history[section.key] ?? []}
-                  loaded={history[section.key] !== undefined}
-                  open={!!openSections[section.key]}
-                  onOpenChange={(open) => toggleSection(section.key, open)}
-                  activeHref={activeHref}
-                  onMutate={onMutate}
-                />
-              ))}
-            </nav>
+            sectionsNav
           )}
         </div>
 
-        <div className="flex flex-col gap-1 px-3 py-4">
-          <div className="mb-1 h-px bg-border" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-accent",
-                  collapsed && "justify-center px-0"
-                )}
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--primary)_20%,transparent)] text-sm font-semibold text-primary">
-                  {userName.slice(0, 1).toUpperCase()}
-                </span>
-                {!collapsed && (
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {userName}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {userEmail}
-                    </span>
-                  </span>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            {/* Centered over the account card, lifted above the divider. */}
-            <DropdownMenuContent
-              side="top"
-              align="center"
-              sideOffset={14}
-              className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-52"
-            >
-              <DropdownMenuLabel className="truncate">
-                {userEmail}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {/* Opens the centered settings modal (settings-dialog.tsx). */}
-              <DropdownMenuItem
-                onSelect={() => router.push(`${pathname}?settings=preferences`)}
-              >
-                <Settings /> Settings
-              </DropdownMenuItem>
-              {/* Plain row, not a menu item: only the pill is interactive,
-                  so the row itself never shows a hover highlight. */}
-              <div className="flex items-center justify-between px-2.5 py-1.5">
-                <span className="text-sm">Theme</span>
-                <ThemeToggle />
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive [&_svg]:text-destructive"
-                onSelect={onSignOut}
-              >
-                <LogOut /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {accountFooter}
       </aside>
     </TooltipProvider>
   );
