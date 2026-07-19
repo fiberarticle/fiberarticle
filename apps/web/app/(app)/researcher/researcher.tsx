@@ -261,7 +261,9 @@ export function Researcher() {
             </p>
           </Card>
         ) : (
-          <div className="flex flex-col gap-2">
+          // The full history scrolls inside a fixed height, never the page:
+          // no border, no box, just a thin scrollbar floating at the edge.
+          <div className="fa-textarea-scroll -mr-3 flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-3">
             {runs.map((run) => (
               <Link key={run.id} href={`/researcher/${run.id}`}>
                 <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent">
