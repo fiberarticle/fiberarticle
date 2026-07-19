@@ -93,7 +93,7 @@ export function Researcher() {
           filters: Object.keys(filters).length > 0 ? filters : null,
         }),
       });
-      router.push(`/runs/${run.id}`);
+      router.push(`/researcher/${run.id}`);
     } catch (e) {
       setError(
         e instanceof ApiError
@@ -263,7 +263,7 @@ export function Researcher() {
         ) : (
           <div className="flex flex-col gap-2">
             {runs.map((run) => (
-              <Link key={run.id} href={`/runs/${run.id}`}>
+              <Link key={run.id} href={`/researcher/${run.id}`}>
                 <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-accent">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
