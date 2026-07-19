@@ -163,11 +163,18 @@
   body {
     height: 100%;
   }
+  html {
+    /* Mobile browsers must not inflate text on orientation change. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* No grey flash rectangle on taps (iOS/Android WebKit). */
+    -webkit-tap-highlight-color: transparent;
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 25%, transparent);
