@@ -40,7 +40,8 @@ function Textarea({
       }}
       rows={1}
       className={cn(
-        "fa-textarea-scroll flex w-full resize-none overflow-y-auto rounded-xl border border-input bg-transparent px-4 py-3.5 text-sm leading-relaxed shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] transition-[height,border-color] duration-150 ease-out placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
+        // text-base below sm: 16px stops iOS Safari's focus auto-zoom.
+        "fa-textarea-scroll flex w-full resize-none overflow-y-auto rounded-xl border border-input bg-transparent px-4 py-3.5 text-base leading-relaxed shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] transition-[height,border-color] duration-150 ease-out placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
         className
       )}
       style={{ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }}
