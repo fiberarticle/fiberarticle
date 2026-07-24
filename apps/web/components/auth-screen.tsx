@@ -34,11 +34,15 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
-        <div className={styles.warmMist} />
-        <div className={styles.orangeBlob} />
-        <div className={styles.whiteGlow} />
-
         <div className={styles.leftPanel}>
+          {/* Warm glow layers live inside the brand panel so they anchor to
+              its bottom on every layout. On the stacked mobile view the panel
+              hugs its content, so keeping these at card level would push the
+              glow down behind the form panel and hide it. */}
+          <div className={styles.warmMist} />
+          <div className={styles.orangeBlob} />
+          <div className={styles.whiteGlow} />
+
           {/* Decorative animation filling the empty lower half of the
               brand panel. aria-hidden + pointer-events none: pure visual. */}
           <div className={styles.leftAnimation} aria-hidden>
