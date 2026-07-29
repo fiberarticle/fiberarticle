@@ -1,9 +1,16 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { bearer, jwt } from "better-auth/plugins";
+import { bearer, emailOTP, jwt } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendRendered, sendRenderedQuietly } from "@/lib/email";
+import {
+  deviceFrom,
+  passwordChangedEmail,
+  passwordResetEmail,
+  verifyEmail,
+  welcomeEmail,
+} from "@/lib/emails";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -28,6 +35,20 @@ const trustedOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// Verification code lifetime. The email states this in minutes, so keep the
+// two in step by deriving one from the other.
+const OTP_TTL_SECONDS = 600;
+const OTP_TTL_MINUTES = OTP_TTL_SECONDS / 60;
+
+// Password reset link lifetime, and the same value in the email copy.
+const RESET_TTL_SECONDS = 3600;
+
+/** First name only: "Hello Abdul" reads better than the full name. */
+function firstNameOf(name: string, email: string): string {
+  const first = name.trim().split(/\s+/)[0];
+  return first || email.split("@")[0];
+}
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
@@ -49,31 +70,99 @@ export const auth = betterAuth({
         });
       }
     }),
+    // A password change from Settings has no built-in callback (unlike a
+    // reset, which has onPasswordReset), so the security notice is sent from
+    // here. Only on success: a failed change leaves ctx.context.returned as
+    // an APIError and must not alarm anyone.
+    //
+    // The user comes from the response body rather than ctx.context.session.
+    // /change-password returns { token, user }, and the dispatcher assigns
+    // context.returned before running after hooks, so it is always there;
+    // whether the endpoint's session middleware writes back to this same
+    // context object is an internal detail not worth depending on.
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/change-password") return;
+      const returned = ctx.context.returned;
+      if (returned instanceof APIError) return;
+      const user =
+        (returned as { user?: { email?: string } } | undefined)?.user ??
+        ctx.context.session?.user;
+      if (!user?.email) return;
+      await sendRenderedQuietly(
+        user.email,
+        passwordChangedEmail({
+          email: user.email,
+          changedAt: new Date(),
+          device: deviceFrom(ctx.headers?.get("user-agent")),
+        })
+      );
+    }),
   },
   user: {
     deleteUser: {
       enabled: true,
     },
   },
+  databaseHooks: {
+    user: {
+      create: {
+        // Social sign-ups arrive already verified, so this is the moment the
+        // account becomes usable for them. Email/password users are created
+        // unverified and get their welcome from afterEmailVerification
+        // instead, so neither path sends it twice.
+        after: async (user) => {
+          if (!user.emailVerified) return;
+          await sendRenderedQuietly(
+            user.email,
+            welcomeEmail({ firstName: firstNameOf(user.name, user.email) })
+          );
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
-    sendResetPassword: async ({ user, url }) => {
-      await sendEmail({
-        to: user.email,
-        subject: "Reset your Fiberarticle password",
-        text: `Hi ${user.name},\n\nReset your Fiberarticle password using the link below. The link expires in one hour.\n\n${url}\n\nIf you did not request this, you can safely ignore this email.`,
-      });
+    resetPasswordTokenExpiresIn: RESET_TTL_SECONDS,
+    // Makes the "every other session was signed out" line in the security
+    // notice true for the reset path as well as the change-password path.
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }, request) => {
+      const requestedAt = new Date();
+      await sendRendered(
+        user.email,
+        passwordResetEmail({
+          email: user.email,
+          resetUrl: url,
+          requestedAt,
+          expiresAt: new Date(requestedAt.getTime() + RESET_TTL_SECONDS * 1000),
+          device: deviceFrom(request?.headers?.get("user-agent")),
+        })
+      );
+    },
+    // Fires once a reset actually completes. Same template as a change from
+    // Settings: from the reader's side it is the same event.
+    onPasswordReset: async ({ user }, request) => {
+      await sendRenderedQuietly(
+        user.email,
+        passwordChangedEmail({
+          email: user.email,
+          changedAt: new Date(),
+          device: deviceFrom(request?.headers?.get("user-agent")),
+        })
+      );
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendEmail({
-        to: user.email,
-        subject: "Verify your Fiberarticle email",
-        text: `Hi ${user.name},\n\nWelcome to Fiberarticle. Verify your email address using the link below.\n\n${url}\n\nIf you did not create this account, you can safely ignore this email.`,
-      });
+    // The emailOTP plugin replaces sendVerificationEmail with its own OTP
+    // send (see overrideDefaultEmailVerification below), so there is no
+    // sendVerificationEmail here: it would never be called.
+    afterEmailVerification: async (user) => {
+      await sendRenderedQuietly(
+        user.email,
+        welcomeEmail({ firstName: firstNameOf(user.name, user.email) })
+      );
     },
   },
   ...(googleClientId && googleClientSecret
@@ -86,5 +175,37 @@ export const auth = betterAuth({
         },
       }
     : {}),
-  plugins: [jwt(), bearer()],
+  plugins: [
+    jwt(),
+    bearer(),
+    /**
+     * Email verification by six digit code.
+     *
+     * The plugin also mounts sign-in-by-OTP, forget-password-by-OTP, and
+     * change-email-by-OTP endpoints. Those are deliberately inert here: the
+     * sender below delivers mail for "email-verification" only, so a code
+     * minted for any other flow never reaches anyone and cannot be used.
+     * disableSignUp stops the sign-in endpoint from creating accounts, and
+     * changeEmail stays disabled by default. Verification code retrieval
+     * (getVerificationOTP) is server-only in the plugin and unreachable from
+     * the browser.
+     */
+    emailOTP({
+      overrideDefaultEmailVerification: true,
+      otpLength: 6,
+      expiresIn: OTP_TTL_SECONDS,
+      disableSignUp: true,
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (type !== "email-verification") return;
+        await sendRendered(
+          email,
+          verifyEmail({
+            email,
+            code: otp,
+            expiresInMinutes: OTP_TTL_MINUTES,
+          })
+        );
+      },
+    }),
+  ],
 });
