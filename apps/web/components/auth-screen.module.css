@@ -455,6 +455,19 @@
   margin: 0;
 }
 
+/* Six digit verification code. Monospaced and widely tracked so the digits
+   read as separate characters, matching the tiles in the email. */
+.codeInput {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas,
+    monospace;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-align: center;
+  min-height: 62px;
+}
+
 /* Radix Theme wrapper: layout-neutral, only styles its buttons. */
 .themeScope {
   width: 100%;
