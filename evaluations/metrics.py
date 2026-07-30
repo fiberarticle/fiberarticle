@@ -228,6 +228,33 @@ def bootstrap_ci(values: Sequence[float], rounds: int = 2000,
     return (lo, hi)
 
 
+def permutation_p(a: Sequence[float], b: Sequence[float],
+                  rounds: int = 20000, seed: int = 12345) -> float:
+    """Two sided permutation p value for mean(a) - mean(b), unpaired.
+
+    The two arms of the grounding comparison have different numbers of judged
+    sentences and no pairing between them, so a paired test does not apply.
+    Under the null the label carries no information, which is what shuffling
+    the pooled values simulates. Seeded, so the same inputs give the same p.
+    """
+    import random
+
+    if not a or not b:
+        return 1.0
+    rng = random.Random(seed)
+    observed = abs(mean(a) - mean(b))
+    pooled = list(a) + list(b)
+    n = len(a)
+    extreme = 0
+    for _ in range(rounds):
+        rng.shuffle(pooled)
+        if abs(mean(pooled[:n]) - mean(pooled[n:])) >= observed:
+            extreme += 1
+    # Add one to both parts so a p value of exactly zero is never reported;
+    # 20000 relabellings cannot distinguish "very small" from "impossible".
+    return (extreme + 1) / (rounds + 1)
+
+
 def paired_bootstrap_p(a: Sequence[float], b: Sequence[float],
                        rounds: int = 2000, seed: int = 12345) -> float:
     """Two sided paired bootstrap p value for mean(a) - mean(b)."""
