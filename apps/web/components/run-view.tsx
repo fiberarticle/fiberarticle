@@ -12,6 +12,7 @@ import {
   FilePlus2,
   FileText,
   Filter,
+  Layers,
   Lightbulb,
   ListChecks,
   PenLine,
@@ -20,6 +21,7 @@ import {
   RotateCcw,
   Search,
   Scroll,
+  Table2,
   Target,
   X,
 } from "lucide-react";
@@ -36,6 +38,8 @@ import {
   SourceContent,
   SourceTrigger,
 } from "@/components/prompt-kit/source";
+import { ReportView } from "@/components/report-view";
+import { ReviewWorkspace } from "@/components/review-workspace";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -54,7 +58,6 @@ import { streamRunEvents } from "@/lib/sse";
 import type {
   DocumentDetail,
   DocumentTemplate,
-  Paper,
   RunDetail,
   RunEvent,
   RunStatus,
@@ -82,11 +85,48 @@ const stageMeta: Record<string, { label: string; icon: React.ElementType }> = {
   chunk_embed: { label: "Indexing the evidence", icon: Boxes },
   extract: { label: "Extracting key findings", icon: Quote },
   coverage_check: { label: "Checking coverage", icon: Target },
+  review_matrix: { label: "Tabulating every paper", icon: Table2 },
+  review_synthesis: {
+    label: "Synthesizing trends, methods, and gaps",
+    icon: Layers,
+  },
   synthesize: { label: "Synthesizing the review", icon: PenLine },
   report: { label: "Writing the report", icon: ClipboardCheck },
 };
 
-const stageOrder = Object.keys(stageMeta);
+// A literature review swaps the shallow finding pass for the two review
+// stages, so progress has to be measured against the stages that will
+// actually run for this mode.
+const RESEARCH_STAGES = [
+  "plan",
+  "generate_queries",
+  "search",
+  "dedupe_rank",
+  "screen",
+  "fetch_oa_pdfs",
+  "parse",
+  "chunk_embed",
+  "extract",
+  "coverage_check",
+  "synthesize",
+  "report",
+];
+
+const REVIEW_STAGES = [
+  "plan",
+  "generate_queries",
+  "search",
+  "dedupe_rank",
+  "screen",
+  "fetch_oa_pdfs",
+  "parse",
+  "chunk_embed",
+  "coverage_check",
+  "review_matrix",
+  "review_synthesis",
+  "synthesize",
+  "report",
+];
 
 function formatElapsed(startIso: string, endIso?: string | null): string {
   const start = new Date(startIso).getTime();
@@ -113,119 +153,6 @@ function groupByStage(events: RunEvent[]): StageGroup[] {
     }
   }
   return groups;
-}
-
-/** Renders text with every [n] citation marker as a link to that paper. */
-function CitedText({ text, papers }: { text: string; papers: Paper[] }) {
-  const parts = text.split(/(\[\d+\])/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        const match = /^\[(\d+)\]$/.exec(part);
-        const paper = match ? papers[Number(match[1]) - 1] : undefined;
-        if (paper?.url) {
-          return (
-            <a
-              key={i}
-              href={paper.url}
-              target="_blank"
-              rel="noreferrer"
-              title={paper.title}
-              className="font-medium text-[#4f90e4] hover:underline"
-            >
-              {part}
-            </a>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </>
-  );
-}
-
-function MarkdownTable({ block, papers }: { block: string; papers: Paper[] }) {
-  const rows = block
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("|"));
-  if (rows.length < 2) return null;
-  const parse = (line: string) =>
-    line
-      .replace(/^\|/, "")
-      .replace(/\|$/, "")
-      .split("|")
-      .map((cell) => cell.trim());
-  const header = parse(rows[0]);
-  const body = rows
-    .slice(1)
-    .filter((line) => !/^\|[\s\-|:]+\|$/.test(line))
-    .map(parse);
-  return (
-    <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full text-left text-xs">
-        <thead className="bg-muted/60">
-          <tr>
-            {header.map((cell, i) => (
-              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
-                {cell}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {body.map((cells, r) => (
-            <tr key={r} className="border-t border-border align-top">
-              {cells.map((cell, c) => (
-                <td key={c} className="px-3 py-2 leading-5">
-                  <CitedText text={cell} papers={papers} />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ReportView({
-  markdown,
-  papers,
-}: {
-  markdown: string;
-  papers: Paper[];
-}) {
-  const blocks = markdown.split(/\n{2,}/);
-  return (
-    <div className="flex flex-col gap-4">
-      {blocks.map((block, i) => {
-        const trimmed = block.trim();
-        if (!trimmed) return null;
-        if (trimmed.startsWith("# ")) {
-          return (
-            <h1 key={i} className="text-2xl font-semibold tracking-tight">
-              {trimmed.slice(2)}
-            </h1>
-          );
-        }
-        if (trimmed.startsWith("## ")) {
-          return (
-            <h2 key={i} className="mt-2 text-lg font-semibold tracking-tight">
-              {trimmed.slice(3)}
-            </h2>
-          );
-        }
-        if (trimmed.startsWith("|")) {
-          return <MarkdownTable key={i} block={trimmed} papers={papers} />;
-        }
-        return (
-          <p key={i} className="whitespace-pre-wrap text-[15px] leading-7">
-            <CitedText text={trimmed} papers={papers} />
-          </p>
-        );
-      })}
-    </div>
-  );
 }
 
 const templateMenu: {
@@ -359,6 +286,16 @@ export function RunView({ runId }: { runId: string }) {
   const groups = groupByStage(events);
   const isActive = run?.status === "running" || run?.status === "pending";
   const activeStage = groups.length > 0 ? groups[groups.length - 1].stage : null;
+  const isReview = run?.mode === "literature_review";
+  const stageOrder = isReview ? REVIEW_STAGES : RESEARCH_STAGES;
+  // The dedicated review workspace replaces the slide-out report panel: the
+  // written report is one of its tabs, alongside the evidence matrix and
+  // the synthesis. Shown for any finished review that produced a matrix,
+  // including one that was cancelled or failed after the matrix stage, so
+  // that work is never hidden. Reviews from before the matrix existed fall
+  // back to the plain report panel.
+  const reviewWorkspace =
+    isReview && !isActive && run?.review?.matrix?.length ? run.review : null;
 
   // Elapsed-time ticker while the run is active.
   useEffect(() => {
@@ -491,8 +428,11 @@ export function RunView({ runId }: { runId: string }) {
     // that remains: both stay fully visible side by side.
     <div
       className={cn(
-        "mx-auto flex max-w-3xl flex-col gap-6",
-        reportOpen && run.report && "xl:mr-[47rem]"
+        "mx-auto flex flex-col gap-6",
+        // The review workspace holds a four-column evidence table, so it
+        // gets the full panel width instead of the reading column.
+        reviewWorkspace ? "max-w-7xl" : "max-w-3xl",
+        reportOpen && run.report && !reviewWorkspace && "xl:mr-[47rem]"
       )}
     >
       <div>
@@ -592,7 +532,7 @@ export function RunView({ runId }: { runId: string }) {
         )}
         {run.status === "completed" && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {run.report && (
+            {run.report && !reviewWorkspace && (
               <Button
                 variant="secondary"
                 onClick={() => setReportOpen((v) => !v)}
@@ -640,6 +580,10 @@ export function RunView({ runId }: { runId: string }) {
           Research complete. Writing your article now — you will be taken to
           the editor.
         </Callout>
+      )}
+
+      {reviewWorkspace && (
+        <ReviewWorkspace run={run} review={reviewWorkspace} />
       )}
 
       <Card>
@@ -723,7 +667,8 @@ export function RunView({ runId }: { runId: string }) {
         </CardContent>
       </Card>
 
-      {run.papers.length > 0 && (
+      {/* The review workspace already lists every source in its own tab. */}
+      {run.papers.length > 0 && !reviewWorkspace && (
         <div className="min-w-0">
           <h2 className="mb-2.5 text-sm font-semibold text-muted-foreground">
             Sources ({run.papers.length})
@@ -755,7 +700,7 @@ export function RunView({ runId }: { runId: string }) {
 
       {/* Slide-out report panel, Claude artifact style: opens from the
           right edge, closable, reopenable from the View report button. */}
-      {run.report && (
+      {run.report && !reviewWorkspace && (
         <div
           className={cn(
             "fixed inset-y-0 right-0 z-40 flex w-[min(720px,94vw)] flex-col border-l border-border bg-card transition-transform duration-300 ease-out",
