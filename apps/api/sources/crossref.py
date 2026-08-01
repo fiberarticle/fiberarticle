@@ -1,10 +1,6 @@
-import re
-
 from config import get_settings
-from sources.base import PaperRecord, normalize_doi
+from sources.base import PaperRecord, clean_text, normalize_doi
 from util.retry import get_with_retry
-
-_TAG_RE = re.compile(r"<[^>]+>")
 
 
 async def search(query: str, limit: int = 15) -> list[PaperRecord]:
@@ -29,18 +25,19 @@ async def search(query: str, limit: int = 15) -> list[PaperRecord]:
         ]
         issued = (item.get("issued") or {}).get("date-parts") or [[None]]
         year = issued[0][0] if issued and issued[0] else None
-        abstract = item.get("abstract")
-        if abstract:
-            abstract = " ".join(_TAG_RE.sub(" ", abstract).split()) or None
+        abstract = clean_text(item.get("abstract"))
         container = item.get("container-title") or []
+        title = clean_text(titles[0])
+        if not title:
+            continue
         papers.append(
             PaperRecord(
                 source="crossref",
                 external_id=item.get("DOI") or "",
-                title=" ".join(titles[0].split()),
+                title=title,
                 authors=[a for a in authors if a],
                 year=year if isinstance(year, int) else None,
-                venue=container[0] if container else None,
+                venue=clean_text(container[0]) if container else None,
                 doi=normalize_doi(item.get("DOI")),
                 url=item.get("URL"),
                 abstract=abstract,
