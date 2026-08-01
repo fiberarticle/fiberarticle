@@ -99,9 +99,79 @@ class PaperOut(BaseModel):
     quartile: str | None = None
 
 
+class ReviewMatrixRow(BaseModel):
+    """One reviewed paper, in the three groups a review table needs:
+    paper details, implementation, and limitations with research gaps."""
+
+    n: int
+    paper_id: str = ""
+    # Paper details
+    title: str
+    authors: list[str] = []
+    venue: str | None = None
+    year: int | None = None
+    doi: str | None = None
+    url: str | None = None
+    # Databases the record is demonstrably indexed in (citations.indexes).
+    indexed_in: list[str] = []
+    quartile: str | None = None
+    cited_by_count: int = 0
+    full_text: bool = False
+    # What the agent actually had to read: "full_text", "abstract", or
+    # "none". Lets the table explain an empty cell instead of implying the
+    # paper simply said nothing.
+    evidence: str = ""
+    # Implementation
+    contribution: str = ""
+    methodology: str = ""
+    models: str = ""
+    dataset: str = ""
+    tools: str = ""
+    metrics: str = ""
+    results: str = ""
+    # Limitations and research gaps
+    limitations: str = ""
+    unresolved: str = ""
+    assumptions: str = ""
+    missing_evaluations: str = ""
+    opportunities: str = ""
+
+
+class ReviewFacet(BaseModel):
+    name: str
+    # Reference numbers ([n]) of the papers this facet was drawn from.
+    papers: list[int] = []
+    note: str = ""
+
+
+class ReviewDirection(BaseModel):
+    title: str
+    rationale: str = ""
+    addresses: str = ""
+
+
+class ReviewSynthesis(BaseModel):
+    themes: list[str] = []
+    trends: list[str] = []
+    methodologies: list[ReviewFacet] = []
+    datasets: list[ReviewFacet] = []
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+    gaps: list[str] = []
+    future_work: list[ReviewDirection] = []
+
+
+class ReviewOut(BaseModel):
+    matrix: list[ReviewMatrixRow] = []
+    synthesis: ReviewSynthesis = Field(default_factory=ReviewSynthesis)
+
+
 class RunDetailOut(RunOut):
     report: str | None
     papers: list[PaperOut]
+    # Literature reviews only; None for research runs and for reviews that
+    # finished before this stage existed.
+    review: ReviewOut | None = None
 
 
 class RunEventOut(BaseModel):
