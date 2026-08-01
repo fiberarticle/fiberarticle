@@ -114,9 +114,11 @@ export function Review() {
             Literature review
           </h1>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            A dedicated review agent: it plans, searches four scholarly indexes,
-            screens against your criteria, reads the full text where available,
-            and writes a thematic review with a synthesis matrix and citations.
+            A dedicated review agent: it searches four scholarly indexes,
+            screens against your criteria, reads each paper in full where
+            available, and returns an evidence matrix of what every paper
+            proposes and what it leaves open, plus the trends, methods,
+            datasets, gaps, and future work across the whole literature.
           </p>
         </div>
         <ReviewArt className="hidden w-40 shrink-0 text-muted-foreground sm:block" />
