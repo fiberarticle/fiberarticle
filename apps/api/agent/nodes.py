@@ -13,6 +13,13 @@ from typing import Any
 import httpx
 
 from agent.events import emit, set_stage
+from agent.review import (
+    IMPLEMENTATION_FIELDS,
+    LIMITATION_FIELDS,
+    NOT_REPORTED,
+    ReviewNodes,
+    is_reported,
+)
 from agent.state import ResearchState
 from db import execute, fetch_all, jsonb
 from llm.client import ResolvedLlm
@@ -23,6 +30,14 @@ from sources.base import PaperRecord
 
 _MAX_PDF_BYTES = 15 * 1024 * 1024
 _PDF_CONCURRENCY = 4
+
+
+def _title_key(title: str | None) -> str | None:
+    return re.sub(r"\W+", "", (title or "").lower()) or None
+
+
+def _doi_key(doi: str | None) -> str | None:
+    return (doi or "").strip().lower() or None
 
 
 def _parse_json_array(text: str) -> list | None:
@@ -36,7 +51,7 @@ def _parse_json_array(text: str) -> list | None:
         return None
 
 
-class ResearchNodes:
+class ResearchNodes(ReviewNodes):
     def __init__(self, run_id: str, user_id: str, llm: ResolvedLlm):
         self.run_id = run_id
         self.user_id = user_id
@@ -328,13 +343,35 @@ class ResearchNodes:
             "dedupe_rank",
             f"Deduplicating {len(candidates)} candidates by DOI and normalized title.",
         )
-        seen: set[str] = set()
+        # Richest copy first, so when the same work turns up as a preprint and
+        # as the published version, the survivor is the one with an abstract,
+        # an open-access PDF, and a real citation count.
+        ranked = sorted(
+            candidates,
+            key=lambda p: (
+                1 if p.get("abstract") else 0,
+                1 if (p.get("is_open_access") or p.get("oa_pdf_url")) else 0,
+                p.get("cited_by_count") or 0,
+            ),
+            reverse=True,
+        )
+        # A DOI match and a title match are both duplicates. Matching on only
+        # one of them lets a preprint and its journal version (same title,
+        # different DOIs) both survive into the review as separate papers.
+        seen_dois: set[str] = set()
+        seen_titles: set[str] = set()
         unique: list[PaperRecord] = []
-        for paper in candidates:
-            key = paper.get("doi") or re.sub(r"\W+", "", (paper.get("title") or "").lower())
-            if not key or key in seen:
+        for paper in ranked:
+            doi = _doi_key(paper.get("doi"))
+            title = _title_key(paper.get("title"))
+            if not doi and not title:
                 continue
-            seen.add(key)
+            if (doi and doi in seen_dois) or (title and title in seen_titles):
+                continue
+            if doi:
+                seen_dois.add(doi)
+            if title:
+                seen_titles.add(title)
             unique.append(paper)
 
         # Rank by topical relevance first so the screening budget is spent on
@@ -345,22 +382,30 @@ class ResearchNodes:
             if len(w) > 2
         }
 
+        # A review is only as good as what can actually be read, so among
+        # equally on-topic papers the ones with an obtainable full text come
+        # first, then the ones with at least an abstract, and only then the
+        # most cited. Relevance is bucketed to one decimal so a hair's
+        # difference in keyword overlap cannot outrank readability.
         def score(p: PaperRecord) -> tuple:
             text = ((p.get("title") or "") + " " + (p.get("abstract") or "")).lower()
             hits = sum(1 for t in terms if t in text)
             return (
-                round(hits / len(terms), 2) if terms else 0,
-                min(p.get("cited_by_count") or 0, 100_000),
+                round(hits / len(terms), 1) if terms else 0,
                 1 if (p.get("is_open_access") or p.get("oa_pdf_url")) else 0,
+                1 if (p.get("abstract") or "").strip() else 0,
+                min(p.get("cited_by_count") or 0, 100_000),
             )
 
         unique.sort(key=score, reverse=True)
         cap = state["papers_per_run"] * 3
         kept = unique[:cap]
+        readable = sum(1 for p in kept if (p.get("abstract") or "").strip())
         await self._emit(
             "dedupe_rank",
             f"{len(unique)} unique papers after deduplication; keeping the top {len(kept)} "
-            "ranked by topical relevance, then citations and open access.",
+            "ranked by topical relevance, then by whether the paper can actually be "
+            f"read, then by citations. {readable} of them have at least an abstract.",
         )
         return {"candidates": kept}
 
@@ -368,15 +413,15 @@ class ResearchNodes:
     async def screen(self, state: ResearchState) -> dict:
         await self._stage("screen")
         existing = state.get("papers", [])
-        existing_keys = {
-            (p.get("doi") or re.sub(r"\W+", "", (p.get("title") or "").lower()))
-            for p in existing
-        }
+        # Same two-key rule as dedupe_rank, so a paper already seeded from the
+        # library (or kept by an earlier loop) is never screened in twice.
+        existing_dois = {d for p in existing if (d := _doi_key(p.get("doi")))}
+        existing_titles = {t for p in existing if (t := _title_key(p.get("title")))}
         candidates = [
             c
             for c in state.get("candidates", [])
-            if (c.get("doi") or re.sub(r"\W+", "", (c.get("title") or "").lower()))
-            not in existing_keys
+            if _doi_key(c.get("doi")) not in existing_dois
+            and _title_key(c.get("title")) not in existing_titles
         ]
         limit = max(0, state["papers_per_run"] - len(existing))
         if limit == 0:
@@ -645,6 +690,11 @@ class ResearchNodes:
 
     # ------------------------------------------------------------- extract
     async def extract(self, state: ResearchState) -> dict:
+        # A literature review runs the far deeper per-paper analysis in
+        # review_matrix, which covers every paper instead of the first
+        # twelve. Running this one too would only duplicate it.
+        if state.get("mode") == "literature_review":
+            return {"findings": []}
         await self._stage("extract")
         papers = state.get("papers", [])
         await self._emit(
@@ -800,7 +850,15 @@ class ResearchNodes:
                 "Structuring a thematic literature review: overview, themes, "
                 "methods, debates, and gaps.",
             )
-            themes = await self._review_themes(state)
+            # The cross-paper synthesis already grouped the literature from
+            # the full evidence matrix; reuse those themes so the narrative
+            # and the structured panels tell the same story. Fall back to a
+            # title-only pass only when that stage produced nothing.
+            themes = (
+                (state.get("review") or {}).get("synthesis") or {}
+            ).get("themes") or []
+            if not themes:
+                themes = await self._review_themes(state)
             for theme in themes:
                 await self._emit("synthesize", f"Theme identified: {theme}")
             section_plan = self._review_section_plan(state["topic"], themes)
@@ -889,6 +947,127 @@ class ResearchNodes:
         sections = [slot for slot in slots if slot is not None]
         return {"sections": sections}
 
+    # ------------------------------------------------- review report parts
+    @staticmethod
+    def _cell(row: dict, fields: list[tuple[str, str]]) -> str:
+        """One evidence-matrix cell: labeled sentences, unreported fields dropped."""
+        parts = []
+        for name, _ in fields:
+            value = (row.get(name) or "").strip()
+            if not is_reported(value):
+                continue
+            label = name.replace("_", " ").capitalize()
+            parts.append(f"**{label}:** {value.replace('|', '/')}")
+        return " ".join(parts) or NOT_REPORTED
+
+    def _review_report_lines(self, state: ResearchState) -> list[str]:
+        """Trends, methods, datasets, gaps, future work, and the evidence
+        matrix, as markdown. Every block is skipped when it has no content,
+        so a partial synthesis never leaves an empty heading behind."""
+        review = state.get("review") or {}
+        matrix: list[dict] = review.get("matrix") or []
+        synthesis: dict = review.get("synthesis") or {}
+        lines: list[str] = []
+
+        def bullets(heading: str, items: list[str]) -> None:
+            if not items:
+                return
+            lines.extend([f"## {heading}", ""])
+            lines.extend(f"- {item}" for item in items)
+            lines.append("")
+
+        def facets(heading: str, items: list[dict]) -> None:
+            if not items:
+                return
+            lines.extend([f"## {heading}", ""])
+            for item in items:
+                refs = (
+                    " " + " ".join(f"[{n}]" for n in item.get("papers") or [])
+                    if item.get("papers")
+                    else ""
+                )
+                note = f": {item['note']}" if item.get("note") else ""
+                lines.append(f"- **{item['name']}**{refs}{note}")
+            lines.append("")
+
+        bullets("Research trends", synthesis.get("trends") or [])
+        facets("Common methodologies", synthesis.get("methodologies") or [])
+        facets("Datasets and benchmarks", synthesis.get("datasets") or [])
+        bullets("Strengths across the literature", synthesis.get("strengths") or [])
+        bullets(
+            "Weaknesses and recurring limitations", synthesis.get("weaknesses") or []
+        )
+        bullets("Research gaps", synthesis.get("gaps") or [])
+
+        future = synthesis.get("future_work") or []
+        if future:
+            lines.extend(["## Suggested future work", ""])
+            for item in future:
+                addresses = (
+                    f" Addresses: {item['addresses']}" if item.get("addresses") else ""
+                )
+                rationale = f" {item['rationale']}" if item.get("rationale") else ""
+                lines.append(f"- **{item['title']}**{rationale}{addresses}")
+            lines.append("")
+
+        if matrix:
+            lines.extend(
+                [
+                    "## Evidence matrix",
+                    "",
+                    "| # | Paper details | Implementation | Limitations and research gaps |",
+                    "|---|---------------|----------------|-------------------------------|",
+                ]
+            )
+            for row in matrix:
+                authors = ", ".join((row.get("authors") or [])[:3])
+                if len(row.get("authors") or []) > 3:
+                    authors += " et al."
+                details = [(row.get("title") or "Untitled").replace("|", "/")]
+                if authors:
+                    details.append(authors.replace("|", "/"))
+                venue_year = ", ".join(
+                    part
+                    for part in [
+                        (row.get("venue") or "").replace("|", "/"),
+                        str(row.get("year") or ""),
+                    ]
+                    if part
+                )
+                if venue_year:
+                    details.append(venue_year)
+                if row.get("indexed_in"):
+                    details.append("Indexed in: " + ", ".join(row["indexed_in"]))
+                if row.get("quartile"):
+                    details.append(f"Scimago {row['quartile']}")
+                details.append(
+                    "Read: "
+                    + {
+                        "full_text": "full text",
+                        "abstract": "abstract only",
+                        "none": "nothing available",
+                    }.get(
+                        row.get("evidence") or "",
+                        "full text" if row.get("full_text") else "abstract only",
+                    )
+                )
+                if row.get("doi"):
+                    details.append(f"DOI: {row['doi']}")
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        [
+                            f"[{row['n']}]",
+                            ". ".join(details),
+                            self._cell(row, IMPLEMENTATION_FIELDS),
+                            self._cell(row, LIMITATION_FIELDS),
+                        ]
+                    )
+                    + " |"
+                )
+            lines.append("")
+        return lines
+
     # -------------------------------------------------------------- report
     async def report(self, state: ResearchState) -> dict:
         await self._stage("report")
@@ -909,29 +1088,8 @@ class ResearchNodes:
             lines.append(section["body"])
             lines.append("")
 
-        if review_mode and papers:
-            # Synthesis matrix: the reviewed evidence at a glance.
-            findings = {}
-            for finding in state.get("findings", []):
-                match = re.match(r"\[(\d+)\]\s*(.+)", finding)
-                if match:
-                    findings[int(match.group(1))] = match.group(2)
-            lines.append("## Synthesis matrix")
-            lines.append("")
-            lines.append("| # | Paper | Year | Journal quartile | Citations | Full text | Key finding |")
-            lines.append("|---|-------|------|------------------|-----------|-----------|-------------|")
-            for i, paper in enumerate(papers, 1):
-                cells = [
-                    f"[{i}]",
-                    (paper.get("title") or "")[:80].replace("|", "/"),
-                    str(paper.get("year") or "n.d."),
-                    paper.get("quartile") or "-",
-                    str(paper.get("cited_by_count") or 0),
-                    "yes" if paper.get("full_text_parsed") else "abstract",
-                    (findings.get(i) or "-")[:140].replace("|", "/"),
-                ]
-                lines.append("| " + " | ".join(cells) + " |")
-            lines.append("")
+        if review_mode:
+            lines.extend(self._review_report_lines(state))
 
         lines.append("## References")
         lines.append("")
