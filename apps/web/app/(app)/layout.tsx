@@ -24,7 +24,11 @@ export default async function AppLayout({
       {/* Suspense: the sidebar and settings dialog read useSearchParams for
           deep links (assistant chats, extraction tables, ?settings=<tab>). */}
       <Suspense>
-        <Sidebar userName={session.user.name} userEmail={session.user.email} />
+        <Sidebar
+          userName={session.user.name}
+          userEmail={session.user.email}
+          isAdmin={(session.user as { role?: string }).role === "admin"}
+        />
       </Suspense>
       <Suspense>
         <SettingsDialog
