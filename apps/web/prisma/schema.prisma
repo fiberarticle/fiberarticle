@@ -17,6 +17,11 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  // "user" or "admin". Admins reach the Admin page and the /v1/admin API;
+  // everyone else is refused by both. Kept in the database rather than
+  // hardcoded to one email so an admin can promote someone without a deploy.
+  // The value is copied into the signed JWT, which is what the API trusts.
+  role          String    @default("user")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
