@@ -74,18 +74,42 @@ async def verify_bearer_token(token: str) -> dict:
     raise HTTPException(status_code=401, detail="Invalid token")
 
 
-async def get_current_user_id(request: Request) -> str:
+async def get_current_claims(request: Request) -> dict:
+    """Every verified claim in the bearer token, not just the subject."""
     authorization = request.headers.get("Authorization", "")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     payload = await verify_bearer_token(authorization.removeprefix("Bearer ").strip())
-    sub = payload.get("sub")
-    if not sub:
+    if not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Token has no subject")
-    return sub
+    return payload
+
+
+async def get_current_user_id(request: Request) -> str:
+    claims = await get_current_claims(request)
+    return claims["sub"]
+
+
+async def get_admin_user_id(request: Request) -> str:
+    """
+    Admin gate for every /v1/admin route.
+
+    The role is read from the signed token and nowhere else. It cannot come
+    from a header or a query parameter, because the caller controls those; the
+    token is signed by the web app with a key only the web app holds, so a
+    forged or edited one fails verification before this line is reached.
+
+    404 rather than 403 on purpose: a non-admin gets the same answer as if the
+    route did not exist, so probing tells them nothing about what is there.
+    """
+    claims = await get_current_claims(request)
+    if claims.get("role") != "admin":
+        raise HTTPException(status_code=404, detail="Not found")
+    return claims["sub"]
 
 
 CurrentUser = Depends(get_current_user_id)
+AdminUser = Depends(get_admin_user_id)
 
 
 def _master_key() -> bytes:
