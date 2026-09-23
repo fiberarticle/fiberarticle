@@ -36,7 +36,7 @@ export function Wordmark({
           rendering as the auth page's CSS. */}
       <span
         className={cn(
-          "bg-clip-text text-lg font-bold tracking-tight text-transparent",
+          "bg-clip-text text-lg font-medium tracking-tight text-transparent",
           textClassName
         )}
         style={{
