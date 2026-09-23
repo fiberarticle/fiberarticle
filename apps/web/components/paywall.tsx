@@ -40,7 +40,7 @@ const FEATURES = [
     icon: ClipboardCheck,
     accent: "#50c158",
     title: "Literature Reviewer",
-    body: "Evidence matrix, themes, research gaps and future work.",
+    body: "Evidence table, objectives, research gaps and future work.",
   },
   {
     icon: PenLine,
