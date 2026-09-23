@@ -289,7 +289,6 @@ export interface LedgerRow {
   /** "razorpay" for a payment, "admin" for a grant or a removal by hand. */
   provider: "razorpay" | "admin";
   status: "created" | "paid" | "failed" | "refunded" | "granted" | "revoked";
-  price_usd: number;
   /** Charged amount in paise (0 for admin rows): plan_amount + fee_amount. */
   amount: number;
   plan_amount: number;
@@ -309,17 +308,11 @@ export interface BillingStatus {
   /** How the account got its access: admin role, a payment, or a grant. */
   via: "admin" | "payment" | "grant" | "none";
   price: {
-    usd: number;
-    /** Whole rupees. All three are null if today's rate is unavailable.
-     * plan: the dollar price at today's rate. fee: Razorpay's fee, paid by
-     * the buyer on top. total: what the buyer is charged. */
-    plan_inr: number | null;
-    fee_inr: number | null;
-    total_inr: number | null;
-    /** Razorpay's share of a payment in percent (2.36 = 2% + 18% GST). */
-    fee_percent: number;
-    usd_inr_rate: number | null;
-    rate_fetched_at: string | null;
+    /** Whole rupees. plan: the plan price. fee: Razorpay's fee, paid by the
+     * buyer on top. total: what the buyer is charged. */
+    plan_inr: number;
+    fee_inr: number;
+    total_inr: number;
   };
   /** False until Razorpay keys are configured on the server. */
   payments_open: boolean;
@@ -336,8 +329,6 @@ export interface BillingOrder {
   plan_inr: number;
   fee_inr: number;
   total_inr: number;
-  price_usd: number;
-  usd_inr_rate: number;
   name: string;
   email: string;
   description: string;

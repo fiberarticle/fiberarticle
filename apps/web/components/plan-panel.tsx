@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatRupees, formatUsd } from "@/lib/access";
+import { formatRupees } from "@/lib/access";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { BillingStatus } from "@/lib/types";
 import { useUnlock } from "@/lib/unlock";
@@ -99,10 +99,9 @@ export function PlanPanel() {
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium">Unlock full access</span>
             <span className="text-sm text-muted-foreground">
-              {formatUsd(price.usd)} once
-              {price.total_inr !== null && price.fee_inr !== null
-                ? `, charged as ${formatRupees(price.total_inr)} today (including ${formatRupees(price.fee_inr)} payment gateway charges).`
-                : ", charged in rupees at today's rate plus payment gateway charges."}
+              {formatRupees(price.plan_inr)} once, plus{" "}
+              {formatRupees(price.fee_inr)} payment gateway charges:{" "}
+              {formatRupees(price.total_inr)} in all.
             </span>
             {status.payments_open ? (
               <Button

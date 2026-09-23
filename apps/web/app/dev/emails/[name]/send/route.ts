@@ -47,10 +47,9 @@ const SAMPLES: Record<string, (to: string) => RenderedEmail> = {
         paymentId: "pay_SAMPLE1234567",
         paidAt: new Date(),
         method: "upi",
-        priceUsd: 200,
-        planInr: 16650,
-        feeInr: 403,
-        totalInr: 17053,
+        planInr: 19999,
+        feeInr: 484,
+        totalInr: 20483,
       },
     }),
   "full-access-grant": () =>

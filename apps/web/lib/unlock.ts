@@ -8,7 +8,7 @@ import type { BillingOrder, BillingStatus } from "@/lib/types";
 /**
  * Buying full access with Razorpay Standard Checkout.
  *
- *   1. The API makes a Razorpay order in rupees for today's price.
+ *   1. The API makes a Razorpay order in rupees for the price.
  *   2. Razorpay's checkout opens over the page; the buyer pays by UPI, card,
  *      netbanking or wallet without leaving the app.
  *   3. On success the checkout hands back the order id, payment id and a

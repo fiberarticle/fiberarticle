@@ -20,7 +20,6 @@ export interface FullAccessReceipt {
   paidAt: Date;
   /** Razorpay's method name: upi, card, netbanking, wallet, emi... */
   method: string | null;
-  priceUsd: number;
   /** Whole rupees. */
   planInr: number;
   feeInr: number;
@@ -84,7 +83,7 @@ export function fullAccessEmail({
   const receiptRows: Array<[string, string]> = paid
     ? [
         ["Product", "Fiberarticle full access"],
-        ["Plan price", `$${receipt.priceUsd} (${rupees(receipt.planInr)})`],
+        ["Plan price", rupees(receipt.planInr)],
         ["Gateway charges", rupees(receipt.feeInr)],
         ["Total paid", rupees(receipt.totalInr)],
         ["Paid on", formatWhen(receipt.paidAt)],

@@ -14,12 +14,7 @@ export function hasFullAccess(user: {
   return user.role === "admin" || user.access === "full";
 }
 
-/** "₹16,754": Indian digit grouping, no decimals. */
+/** "₹19,999": Indian digit grouping, no decimals. */
 export function formatRupees(rupees: number): string {
   return `₹${Math.round(rupees).toLocaleString("en-IN")}`;
-}
-
-/** "$200". */
-export function formatUsd(usd: number): string {
-  return `$${usd.toLocaleString("en-US")}`;
 }

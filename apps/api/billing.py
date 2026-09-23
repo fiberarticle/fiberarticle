@@ -1,12 +1,10 @@
 """
 Paid access: one product, "full access", bought once.
 
-The price is set in US dollars and charged in rupees. The Razorpay account
-takes Indian payment methods (UPI, Indian cards, netbanking, wallets), and a
-Razorpay order in a foreign currency needs international payments switched
-on. So the dollar price is turned into rupees with the day's USD to INR rate
-and the order is made in INR. The rate and the rupee amounts are stored on
-the order, which is what makes the amount charged exactly the amount shown.
+The price is set and charged in Indian rupees. The Razorpay account takes
+Indian payment methods only (UPI, Indian cards, netbanking, wallets), so
+every order is made in INR. The rupee amounts are stored on the order, which
+is what makes the amount charged exactly the amount shown.
 
 Razorpay keeps a fee out of every payment. The buyer pays that fee on top of
 the plan price, shown as its own line, so the full plan price reaches the
@@ -29,7 +27,6 @@ import logging
 import math
 import time
 import uuid
-from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import httpx
@@ -78,102 +75,9 @@ def forget_access(user_id: str) -> None:
 # ---------------------------------------------------------------- price
 
 
-_FX_PAIR = "USDINR"
-# A fresh rate is fetched at most every six hours. If the rate services are
-# down, the last good rate keeps being used for up to a week; after that the
-# price is refused rather than guessed.
-_FX_REFRESH = timedelta(hours=6)
-_FX_MAX_AGE = timedelta(days=7)
-# A rate outside this band is a broken response, not a market move.
-_FX_SANE = (Decimal("40"), Decimal("250"))
-
-_fx: dict = {"rate": None, "fetched_at": None, "source": None}
-_fx_lock = asyncio.Lock()
-
-
-def _sane(rate: Decimal) -> bool:
-    return _FX_SANE[0] < rate < _FX_SANE[1]
-
-
-async def _fetch_rate() -> tuple[Decimal, str]:
-    """Today's USD to INR rate from a public source. Two sources, so one
-    being down does not stop sales."""
-    async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
-        try:
-            res = await client.get(
-                "https://api.frankfurter.dev/v1/latest",
-                params={"base": "USD", "symbols": "INR"},
-            )
-            res.raise_for_status()
-            rate = Decimal(str(res.json()["rates"]["INR"]))
-            if _sane(rate):
-                return rate, "frankfurter.dev"
-        except Exception:
-            logger.warning("frankfurter rate fetch failed", exc_info=True)
-
-        res = await client.get("https://open.er-api.com/v6/latest/USD")
-        res.raise_for_status()
-        data = res.json()
-        rate = Decimal(str(data["rates"]["INR"]))
-        if data.get("result") != "success" or not _sane(rate):
-            raise ValueError("open.er-api returned an unusable rate")
-        return rate, "open.er-api.com"
-
-
-async def usd_inr() -> tuple[Decimal, datetime]:
-    """The USD to INR rate to price with, and when it was fetched."""
-    now = datetime.now(timezone.utc)
-    if _fx["rate"] is not None and now - _fx["fetched_at"] < _FX_REFRESH:
-        return _fx["rate"], _fx["fetched_at"]
-
-    async with _fx_lock:
-        if _fx["rate"] is not None and now - _fx["fetched_at"] < _FX_REFRESH:
-            return _fx["rate"], _fx["fetched_at"]
-
-        if _fx["rate"] is None:
-            row = await fetch_one(
-                "SELECT rate, source, fetched_at FROM fx_rates WHERE pair = %s", _FX_PAIR
-            )
-            if row is not None:
-                _fx.update(
-                    rate=Decimal(row["rate"]),
-                    fetched_at=row["fetched_at"],
-                    source=row["source"],
-                )
-                if now - row["fetched_at"] < _FX_REFRESH:
-                    return _fx["rate"], _fx["fetched_at"]
-
-        try:
-            rate, source = await _fetch_rate()
-        except Exception:
-            logger.exception("exchange rate fetch failed on both sources")
-            if _fx["rate"] is None or now - _fx["fetched_at"] > _FX_MAX_AGE:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Could not get today's dollar to rupee rate. Try again in a minute.",
-                )
-            return _fx["rate"], _fx["fetched_at"]
-
-        await execute(
-            """
-            INSERT INTO fx_rates (pair, rate, source, fetched_at)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (pair) DO UPDATE
-               SET rate = EXCLUDED.rate,
-                   source = EXCLUDED.source,
-                   fetched_at = EXCLUDED.fetched_at
-            """,
-            _FX_PAIR,
-            rate,
-            source,
-            now,
-        )
-        _fx.update(rate=rate, fetched_at=now, source=source)
-        return rate, now
-
-
-def price_usd() -> int:
-    return get_settings().full_access_price_usd
+def price_inr() -> int:
+    """The plan price in whole rupees, before Razorpay's fee."""
+    return get_settings().full_access_price_inr
 
 
 def fee_rate() -> Decimal:
@@ -187,19 +91,19 @@ def fee_rate() -> Decimal:
     )
 
 
-def quote(usd: int, rate: Decimal) -> dict[str, int]:
+def quote(plan: int) -> dict[str, int]:
     """
-    The rupee amounts for a dollar price, in whole rupees.
+    What the buyer pays for a plan price, in whole rupees.
 
-    plan   the dollar price at today's rate, rounded up
+    plan   the plan price
     fee    what the buyer adds for Razorpay's fee
     total  what the buyer pays
 
     Razorpay keeps its fee as a share of the whole payment, not of the plan
     price, so the total is grossed up: total = plan / (1 - fee rate). After
     Razorpay takes its share of the total, the plan price is what is left.
+    For 19,999 that is a total of 20,483: Razorpay keeps 483.40 of it.
     """
-    plan = int(math.ceil(Decimal(usd) * rate))
     total = int(math.ceil(Decimal(plan) / (1 - fee_rate())))
     return {"plan": plan, "fee": total - plan, "total": total}
 
@@ -241,9 +145,7 @@ async def _razorpay(method: str, path: str, body: dict | None = None) -> dict:
 
 async def create_order(user_id: str, email: str | None) -> dict:
     """A Razorpay order for full access in rupees, recorded as 'created'."""
-    usd = price_usd()
-    rate, _ = await usd_inr()
-    amounts = quote(usd, rate)
+    amounts = quote(price_inr())
     order = await _razorpay(
         "POST",
         "/orders",
@@ -257,8 +159,6 @@ async def create_order(user_id: str, email: str | None) -> dict:
                 "sku": SKU,
                 "user_id": user_id,
                 "email": email or "",
-                "price_usd": str(usd),
-                "usd_inr_rate": str(rate),
                 "plan_inr": str(amounts["plan"]),
                 "gateway_charges_inr": str(amounts["fee"]),
             },
@@ -267,22 +167,20 @@ async def create_order(user_id: str, email: str | None) -> dict:
     await execute(
         """
         INSERT INTO payments
-            (user_id, email, sku, provider, status, price_usd, amount, plan_amount,
-             fee_amount, currency, fx_rate, order_id, livemode)
-        VALUES (%s, %s, %s, 'razorpay', 'created', %s, %s, %s, %s, 'INR', %s, %s, %s)
+            (user_id, email, sku, provider, status, amount, plan_amount,
+             fee_amount, currency, order_id, livemode)
+        VALUES (%s, %s, %s, 'razorpay', 'created', %s, %s, %s, 'INR', %s, %s)
         """,
         user_id,
         email,
         SKU,
-        usd,
         order["amount"],
         amounts["plan"] * 100,
         amounts["fee"] * 100,
-        rate,
         order["id"],
         livemode(),
     )
-    return {"order": order, "amounts": amounts, "rate": rate, "usd": usd}
+    return {"order": order, "amounts": amounts}
 
 
 async def fetch_payment(payment_id: str) -> dict:
@@ -520,9 +418,9 @@ async def set_access(user_id: str, access: str, admin_id: str, email: str | None
             cur = await conn.execute(
                 """
                 INSERT INTO payments
-                    (user_id, email, sku, provider, status, price_usd, amount, currency,
+                    (user_id, email, sku, provider, status, amount, currency,
                      livemode, actor_id, note, paid_at)
-                VALUES (%s, %s, %s, 'admin', %s, %s, 0, 'INR', true, %s, %s,
+                VALUES (%s, %s, %s, 'admin', %s, 0, 'INR', true, %s, %s,
                         CASE WHEN %s THEN now() END)
              RETURNING id
                 """,
@@ -531,7 +429,6 @@ async def set_access(user_id: str, access: str, admin_id: str, email: str | None
                     email,
                     SKU,
                     "granted" if grant else "revoked",
-                    price_usd(),
                     admin_id,
                     "Full access given by an admin" if grant else "Access removed by an admin",
                     grant,
@@ -553,7 +450,7 @@ async def payments_of(user_id: str) -> list[dict]:
     checkout attempts are left out; they are noise to the person reading."""
     return await fetch_all(
         """
-        SELECT id::text, provider, status, price_usd, amount, plan_amount, fee_amount,
+        SELECT id::text, provider, status, amount, plan_amount, fee_amount,
                currency, order_id, payment_id, method, livemode, note, paid_at,
                created_at
           FROM payments

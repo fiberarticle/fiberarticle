@@ -349,15 +349,13 @@ async def _create_schema(conn) -> None:
             sku TEXT NOT NULL DEFAULT 'full_access',
             provider TEXT NOT NULL,
             status TEXT NOT NULL,
-            price_usd INT NOT NULL,
             -- In paise. amount is what the buyer is charged: plan_amount (the
-            -- dollar price in rupees) plus fee_amount (Razorpay's fee, which
-            -- the buyer pays so the full plan price reaches the account).
+            -- plan price) plus fee_amount (Razorpay's fee, which the buyer
+            -- pays so the full plan price reaches the account).
             amount INT NOT NULL DEFAULT 0,
             plan_amount INT NOT NULL DEFAULT 0,
             fee_amount INT NOT NULL DEFAULT 0,
             currency TEXT NOT NULL DEFAULT 'INR',
-            fx_rate NUMERIC(12, 4),
             order_id TEXT UNIQUE,
             payment_id TEXT UNIQUE,
             method TEXT,
@@ -374,15 +372,24 @@ async def _create_schema(conn) -> None:
     await conn.execute(
         "CREATE INDEX IF NOT EXISTS payments_user_idx ON payments (user_id, created_at DESC)"
     )
-    # Last good USD to INR rate, so a restart or a rate service outage does
-    # not stop anyone from paying.
+    # Full access was first priced in US dollars and turned into rupees at the
+    # day's exchange rate. It is priced in rupees now, so the dollar columns
+    # and the saved rate go. Checked first, like the access column above, so
+    # a database that is already clean is not locked for nothing.
     await conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS fx_rates (
-            pair TEXT PRIMARY KEY,
-            rate NUMERIC(12, 4) NOT NULL,
-            source TEXT NOT NULL,
-            fetched_at TIMESTAMPTZ NOT NULL
-        )
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'payments'
+                   AND column_name IN ('price_usd', 'fx_rate')
+            ) THEN
+                ALTER TABLE payments DROP COLUMN IF EXISTS price_usd,
+                                     DROP COLUMN IF EXISTS fx_rate;
+            END IF;
+        END $$
         """
     )
+    await conn.execute("DROP TABLE IF EXISTS fx_rates")

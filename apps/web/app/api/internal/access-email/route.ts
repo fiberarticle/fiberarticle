@@ -47,7 +47,6 @@ interface ClaimedRow {
   status: string;
   payment_id: string | null;
   method: string | null;
-  price_usd: number;
   amount: number;
   plan_amount: number;
   fee_amount: number;
@@ -73,7 +72,7 @@ export async function POST(request: Request) {
      WHERE id = ${id}::uuid
        AND receipt_sent_at IS NULL
        AND status IN ('paid', 'granted')
- RETURNING id::text, user_id, status, payment_id, method, price_usd, amount,
+ RETURNING id::text, user_id, status, payment_id, method, amount,
            plan_amount, fee_amount, paid_at`;
   const row = claimed[0];
   if (!row) return json({ ok: true, sent: false });
@@ -93,7 +92,6 @@ export async function POST(request: Request) {
             paymentId: row.payment_id ?? "",
             paidAt: row.paid_at ?? new Date(),
             method: row.method,
-            priceUsd: row.price_usd,
             planInr: Math.round(row.plan_amount / 100),
             feeInr: Math.round(row.fee_amount / 100),
             totalInr: Math.round(row.amount / 100),

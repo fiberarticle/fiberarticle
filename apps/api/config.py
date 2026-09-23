@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
 
-    # Full access is one SKU, priced in US dollars and charged in rupees at
-    # the day's exchange rate.
-    full_access_price_usd: int = 200
+    # Full access is one SKU, priced and charged in Indian rupees (whole
+    # rupees). Razorpay's fee is added on top of it, see billing.quote().
+    full_access_price_inr: int = 19999
 
     # Razorpay takes its fee out of every payment. The buyer pays it on top
     # of the plan price, so the full plan price reaches the account: 2%

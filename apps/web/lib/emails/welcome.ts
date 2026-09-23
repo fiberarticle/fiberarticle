@@ -22,7 +22,7 @@ const STEPS = [
   {
     color: "#FCA91E",
     title: "Unlock full access",
-    body: "Every feature opens with a single one-time payment. You pay in rupees at the day's rate, and there is nothing to renew.",
+    body: "Every feature opens with a single one-time payment, and there is nothing to renew.",
   },
   {
     color: "#50C158",

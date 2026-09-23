@@ -31,27 +31,19 @@ _MAX_ORDERS_PER_HOUR = 12
 
 
 class Price(BaseModel):
-    usd: int
-    # Whole rupees. The three are null when today's exchange rate could not
-    # be fetched; the page then shows the dollar price alone and the checkout
-    # retries the rate.
-    #   plan_inr   the dollar price at today's rate
+    # Whole rupees.
+    #   plan_inr   the plan price
     #   fee_inr    Razorpay's fee, which the buyer pays on top
     #   total_inr  what the buyer is charged
-    plan_inr: int | None
-    fee_inr: int | None
-    total_inr: int | None
-    # Razorpay's share of a payment, as a percentage (2.36 = 2% + 18% GST).
-    fee_percent: float
-    usd_inr_rate: float | None
-    rate_fetched_at: datetime | None
+    plan_inr: int
+    fee_inr: int
+    total_inr: int
 
 
 class LedgerRow(BaseModel):
     id: str
     provider: str
     status: str
-    price_usd: int
     amount: int
     plan_amount: int
     fee_amount: int
@@ -84,8 +76,6 @@ class OrderOut(BaseModel):
     plan_inr: int
     fee_inr: int
     total_inr: int
-    price_usd: int
-    usd_inr_rate: float
     name: str
     email: str
     description: str
@@ -97,30 +87,12 @@ class VerifyIn(BaseModel):
     razorpay_signature: str = Field(min_length=16, max_length=256)
 
 
-async def _price() -> Price:
-    usd = billing.price_usd()
-    fee_percent = float(round(billing.fee_rate() * 100, 2))
-    try:
-        rate, fetched_at = await billing.usd_inr()
-    except HTTPException:
-        return Price(
-            usd=usd,
-            plan_inr=None,
-            fee_inr=None,
-            total_inr=None,
-            fee_percent=fee_percent,
-            usd_inr_rate=None,
-            rate_fetched_at=None,
-        )
-    amounts = billing.quote(usd, rate)
+def _price() -> Price:
+    amounts = billing.quote(billing.price_inr())
     return Price(
-        usd=usd,
         plan_inr=amounts["plan"],
         fee_inr=amounts["fee"],
         total_inr=amounts["total"],
-        fee_percent=fee_percent,
-        usd_inr_rate=float(rate),
-        rate_fetched_at=fetched_at,
     )
 
 
@@ -143,7 +115,7 @@ async def _status(claims: dict) -> BillingStatus:
     return BillingStatus(
         access="full" if is_admin or access == "full" else "locked",
         via=via,
-        price=await _price(),
+        price=_price(),
         payments_open=billing.payments_open(),
         history=[LedgerRow(**r) for r in history],
     )
@@ -190,11 +162,9 @@ async def create_order(claims: dict = Depends(get_current_claims)) -> OrderOut:
         plan_inr=amounts["plan"],
         fee_inr=amounts["fee"],
         total_inr=amounts["total"],
-        price_usd=made["usd"],
-        usd_inr_rate=float(made["rate"]),
         name=(user or {}).get("name") or "",
         email=email,
-        description=f"Full access, one-time payment (US${made['usd']} plus gateway charges)",
+        description="Full access, one-time payment",
     )
 
 

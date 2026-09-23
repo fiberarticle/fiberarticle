@@ -17,7 +17,7 @@ import { FiberMark } from "@/components/wordmark";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatRupees, formatUsd } from "@/lib/access";
+import { formatRupees } from "@/lib/access";
 import { apiFetch, ApiError } from "@/lib/api";
 import type { BillingStatus } from "@/lib/types";
 import { useUnlock } from "@/lib/unlock";
@@ -208,8 +208,8 @@ export function Paywall({ userName }: { userName: string }) {
             </p>
             <div className="mt-2 flex items-end gap-2">
               {price ? (
-                <span className="text-5xl font-semibold tracking-tight">
-                  {formatUsd(price.usd)}
+                <span className="text-5xl font-semibold tracking-tight tabular-nums">
+                  {formatRupees(price.plan_inr)}
                 </span>
               ) : (
                 <Skeleton className="h-12 w-28" />
@@ -226,14 +226,10 @@ export function Paywall({ userName }: { userName: string }) {
                   <Skeleton className="h-4 w-5/6" />
                   <Skeleton className="h-4 w-2/3" />
                 </>
-              ) : price.total_inr !== null &&
-                price.plan_inr !== null &&
-                price.fee_inr !== null ? (
+              ) : (
                 <>
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      Plan price in rupees
-                    </span>
+                    <span className="text-muted-foreground">Plan price</span>
                     <span className="tabular-nums">
                       {formatRupees(price.plan_inr)}
                     </span>
@@ -253,11 +249,6 @@ export function Paywall({ userName }: { userName: string }) {
                     </span>
                   </div>
                 </>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  The amount in rupees, with payment gateway charges, is shown
-                  at checkout.
-                </p>
               )}
             </div>
 
@@ -292,8 +283,8 @@ export function Paywall({ userName }: { userName: string }) {
             )}
 
             <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-              Pay by UPI, card, netbanking or wallet through Razorpay. All sales
-              are final: there are no refunds. By paying you agree to the{" "}
+              Pay by UPI, card, netbanking or wallet through Razorpay. By paying
+              you agree to the{" "}
               <a
                 href={TERMS_URL}
                 target="_blank"
