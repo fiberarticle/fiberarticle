@@ -20,7 +20,7 @@ from models import (
     ExtractionOut,
     ExtractionUpdate,
 )
-from security import CurrentUser
+from security import PaidUser
 
 router = APIRouter(prefix="/v1/extractions", tags=["extractions"])
 
@@ -165,7 +165,7 @@ async def _run_extraction(extraction_id: str, user_id: str) -> None:
 
 
 @router.get("", response_model=list[ExtractionOut])
-async def list_extractions(user_id: str = CurrentUser) -> list[ExtractionOut]:
+async def list_extractions(user_id: str = PaidUser) -> list[ExtractionOut]:
     rows = await fetch_all(
         "SELECT * FROM extractions WHERE user_id = %s ORDER BY created_at DESC LIMIT 50",
         user_id,
@@ -175,7 +175,7 @@ async def list_extractions(user_id: str = CurrentUser) -> list[ExtractionOut]:
 
 @router.post("", response_model=ExtractionOut, status_code=201)
 async def create_extraction(
-    body: ExtractionCreateIn, user_id: str = CurrentUser
+    body: ExtractionCreateIn, user_id: str = PaidUser
 ) -> ExtractionOut:
     try:
         await resolve_llm(user_id)
@@ -222,14 +222,14 @@ async def create_extraction(
 
 @router.get("/{extraction_id}", response_model=ExtractionOut)
 async def get_extraction(
-    extraction_id: str, user_id: str = CurrentUser
+    extraction_id: str, user_id: str = PaidUser
 ) -> ExtractionOut:
     return _extraction_out(await _get_owned(extraction_id, user_id))
 
 
 @router.patch("/{extraction_id}", response_model=ExtractionOut)
 async def update_extraction(
-    extraction_id: str, body: ExtractionUpdate, user_id: str = CurrentUser
+    extraction_id: str, body: ExtractionUpdate, user_id: str = PaidUser
 ) -> ExtractionOut:
     await _get_owned(extraction_id, user_id)
     if body.name is not None:
@@ -248,14 +248,14 @@ async def update_extraction(
 
 
 @router.delete("/{extraction_id}", status_code=204)
-async def delete_extraction(extraction_id: str, user_id: str = CurrentUser) -> None:
+async def delete_extraction(extraction_id: str, user_id: str = PaidUser) -> None:
     await _get_owned(extraction_id, user_id)
     await execute("DELETE FROM extractions WHERE id = %s", extraction_id)
 
 
 @router.get("/{extraction_id}/export")
 async def export_extraction(
-    extraction_id: str, user_id: str = CurrentUser
+    extraction_id: str, user_id: str = PaidUser
 ) -> Response:
     row = await _get_owned(extraction_id, user_id)
     columns = [c["name"] for c in row["columns"]]

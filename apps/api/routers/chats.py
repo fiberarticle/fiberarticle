@@ -20,7 +20,7 @@ from models import (
     ConversationOut,
     ConversationUpdate,
 )
-from security import CurrentUser
+from security import PaidUser
 
 logger = logging.getLogger("fiberarticle.chats")
 
@@ -59,7 +59,7 @@ async def _get_owned_conversation(conversation_id: str, user_id: str) -> dict:
 
 
 @router.get("", response_model=list[ConversationOut])
-async def list_conversations(user_id: str = CurrentUser) -> list[ConversationOut]:
+async def list_conversations(user_id: str = PaidUser) -> list[ConversationOut]:
     rows = await fetch_all(
         """
         SELECT c.*, p.title AS paper_title
@@ -74,7 +74,7 @@ async def list_conversations(user_id: str = CurrentUser) -> list[ConversationOut
 
 @router.post("", response_model=ConversationOut, status_code=201)
 async def create_conversation(
-    body: ConversationCreateIn, user_id: str = CurrentUser
+    body: ConversationCreateIn, user_id: str = PaidUser
 ) -> ConversationOut:
     paper_title = None
     if body.scope == "paper":
@@ -108,7 +108,7 @@ async def create_conversation(
 
 @router.patch("/{conversation_id}", response_model=ConversationOut)
 async def update_conversation(
-    conversation_id: str, body: ConversationUpdate, user_id: str = CurrentUser
+    conversation_id: str, body: ConversationUpdate, user_id: str = PaidUser
 ) -> ConversationOut:
     await _get_owned_conversation(conversation_id, user_id)
     if body.title is not None:
@@ -128,7 +128,7 @@ async def update_conversation(
 
 @router.delete("/{conversation_id}", status_code=204)
 async def delete_conversation(
-    conversation_id: str, user_id: str = CurrentUser
+    conversation_id: str, user_id: str = PaidUser
 ) -> None:
     await _get_owned_conversation(conversation_id, user_id)
     await execute("DELETE FROM conversations WHERE id = %s", conversation_id)
@@ -141,7 +141,7 @@ _FALLBACK_CONTEXT_WINDOW = 128_000
 
 @router.get("/{conversation_id}/context")
 async def conversation_context(
-    conversation_id: str, user_id: str = CurrentUser
+    conversation_id: str, user_id: str = PaidUser
 ) -> dict:
     """Approximate context-window usage for the next turn: the system prompt
     plus the rolling message history the agent will actually send."""
@@ -186,7 +186,7 @@ async def conversation_context(
 
 @router.get("/{conversation_id}/messages", response_model=list[ChatMessageOut])
 async def list_messages(
-    conversation_id: str, user_id: str = CurrentUser
+    conversation_id: str, user_id: str = PaidUser
 ) -> list[ChatMessageOut]:
     await _get_owned_conversation(conversation_id, user_id)
     rows = await fetch_all(
@@ -241,7 +241,7 @@ async def _finish_exchange(
 
 @router.post("/{conversation_id}/messages/stream")
 async def send_message_stream(
-    conversation_id: str, body: ChatMessageIn, user_id: str = CurrentUser
+    conversation_id: str, body: ChatMessageIn, user_id: str = PaidUser
 ) -> StreamingResponse:
     """Same exchange as POST /messages, but as an SSE stream: every agent
     step is sent the moment it happens (live chain of thought), and closing
@@ -376,7 +376,7 @@ async def send_message_stream(
 
 @router.post("/{conversation_id}/messages", response_model=list[ChatMessageOut])
 async def send_message(
-    conversation_id: str, body: ChatMessageIn, user_id: str = CurrentUser
+    conversation_id: str, body: ChatMessageIn, user_id: str = PaidUser
 ) -> list[ChatMessageOut]:
     conversation = await _get_owned_conversation(conversation_id, user_id)
     try:

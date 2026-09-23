@@ -25,7 +25,7 @@ from models import (
     SectionEditIn,
     SectionEditOut,
 )
-from security import CurrentUser
+from security import PaidUser
 from writer.generate import (
     PLANNED_SECTION_COUNT,
     cancel_generation,
@@ -119,7 +119,7 @@ async def _document_out(row: dict, user_id: str) -> DocumentOut:
 
 @router.post("/runs/{run_id}/document", response_model=DocumentOut, status_code=201)
 async def create_document(
-    run_id: str, body: DocumentCreate, user_id: str = CurrentUser
+    run_id: str, body: DocumentCreate, user_id: str = PaidUser
 ) -> DocumentOut:
     run = await fetch_one(
         "SELECT * FROM runs WHERE id = %s AND user_id = %s", run_id, user_id
@@ -155,7 +155,7 @@ async def create_document(
 
 
 @router.get("/documents", response_model=list[DocumentListItem])
-async def list_documents(user_id: str = CurrentUser) -> list[DocumentListItem]:
+async def list_documents(user_id: str = PaidUser) -> list[DocumentListItem]:
     rows = await fetch_all(
         "SELECT * FROM documents WHERE user_id = %s ORDER BY created_at DESC LIMIT 100",
         user_id,
@@ -176,14 +176,14 @@ async def list_documents(user_id: str = CurrentUser) -> list[DocumentListItem]:
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOut)
-async def get_document(document_id: str, user_id: str = CurrentUser) -> DocumentOut:
+async def get_document(document_id: str, user_id: str = PaidUser) -> DocumentOut:
     row = await _get_owned_document(document_id, user_id)
     return await _document_out(row, user_id)
 
 
 @router.put("/documents/{document_id}", response_model=DocumentOut)
 async def update_document(
-    document_id: str, body: DocumentUpdate, user_id: str = CurrentUser
+    document_id: str, body: DocumentUpdate, user_id: str = PaidUser
 ) -> DocumentOut:
     row = await _get_owned_document(document_id, user_id)
     # Content edits must wait for generation (the writer owns the sections),
@@ -229,7 +229,7 @@ async def update_document(
 
 @router.post("/documents/{document_id}/cancel", response_model=DocumentOut)
 async def cancel_document_generation(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> DocumentOut:
     """Stop generation without destroying anything: sections written so far
     are kept and the document becomes editable."""
@@ -246,14 +246,14 @@ async def cancel_document_generation(
 
 
 @router.delete("/documents/{document_id}", status_code=204)
-async def delete_document(document_id: str, user_id: str = CurrentUser) -> None:
+async def delete_document(document_id: str, user_id: str = PaidUser) -> None:
     await _get_owned_document(document_id, user_id)
     await execute("DELETE FROM documents WHERE id = %s", document_id)
 
 
 @router.post("/documents/{document_id}/edit", response_model=SectionEditOut)
 async def edit_section(
-    document_id: str, body: SectionEditIn, user_id: str = CurrentUser
+    document_id: str, body: SectionEditIn, user_id: str = PaidUser
 ) -> SectionEditOut:
     row = await _get_owned_document(document_id, user_id)
     sections = row["sections"] or []
@@ -383,7 +383,7 @@ async def _exportable(document_id: str, user_id: str) -> dict:
 
 
 @router.get("/documents/{document_id}/export")
-async def export_document(document_id: str, user_id: str = CurrentUser) -> Response:
+async def export_document(document_id: str, user_id: str = PaidUser) -> Response:
     row = await _exportable(document_id, user_id)
     papers, _, numeric, references, intext = await _export_bundle(row, user_id)
     data = render_docx(
@@ -404,7 +404,7 @@ async def export_document(document_id: str, user_id: str = CurrentUser) -> Respo
 
 @router.get("/documents/{document_id}/export-pdf")
 async def export_document_pdf(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> Response:
     row = await _exportable(document_id, user_id)
     papers, _, numeric, references, intext = await _export_bundle(row, user_id)
@@ -426,7 +426,7 @@ async def export_document_pdf(
 
 @router.get("/documents/{document_id}/export-html")
 async def export_document_html(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> Response:
     row = await _exportable(document_id, user_id)
     papers, _, numeric, references, intext = await _export_bundle(row, user_id)
@@ -448,7 +448,7 @@ async def export_document_html(
 
 @router.get("/documents/{document_id}/export-doc")
 async def export_document_doc(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> Response:
     """Legacy Word .doc: Word opens HTML documents natively, so this serves
     the HTML render (single-column variant) with the msword content type."""
@@ -473,7 +473,7 @@ async def export_document_doc(
 
 @router.get("/documents/{document_id}/bibliography", response_model=BibliographyOut)
 async def document_bibliography(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> BibliographyOut:
     """Rendered reference entries in the document's effective citation style,
     so the editor page can show the reference list exactly as exported."""
@@ -493,7 +493,7 @@ async def document_bibliography(
 
 @router.post("/documents/{document_id}/chat", response_model=DocumentChatOut)
 async def document_chat(
-    document_id: str, body: DocumentChatIn, user_id: str = CurrentUser
+    document_id: str, body: DocumentChatIn, user_id: str = PaidUser
 ) -> DocumentChatOut:
     """One AI side-panel turn: answer the user and, when asked, edit the
     document (rewrite/insert/delete sections) server-side in the same turn."""
@@ -557,7 +557,7 @@ async def document_chat(
 
 @router.get("/documents/{document_id}/export-latex")
 async def export_document_latex(
-    document_id: str, user_id: str = CurrentUser
+    document_id: str, user_id: str = PaidUser
 ) -> Response:
     row = await _get_owned_document(document_id, user_id)
     if row["status"] != "ready":

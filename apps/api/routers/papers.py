@@ -8,7 +8,7 @@ from ingest.service import (
     insert_paper,
 )
 from models import PaperDetailOut, PaperOut
-from security import CurrentUser
+from security import PaidUser
 
 router = APIRouter(prefix="/v1", tags=["papers"])
 
@@ -51,7 +51,7 @@ async def _get_owned_paper(paper_id: str, user_id: str) -> dict:
 @router.get("/papers", response_model=list[PaperDetailOut])
 async def list_papers(
     q: str | None = Query(default=None, max_length=300),
-    user_id: str = CurrentUser,
+    user_id: str = PaidUser,
 ) -> list[PaperDetailOut]:
     if q:
         rows = await fetch_all(
@@ -86,7 +86,7 @@ _TEXT_EXTENSIONS = {".txt", ".md"}
 
 @router.post("/papers/upload", response_model=PaperDetailOut, status_code=201)
 async def upload_paper(
-    file: UploadFile = File(...), user_id: str = CurrentUser
+    file: UploadFile = File(...), user_id: str = PaidUser
 ) -> PaperDetailOut:
     name = (file.filename or "").lower()
     extension = "." + name.rsplit(".", 1)[-1] if "." in name else ""

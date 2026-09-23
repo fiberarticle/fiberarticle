@@ -16,7 +16,7 @@ from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from llm.titles import schedule_title
 from models import PaperOut, ReviewOut, RunCreate, RunDetailOut, RunOut, RunUpdate
-from security import CurrentUser
+from security import PaidUser
 
 logger = logging.getLogger("fiberarticle.runs")
 
@@ -65,7 +65,7 @@ def _run_out(row: dict) -> RunOut:
 
 
 @router.post("", response_model=RunOut, status_code=201)
-async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
+async def create_run(body: RunCreate, user_id: str = PaidUser) -> RunOut:
     try:
         await resolve_llm(user_id)
     except LlmNotConfigured as exc:
@@ -107,7 +107,7 @@ async def create_run(body: RunCreate, user_id: str = CurrentUser) -> RunOut:
 
 @router.get("", response_model=list[RunOut])
 async def list_runs(
-    mode: str | None = None, user_id: str = CurrentUser
+    mode: str | None = None, user_id: str = PaidUser
 ) -> list[RunOut]:
     condition = "AND r.mode = %s" if mode in ("research", "literature_review") else ""
     args = [user_id] + ([mode] if condition else [])
@@ -140,7 +140,7 @@ async def _get_owned_run(run_id: str, user_id: str) -> dict:
 
 
 @router.get("/{run_id}", response_model=RunDetailOut)
-async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
+async def get_run(run_id: str, user_id: str = PaidUser) -> RunDetailOut:
     row = await _get_owned_run(run_id, user_id)
     papers = await fetch_all(
         "SELECT * FROM papers WHERE run_id = %s AND user_id = %s ORDER BY created_at",
@@ -171,7 +171,7 @@ async def get_run(run_id: str, user_id: str = CurrentUser) -> RunDetailOut:
 
 
 @router.get("/{run_id}/review.csv")
-async def export_review_matrix(run_id: str, user_id: str = CurrentUser) -> Response:
+async def export_review_matrix(run_id: str, user_id: str = PaidUser) -> Response:
     """The evidence matrix as a spreadsheet: one row per reviewed paper, the
     paper details, the implementation, and the limitations and gaps."""
     row = await _get_owned_run(run_id, user_id)
@@ -241,7 +241,7 @@ async def export_review_matrix(run_id: str, user_id: str = CurrentUser) -> Respo
 
 @router.patch("/{run_id}", response_model=RunOut)
 async def update_run(
-    run_id: str, body: RunUpdate, user_id: str = CurrentUser
+    run_id: str, body: RunUpdate, user_id: str = PaidUser
 ) -> RunOut:
     await _get_owned_run(run_id, user_id)
     if body.title is not None:
@@ -260,7 +260,7 @@ async def update_run(
 
 
 @router.post("/{run_id}/cancel", response_model=RunOut)
-async def cancel_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+async def cancel_run(run_id: str, user_id: str = PaidUser) -> RunOut:
     """Non-destructive stop: the run is marked cancelled and everything
     collected so far (papers, events, partial report) is kept."""
     row = await _get_owned_run(run_id, user_id)
@@ -280,7 +280,7 @@ async def cancel_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
 
 
 @router.post("/{run_id}/resume", response_model=RunOut)
-async def resume_failed_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+async def resume_failed_run(run_id: str, user_id: str = PaidUser) -> RunOut:
     """Continue a failed run from the stage it died in. The state saved after
     every completed stage is restored, so finished work is never redone."""
     row = await _get_owned_run(run_id, user_id)
@@ -363,7 +363,7 @@ async def resume_failed_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
 
 
 @router.post("/{run_id}/retry", response_model=RunOut)
-async def retry_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
+async def retry_run(run_id: str, user_id: str = PaidUser) -> RunOut:
     """Start the run over from scratch: everything the failed attempt
     collected is wiped and the same topic runs again."""
     row = await _get_owned_run(run_id, user_id)
@@ -404,7 +404,7 @@ async def retry_run(run_id: str, user_id: str = CurrentUser) -> RunOut:
 
 
 @router.delete("/{run_id}", status_code=204)
-async def delete_run(run_id: str, user_id: str = CurrentUser) -> None:
+async def delete_run(run_id: str, user_id: str = PaidUser) -> None:
     # Papers, chunks, and events cascade; documents keep their sections and
     # just lose the run link (run_id SET NULL). A still-running task fails
     # its next write harmlessly and stops.
@@ -413,7 +413,7 @@ async def delete_run(run_id: str, user_id: str = CurrentUser) -> None:
 
 
 @router.get("/{run_id}/events")
-async def stream_events(run_id: str, user_id: str = CurrentUser) -> StreamingResponse:
+async def stream_events(run_id: str, user_id: str = PaidUser) -> StreamingResponse:
     await _get_owned_run(run_id, user_id)
 
     async def generate():

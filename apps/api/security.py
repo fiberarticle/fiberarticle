@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK
 
+from billing import LOCKED_MESSAGE, access_of
 from config import get_settings
 
 _jwks_cache: dict = {"keys": None, "fetched_at": 0.0}
@@ -108,8 +109,30 @@ async def get_admin_user_id(request: Request) -> str:
     return claims["sub"]
 
 
+async def get_paid_user_id(request: Request) -> str:
+    """
+    Gate for every feature route: the caller must have full access.
+
+    Full access comes from the one-time payment or from an admin grant, and
+    lives in "user".access. It is read from the database, not the token, so an
+    unlock applies the moment the payment is recorded and a removal applies
+    at once too. Admins always pass.
+
+    402 Payment Required is the honest status here: the account is fine, the
+    feature is paid. The web app shows its unlock page for any locked account
+    before these routes are ever called, so this is the enforcement behind it.
+    """
+    claims = await get_current_claims(request)
+    if claims.get("role") == "admin":
+        return claims["sub"]
+    if await access_of(claims["sub"]) != "full":
+        raise HTTPException(status_code=402, detail=LOCKED_MESSAGE)
+    return claims["sub"]
+
+
 CurrentUser = Depends(get_current_user_id)
 AdminUser = Depends(get_admin_user_id)
+PaidUser = Depends(get_paid_user_id)
 
 
 def _master_key() -> bytes:
