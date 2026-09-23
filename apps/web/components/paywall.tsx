@@ -252,18 +252,11 @@ export function Paywall({ userName }: { userName: string }) {
                       {formatRupees(price.total_inr)}
                     </span>
                   </div>
-                  {price.usd_inr_rate !== null && (
-                    <p className="text-xs text-muted-foreground">
-                      At today&apos;s rate of 1 USD = ₹
-                      {price.usd_inr_rate.toFixed(2)}. The gateway charges are
-                      Razorpay&apos;s {price.fee_percent}% fee.
-                    </p>
-                  )}
                 </>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  The rupee amount, at today&apos;s rate plus Razorpay&apos;s{" "}
-                  {price.fee_percent}% gateway charges, is shown at checkout.
+                  The amount in rupees, with payment gateway charges, is shown
+                  at checkout.
                 </p>
               )}
             </div>
@@ -324,7 +317,8 @@ export function Paywall({ userName }: { userName: string }) {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Want us to do the research and the writing for you instead? Write to{" "}
+          Want us to do the research and manuscript preparation for you
+          instead? Write to{" "}
           <a
             href="mailto:admin@fiberarticle.com"
             className="font-medium text-primary hover:underline"
