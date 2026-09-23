@@ -8,6 +8,8 @@ const TEMPLATES = [
   ["verify-email", "Email verification, six digit code"],
   ["password-reset", "Password reset request"],
   ["password-changed", "Password changed, security notice"],
+  ["full-access", "Full access after a payment, with the receipt"],
+  ["full-access-grant", "Full access given by an admin"],
 ] as const;
 
 export async function GET() {

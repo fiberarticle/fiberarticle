@@ -21,8 +21,8 @@ export interface WelcomeEmailProps {
 const STEPS = [
   {
     color: "#FCA91E",
-    title: "Choose how you want to run the model",
-    body: "Fiberarticle AI needs no setup at all. You can also bring your own key, or point us at a local model you already run.",
+    title: "Unlock full access",
+    body: "Every feature opens with a single one-time payment. You pay in rupees at the day's rate, and there is nothing to renew.",
   },
   {
     color: "#50C158",
@@ -55,7 +55,7 @@ export function welcomeEmail({ firstName }: WelcomeEmailProps): RenderedEmail {
     // the numbered list that follows.
     `<tr><td class="sh d-accent" style="padding:0 44px 20px 44px;font-family:'Bricolage Grotesque','Helvetica Neue',Helvetica,Arial,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:15px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#8A4A03;">Three steps to your first draft</td></tr>`,
     numberedSteps(STEPS),
-    button(url, "Start your first run", "primary", 32),
+    button(url, "Unlock Fiberarticle", "primary", 32),
     paragraph(
       "Everything Fiberarticle writes stays tied to the sources it read, so you can open any citation and check it yourself before the paper leaves your hands.",
       30
@@ -86,7 +86,7 @@ export function welcomeEmail({ firstName }: WelcomeEmailProps): RenderedEmail {
       "Three steps to your first draft:",
       ...STEPS.map((step, index) => `${index + 1}. ${step.title}. ${step.body}`),
       "",
-      `Start your first run: ${url}`,
+      `Unlock Fiberarticle: ${url}`,
       "",
       `You are receiving this because a Fiberarticle account was created for this address at ${host}.`,
     ].join("\n"),

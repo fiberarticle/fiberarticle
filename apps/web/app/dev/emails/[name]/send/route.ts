@@ -1,5 +1,6 @@
 import { sendRendered } from "@/lib/email";
 import {
+  fullAccessEmail,
   passwordChangedEmail,
   passwordResetEmail,
   verifyEmail,
@@ -38,6 +39,22 @@ const SAMPLES: Record<string, (to: string) => RenderedEmail> = {
       changedAt: new Date(),
       device: "Chrome on Windows",
     }),
+  "full-access": () =>
+    fullAccessEmail({
+      firstName: "Abdul",
+      via: "payment",
+      receipt: {
+        paymentId: "pay_SAMPLE1234567",
+        paidAt: new Date(),
+        method: "upi",
+        priceUsd: 200,
+        planInr: 16650,
+        feeInr: 403,
+        totalInr: 17053,
+      },
+    }),
+  "full-access-grant": () =>
+    fullAccessEmail({ firstName: "Abdul", via: "grant" }),
 };
 
 export async function GET(
