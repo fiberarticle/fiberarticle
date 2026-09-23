@@ -11,6 +11,7 @@ from db import execute
 from rag.embeddings import _get_model
 from routers import (
     admin,
+    billing,
     chats,
     citations,
     documents,
@@ -96,6 +97,7 @@ app.add_middleware(
 
 app.include_router(me.router)
 app.include_router(admin.router)
+app.include_router(billing.router)
 app.include_router(runs.router)
 app.include_router(papers.router)
 app.include_router(documents.router)
