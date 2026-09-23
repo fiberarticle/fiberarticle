@@ -26,7 +26,7 @@ export function ThemeToggle() {
     >
       {OPTIONS.map((option) => {
         const Icon = option.icon;
-        const active = mounted && (theme ?? "system") === option.value;
+        const active = mounted && (theme ?? "light") === option.value;
         return (
           <button
             key={option.value}

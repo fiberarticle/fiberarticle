@@ -39,7 +39,9 @@ export default function RootLayout({
       <body
         className={`${bricolage.variable} ${newsreader.variable} ${fasterOne.variable}`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {/* Light for everyone until they pick another theme in the sidebar
+            toggle. "System" stays available there as a choice. */}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
         </ThemeProvider>
       </body>
