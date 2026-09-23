@@ -140,7 +140,7 @@ export function Paywall({ userName }: { userName: string }) {
     <div className="flex min-h-[calc(100svh-9.5rem)] items-center justify-center md:min-h-[calc(100vh-8rem)]">
       <section className="flex w-full max-w-4xl flex-col gap-6 md:-mt-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <FiberMark size={40} />
+          <FiberMark size={64} />
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Unlock Fiberarticle
           </h1>
