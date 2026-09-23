@@ -123,7 +123,8 @@ export function useUnlock(onUnlocked: (status: BillingStatus) => void) {
         description: order.description,
         image: CHECKOUT_LOGO,
         prefill: { name: order.name, email: order.email },
-        theme: { color: "#9a6b45" },
+        // The logo palette's blue, the same accent the Assistant uses.
+        theme: { color: "#4f90e4" },
         modal: {
           // Closing by accident mid-payment is easy on a phone; ask first.
           confirm_close: true,
