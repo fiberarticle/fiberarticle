@@ -9,6 +9,7 @@ import {
   AGENTS,
   type AgentMode,
 } from "@/components/agent-composer";
+import { useLock } from "@/components/lock-gate";
 import { TextShimmer } from "@/components/prompt-kit/text-shimmer";
 import { Callout } from "@/components/ui/callout";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
@@ -29,6 +30,9 @@ function isAgentMode(value: string | null): value is AgentMode {
 
 export function Dashboard({ userName }: { userName: string }) {
   const router = useRouter();
+  // A locked account can look around here and type, but starting anything
+  // brings up the unlock page (the dashboard is the one page left open to it).
+  const { locked, showUnlock } = useLock();
   const [llmConfig, setLlmConfig] = useState<LlmConfig | null>(null);
   const [mode, setMode] = useState<AgentMode>("researcher");
   const [topic, setTopic] = useState("");
@@ -139,6 +143,10 @@ export function Dashboard({ userName }: { userName: string }) {
         setError("Ask a fuller question so the search has something to work with.");
         return;
       }
+      if (locked) {
+        showUnlock();
+        return;
+      }
       setStarting(true);
       const uploadedIds = await uploadAttachments();
       if (uploadedIds === null) {
@@ -157,6 +165,10 @@ export function Dashboard({ userName }: { userName: string }) {
 
     if (trimmed.length < 10) {
       setError("Describe your topic in at least 10 characters.");
+      return;
+    }
+    if (locked) {
+      showUnlock();
       return;
     }
     setStarting(true);

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   CircleCheck,
   ClipboardCheck,
   FileDown,
@@ -76,7 +77,15 @@ const FEATURES = [
  * from locked accounts as well (402), which is the part that actually
  * protects anything.
  */
-export function Paywall({ userName }: { userName: string }) {
+export function Paywall({
+  userName,
+  onBack,
+}: {
+  userName: string;
+  /** Set when the page was opened over the dashboard preview: shows a way
+   * back to it. */
+  onBack?: () => void;
+}) {
   const router = useRouter();
   const [status, setStatus] = React.useState<BillingStatus | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -139,6 +148,16 @@ export function Paywall({ userName }: { userName: string }) {
   return (
     <div className="flex min-h-[calc(100svh-9.5rem)] items-center justify-center md:min-h-[calc(100vh-8rem)]">
       <section className="flex w-full max-w-4xl flex-col gap-6 md:-mt-6">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="-mb-2 inline-flex w-fit cursor-pointer items-center gap-1.5 self-start text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Back to the dashboard
+          </button>
+        )}
         <div className="flex flex-col items-center gap-2 text-center">
           <FiberMark size={64} />
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
