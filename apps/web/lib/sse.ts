@@ -1,6 +1,6 @@
 "use client";
 
-import { getApiToken, apiUrl } from "@/lib/api";
+import { getApiToken, apiUrl, noteAccessLost } from "@/lib/api";
 import type { ChatMessage, ChatStep } from "@/lib/types";
 
 export interface SseHandle {
@@ -24,6 +24,7 @@ export function streamRunEvents(
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
+        noteAccessLost(res.status);
         throw new Error(`Event stream failed (${res.status})`);
       }
       const reader = res.body.getReader();
@@ -90,6 +91,7 @@ export function streamChatMessage(
         }
       );
       if (!res.ok || !res.body) {
+        noteAccessLost(res.status);
         let message = `The message failed to send (${res.status}).`;
         try {
           const data = await res.json();

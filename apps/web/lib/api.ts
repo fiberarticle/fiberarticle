@@ -31,6 +31,22 @@ export async function getApiToken(): Promise<string> {
   return data.token;
 }
 
+/**
+ * Fired on window when the API answers 402: the account no longer has full
+ * access (an admin removed it, or the payment was refunded). The app layout
+ * listens for it (components/access-watcher.tsx) and brings up the unlock
+ * page.
+ */
+export const ACCESS_LOST_EVENT = "fa:access-lost";
+
+/** Announces a 402 answer; see ACCESS_LOST_EVENT. For callers that use
+ * fetch directly instead of apiFetch (uploads, streams). */
+export function noteAccessLost(status: number): void {
+  if (status === 402 && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ACCESS_LOST_EVENT));
+  }
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -53,6 +69,7 @@ export async function apiFetch<T>(
     },
   });
   if (!res.ok) {
+    noteAccessLost(res.status);
     let message = `Request failed (${res.status})`;
     try {
       const body = await res.json();
