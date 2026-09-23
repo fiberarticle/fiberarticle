@@ -6,7 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ClipboardCheck,
   ChevronRight,
+  CreditCard,
   HatGlasses,
+  Lock,
   LogOut,
   Mail,
   Menu,
@@ -311,6 +313,7 @@ function Section({
   onOpenChange,
   activeHref,
   onMutate,
+  locked,
 }: {
   def: SectionDef;
   items: HistoryItem[];
@@ -323,8 +326,33 @@ function Section({
     update: (items: HistoryItem[]) => HistoryItem[],
     action: () => Promise<unknown>
   ) => void;
+  /** No history, a lock instead of the chevron: the account is not paid. */
+  locked: boolean;
 }) {
   const Icon = def.icon;
+
+  if (locked) {
+    const sectionActive =
+      activeHref === def.landing || activeHref.startsWith(def.landing + "/");
+    return (
+      <Link
+        href={def.landing}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-colors",
+          sectionActive
+            ? "bg-[color-mix(in_oklab,var(--primary)_12%,transparent)] font-medium text-primary"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+        )}
+      >
+        <Icon className="size-4 shrink-0" style={{ color: def.accent }} />
+        <span className="min-w-0 flex-1 truncate text-left">{def.label}</span>
+        <Lock
+          className="mr-1 size-3.5 shrink-0 text-muted-foreground/70"
+          aria-label="Locked"
+        />
+      </Link>
+    );
+  }
   // Pinned rows take the visible spots first; the newest unpinned rows
   // fill whatever remains of the cap. Everything else sits behind More.
   const pinned = items.filter((i) => i.pinned).slice(0, MAX_VISIBLE_ITEMS);
@@ -447,12 +475,16 @@ export function Sidebar({
   userName,
   userEmail,
   isAdmin = false,
+  locked = false,
 }: {
   userName: string;
   userEmail: string;
   /** Shows the Admin entry in the account menu. Cosmetic only: the page and
       the API both check the role again on the server. */
   isAdmin?: boolean;
+  /** The account has not paid: the features show a lock and no history is
+      fetched (the API would refuse it). The layout shows the unlock page. */
+  locked?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -528,12 +560,14 @@ export function Sidebar({
   // Refresh on navigation (new items appear right after they are created)
   // and on a slow poll (background AI titles land without a reload).
   React.useEffect(() => {
+    if (locked) return;
     loadAll();
-  }, [loadAll, pathname]);
+  }, [loadAll, pathname, locked]);
   React.useEffect(() => {
+    if (locked) return;
     const interval = setInterval(loadAll, 20_000);
     return () => clearInterval(interval);
-  }, [loadAll]);
+  }, [loadAll, locked]);
 
   function onMutate(
     key: SectionKey,
@@ -566,6 +600,7 @@ export function Sidebar({
           onOpenChange={(open) => toggleSection(section.key, open)}
           activeHref={activeHref}
           onMutate={onMutate}
+          locked={locked}
         />
       ))}
     </nav>
@@ -623,6 +658,11 @@ export function Sidebar({
             onSelect={() => router.push(`${pathname}?settings=preferences`)}
           >
             <Settings /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => router.push(`${pathname}?settings=plan`)}
+          >
+            <CreditCard /> {locked ? "Unlock full access" : "Plan and payments"}
           </DropdownMenuItem>
           {/* Plain row, not a menu item: only the pill is interactive,
               so the row itself never shows a hover highlight. */}
