@@ -11,7 +11,8 @@ Two sets of tables are involved, both in the same Postgres database:
   owned by Better Auth (through Prisma)  "user", "session", "account"
   owned by this API (created in db.py)   llm_config, runs, run_events, papers,
                                          chunks, documents, conversations,
-                                         chat_messages, user_prefs, extractions
+                                         chat_messages, user_prefs, extractions,
+                                         payments
 
 They are joined on the user id, which this API stores as plain text with no
 foreign key back to "user". That is why deleting an account has to clear both
@@ -27,6 +28,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+import billing
 from db import execute, fetch_all, fetch_one, get_pool
 from models import CAPS, LlmMode
 from security import AdminUser
@@ -42,7 +44,8 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Every table this API owns that is keyed by user id. Order matters on delete:
 # children before parents, so nothing is left pointing at a row that has gone.
 # journal_ranks is deliberately absent, it is shared reference data and belongs
-# to nobody.
+# to nobody. So is payments: those rows are the business's payment records and
+# outlive the account they were made for.
 USER_OWNED_TABLES = (
     "chat_messages",
     "conversations",
@@ -66,6 +69,10 @@ class AdminUserRow(BaseModel):
     email: str
     email_verified: bool
     role: str
+    # "full" or "locked": whether the features are open to this account.
+    access: str
+    # When they last bought full access (null if they never paid).
+    paid_at: datetime | None
     image: str | None
     created_at: datetime
     ai_mode: str | None
@@ -101,6 +108,10 @@ class Overview(BaseModel):
     total_papers: int
     runs_running: int
     runs_failed: int
+    # Accounts with full access (admins not counted), and the rupees taken
+    # from live payments that were not refunded.
+    paid_users: int
+    revenue_inr: int
     signups_by_day: list[CountPoint]
     users_by_ai_mode: list[CountPoint]
     runs_by_day: list[CountPoint]
@@ -112,6 +123,7 @@ class UserPatch(BaseModel):
     email: str | None = Field(default=None, min_length=3, max_length=254)
     email_verified: bool | None = None
     role: Literal["user", "admin"] | None = None
+    access: Literal["locked", "full"] | None = None
 
 
 class AiPatch(BaseModel):
@@ -135,6 +147,7 @@ class UserDetail(BaseModel):
     sessions: list[dict]
     accounts: list[dict]
     work: list[WorkItem]
+    payments: list[dict]
 
 
 class Ok(BaseModel):
@@ -159,6 +172,8 @@ def _row_to_user(row: dict) -> AdminUserRow:
         email=row["email"],
         email_verified=bool(row["emailVerified"]),
         role=row.get("role") or "user",
+        access="full" if row.get("access") == "full" else "locked",
+        paid_at=row.get("paid_at"),
         image=row.get("image"),
         created_at=row["createdAt"],
         ai_mode=row.get("mode"),
@@ -184,6 +199,9 @@ _USER_SELECT = """
            u.image,
            u."createdAt",
            COALESCE(u.role, 'user') AS role,
+           COALESCE(u.access, 'locked') AS access,
+           (SELECT max(pm.paid_at) FROM payments pm
+             WHERE pm.user_id = u.id AND pm.status = 'paid')             AS paid_at,
            c.mode,
            c.provider,
            c.model,
@@ -219,7 +237,11 @@ async def overview(admin_id: str = AdminUser) -> Overview:
           (SELECT count(*) FROM documents)                                     AS total_documents,
           (SELECT count(*) FROM papers)                                        AS total_papers,
           (SELECT count(*) FROM runs WHERE status = 'running')                 AS runs_running,
-          (SELECT count(*) FROM runs WHERE status = 'failed')                  AS runs_failed
+          (SELECT count(*) FROM runs WHERE status = 'failed')                  AS runs_failed,
+          (SELECT count(*) FROM "user"
+            WHERE access = 'full' AND COALESCE(role,'user') <> 'admin')        AS paid_users,
+          (SELECT COALESCE(sum(amount), 0) / 100 FROM payments
+            WHERE status = 'paid' AND provider = 'razorpay' AND livemode)      AS revenue_inr
         """
     )
 
@@ -286,6 +308,8 @@ async def overview(admin_id: str = AdminUser) -> Overview:
         total_papers=int(totals["total_papers"]),
         runs_running=int(totals["runs_running"]),
         runs_failed=int(totals["runs_failed"]),
+        paid_users=int(totals["paid_users"]),
+        revenue_inr=int(totals["revenue_inr"]),
         signups_by_day=[CountPoint(**r) for r in signups],
         users_by_ai_mode=[CountPoint(**r) for r in by_mode],
         runs_by_day=[CountPoint(**r) for r in runs_daily],
@@ -388,6 +412,7 @@ async def user_detail(user_id: str, admin_id: str = AdminUser) -> UserDetail:
         user=_row_to_user(rows[0]),
         sessions=[dict(s) for s in sessions],
         accounts=[dict(a) for a in accounts],
+        payments=[dict(p) for p in await billing.payments_of(user_id)],
         work=[
             WorkItem(
                 id=w["id"],
@@ -405,7 +430,7 @@ async def user_detail(user_id: str, admin_id: str = AdminUser) -> UserDetail:
 async def update_user(
     user_id: str, body: UserPatch, admin_id: str = AdminUser
 ) -> Ok:
-    await _require_user(user_id)
+    target = await _require_user(user_id)
 
     # An admin removing their own admin rights could leave the system with
     # nobody able to reach this page, and there would then be no way back in
@@ -442,6 +467,25 @@ async def update_user(
     if body.role is not None:
         sets.append("role = %s")
         params.append(body.role)
+
+    # Access goes through the billing module rather than a plain UPDATE, so
+    # the change is written to the payments ledger alongside the switch.
+    if body.access is not None:
+        changed = await billing.set_access(
+            user_id, body.access, admin_id, target.get("email")
+        )
+        if not sets:
+            if not changed:
+                return Ok(
+                    message="They already have full access."
+                    if body.access == "full"
+                    else "Their features were already locked."
+                )
+            return Ok(
+                message="Full access given. They will get an email about it."
+                if body.access == "full"
+                else "Access removed. The features are locked for them again."
+            )
 
     if not sets:
         return Ok(message="Nothing to change")

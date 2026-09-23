@@ -115,6 +115,12 @@ async def export_data(user_id: str = CurrentUser) -> Response:
         "extractions": _rows_for_export(
             await fetch_all("SELECT * FROM extractions WHERE user_id = %s ORDER BY created_at", user_id)
         ),
+        # Their own purchase and access history. actor_id (which admin made a
+        # change) is internal and left out.
+        "payments": _rows_for_export(
+            await fetch_all("SELECT * FROM payments WHERE user_id = %s ORDER BY created_at", user_id),
+            drop=("actor_id",),
+        ),
     }
     return Response(
         content=json.dumps(data, ensure_ascii=False, indent=2, default=str),
