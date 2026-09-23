@@ -312,3 +312,77 @@ async def _create_schema(conn) -> None:
     await conn.execute(
         "ALTER TABLE extractions ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false"
     )
+    # Paid access. "user".access is the switch every feature checks: 'locked'
+    # until the one-time payment (or an admin grant), then 'full'. The column
+    # belongs to Better Auth's table, so it is also declared in the web app's
+    # Prisma schema; adding it here as well means a fresh database works no
+    # matter which side starts first. Guarded, because on a brand new database
+    # the "user" table may not exist yet when the API starts, and checked
+    # first, because ALTER TABLE locks the table even when there is nothing
+    # to add, and every sign-in reads this table.
+    await conn.execute(
+        """
+        DO $$
+        BEGIN
+            IF to_regclass('public."user"') IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'user'
+                   AND column_name = 'access'
+            ) THEN
+                ALTER TABLE "user" ADD COLUMN access TEXT NOT NULL DEFAULT 'locked';
+            END IF;
+        END $$
+        """
+    )
+    # Every attempt to buy, every payment, and every grant or removal by an
+    # admin, one row each. Kept when an account is deleted: these are the
+    # business's payment records, not the user's content.
+    #   status: created (order made, not paid) | paid | failed | refunded
+    #           | granted (admin gave access) | revoked (admin took it away)
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS payments (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id TEXT NOT NULL,
+            email TEXT,
+            sku TEXT NOT NULL DEFAULT 'full_access',
+            provider TEXT NOT NULL,
+            status TEXT NOT NULL,
+            price_usd INT NOT NULL,
+            -- In paise. amount is what the buyer is charged: plan_amount (the
+            -- dollar price in rupees) plus fee_amount (Razorpay's fee, which
+            -- the buyer pays so the full plan price reaches the account).
+            amount INT NOT NULL DEFAULT 0,
+            plan_amount INT NOT NULL DEFAULT 0,
+            fee_amount INT NOT NULL DEFAULT 0,
+            currency TEXT NOT NULL DEFAULT 'INR',
+            fx_rate NUMERIC(12, 4),
+            order_id TEXT UNIQUE,
+            payment_id TEXT UNIQUE,
+            method TEXT,
+            livemode BOOLEAN NOT NULL DEFAULT true,
+            note TEXT,
+            actor_id TEXT,
+            receipt_sent_at TIMESTAMPTZ,
+            paid_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    await conn.execute(
+        "CREATE INDEX IF NOT EXISTS payments_user_idx ON payments (user_id, created_at DESC)"
+    )
+    # Last good USD to INR rate, so a restart or a rate service outage does
+    # not stop anyone from paying.
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS fx_rates (
+            pair TEXT PRIMARY KEY,
+            rate NUMERIC(12, 4) NOT NULL,
+            source TEXT NOT NULL,
+            fetched_at TIMESTAMPTZ NOT NULL
+        )
+        """
+    )
