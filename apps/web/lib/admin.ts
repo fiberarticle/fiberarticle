@@ -9,6 +9,7 @@
  */
 
 import { apiFetch } from "@/lib/api";
+import type { LedgerRow } from "@/lib/types";
 
 export type AiMode = "fiberarticle_ai" | "byok" | "local";
 
@@ -20,6 +21,10 @@ export type AdminUserRow = {
   email: string;
   email_verified: boolean;
   role: "user" | "admin";
+  /** "full" once they paid or an admin gave access; admins pass either way. */
+  access: "full" | "locked";
+  /** When they last bought full access, or null if they never paid. */
+  paid_at: string | null;
   image: string | null;
   created_at: string;
   ai_mode: AiMode | null;
@@ -45,6 +50,10 @@ export type Overview = {
   total_papers: number;
   runs_running: number;
   runs_failed: number;
+  /** Accounts with full access (paid or given), admins not counted. */
+  paid_users: number;
+  /** Rupees from live payments that were not refunded. */
+  revenue_inr: number;
   signups_by_day: CountPoint[];
   users_by_ai_mode: CountPoint[];
   runs_by_day: CountPoint[];
@@ -80,6 +89,7 @@ export type UserDetail = {
   sessions: AdminSession[];
   accounts: AdminAccount[];
   work: WorkItem[];
+  payments: LedgerRow[];
 };
 
 export type SortKey = "newest" | "oldest" | "name" | "email" | "runs";
@@ -126,6 +136,7 @@ export const patchUser = (
     email: string;
     email_verified: boolean;
     role: "user" | "admin";
+    access: "full" | "locked";
   }>
 ) =>
   apiFetch<Ok>(`/v1/admin/users/${id}`, {

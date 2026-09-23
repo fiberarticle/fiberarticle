@@ -70,6 +70,11 @@ function PersonBadges({ user }: { user: AdminUserRow }) {
           <ShieldCheck className="mr-1 size-3" /> Admin
         </Badge>
       ) : null}
+      {user.role === "admin" ? null : user.access === "full" ? (
+        <Badge variant="success">{user.paid_at ? "Paid" : "Full access"}</Badge>
+      ) : (
+        <Badge variant="outline">Locked</Badge>
+      )}
       {user.email_verified ? null : (
         <Badge variant="warning">Email not confirmed</Badge>
       )}
@@ -223,6 +228,20 @@ export function AdminView({ meId }: { meId: string }) {
               label="Admins"
               value={overview.admin_users}
               hint="Can open this page"
+            />
+          </section>
+
+          <section className="grid grid-cols-2 gap-3 sm:gap-4">
+            <StatTile
+              label="Have full access"
+              value={overview.paid_users}
+              hint={`${Math.max(0, overview.total_users - overview.admin_users - overview.paid_users)} still locked`}
+              tone={overview.paid_users > 0 ? "good" : "plain"}
+            />
+            <StatTile
+              label="Money received"
+              value={`₹${overview.revenue_inr.toLocaleString("en-IN")}`}
+              hint="Live payments, refunds taken out"
             />
           </section>
 

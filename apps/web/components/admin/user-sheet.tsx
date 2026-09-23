@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { ledgerLabel } from "@/components/ledger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -300,6 +301,58 @@ export function UserSheet({
                     Save name and email
                   </Button>
                 </div>
+              </Section>
+
+              <Section title="Access and payments">
+                <Row label="Full access">
+                  <div className="flex items-center justify-end gap-2">
+                    <Switch
+                      checked={u.role === "admin" || u.access === "full"}
+                      onCheckedChange={(v) =>
+                        run(() =>
+                          patchUser(u.id, { access: v ? "full" : "locked" })
+                        )
+                      }
+                      disabled={busy || u.role === "admin"}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {u.role === "admin"
+                      ? "Admins always have full access."
+                      : u.access === "full"
+                        ? "Turning this off locks every feature for them again."
+                        : "Turning this on opens everything without a payment, and emails them."}
+                  </p>
+                </Row>
+                {detail.payments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No payments and no changes to their access yet.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col divide-y divide-border rounded-xl border border-border">
+                    {detail.payments.map((p) => {
+                      const line = ledgerLabel(p);
+                      return (
+                        <li key={p.id} className="flex flex-col gap-1 px-3 py-2.5">
+                          <span className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-sm font-medium">{line.title}</span>
+                            <Badge variant={line.tone}>{line.status}</Badge>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {shortDate(p.paid_at ?? p.created_at)}
+                            {line.detail ? ` · ${line.detail}` : ""}
+                          </span>
+                          {/* Admin rows carry their title as the note, so
+                              only payment notes (a refund, a double
+                              payment to refund) are worth showing. */}
+                          {p.note && p.provider === "razorpay" ? (
+                            <span className="text-xs text-[var(--warning)]">{p.note}</span>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </Section>
 
               <Section title="Which AI they use">
