@@ -22,6 +22,11 @@ model User {
   // hardcoded to one email so an admin can promote someone without a deploy.
   // The value is copied into the signed JWT, which is what the API trusts.
   role          String    @default("user")
+  // "locked" or "full". Every feature is locked until the one-time payment
+  // (or an admin grant) sets this to "full". Only the API writes it, inside
+  // the same transaction as the payment record (apps/api/billing.py); admins
+  // pass regardless. Added by hand-written ALTER, never by db push.
+  access        String    @default("locked")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]

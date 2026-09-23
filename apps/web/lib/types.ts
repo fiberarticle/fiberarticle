@@ -282,3 +282,63 @@ export interface LanguageOption {
   value: string;
   label: string;
 }
+
+/** One row of someone's purchase and access history (payments table). */
+export interface LedgerRow {
+  id: string;
+  /** "razorpay" for a payment, "admin" for a grant or a removal by hand. */
+  provider: "razorpay" | "admin";
+  status: "created" | "paid" | "failed" | "refunded" | "granted" | "revoked";
+  price_usd: number;
+  /** Charged amount in paise (0 for admin rows): plan_amount + fee_amount. */
+  amount: number;
+  plan_amount: number;
+  fee_amount: number;
+  currency: string;
+  order_id: string | null;
+  payment_id: string | null;
+  method: string | null;
+  livemode: boolean;
+  note: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
+export interface BillingStatus {
+  access: "full" | "locked";
+  /** How the account got its access: admin role, a payment, or a grant. */
+  via: "admin" | "payment" | "grant" | "none";
+  price: {
+    usd: number;
+    /** Whole rupees. All three are null if today's rate is unavailable.
+     * plan: the dollar price at today's rate. fee: Razorpay's fee, paid by
+     * the buyer on top. total: what the buyer is charged. */
+    plan_inr: number | null;
+    fee_inr: number | null;
+    total_inr: number | null;
+    /** Razorpay's share of a payment in percent (2.36 = 2% + 18% GST). */
+    fee_percent: number;
+    usd_inr_rate: number | null;
+    rate_fetched_at: string | null;
+  };
+  /** False until Razorpay keys are configured on the server. */
+  payments_open: boolean;
+  history: LedgerRow[];
+}
+
+/** What the API returns when a checkout is started. */
+export interface BillingOrder {
+  key_id: string;
+  order_id: string;
+  /** Paise. */
+  amount: number;
+  currency: string;
+  plan_inr: number;
+  fee_inr: number;
+  total_inr: number;
+  price_usd: number;
+  usd_inr_rate: number;
+  name: string;
+  email: string;
+  description: string;
+}

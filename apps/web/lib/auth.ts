@@ -117,6 +117,21 @@ export const auth = betterAuth({
         defaultValue: "user",
         input: false,
       },
+      /**
+       * "locked" or "full": whether the features are open to this account.
+       *
+       * input: false for the same reason as role: otherwise anyone could
+       * sign up, or update their profile, with access set to "full" and skip
+       * the payment. Only the API changes it, when a payment is recorded or
+       * an admin grants it. Read here so the app layout can show the unlock
+       * page on the server, before any feature renders.
+       */
+      access: {
+        type: "string",
+        required: false,
+        defaultValue: "locked",
+        input: false,
+      },
     },
   },
   databaseHooks: {
