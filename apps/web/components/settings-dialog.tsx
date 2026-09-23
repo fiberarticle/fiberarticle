@@ -8,6 +8,7 @@ import {
   BookMarked,
   ChevronDown,
   Cpu,
+  CreditCard,
   HatGlasses,
   KeyRound,
   Languages,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { PlanPanel } from "@/components/plan-panel";
 import { StylePicker } from "@/components/style-picker";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
@@ -36,11 +38,12 @@ import type {
 /** Query param that opens the dialog from anywhere: ?settings=<tab>. */
 export const SETTINGS_PARAM = "settings";
 
-type SettingsTab = "preferences" | "llm" | "account";
+type SettingsTab = "preferences" | "llm" | "plan" | "account";
 
 const TABS: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
   { id: "llm", label: "AI Model", icon: HatGlasses },
+  { id: "plan", label: "Plan", icon: CreditCard },
   { id: "account", label: "Account", icon: UserRound },
 ];
 
@@ -731,7 +734,9 @@ function AccountPanel({
         </span>
         <span className="text-xs text-muted-foreground">
           Permanently deletes your account and all of your data: runs, papers,
-          articles, chats, and extractions. This cannot be undone. Type{" "}
+          articles, chats, and extractions. Full access goes with the account,
+          so a new account would need a new payment. Records of past payments
+          are kept for accounting. This cannot be undone. Type{" "}
           <span className="font-semibold">DELETE</span> to confirm.
         </span>
         {deleteError && <Callout tone="error">{deleteError}</Callout>}
@@ -759,7 +764,7 @@ function AccountPanel({
 
 /**
  * Centered settings modal over a blurred backdrop, opened from anywhere with
- * the ?settings=<tab> query param (preferences | llm | account). Left rail
+ * the ?settings=<tab> query param (preferences | llm | plan | account). Left rail
  * picks the panel, ChatGPT/Claude style.
  */
 export function SettingsDialog({
@@ -848,6 +853,7 @@ export function SettingsDialog({
             <div className="min-h-0 flex-1 overflow-y-auto p-5">
               {tab === "preferences" && <PreferencesPanel />}
               {tab === "llm" && <LlmPanel />}
+              {tab === "plan" && <PlanPanel />}
               {tab === "account" && (
                 <AccountPanel
                   userName={userName}
