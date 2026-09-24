@@ -54,6 +54,8 @@ export type Overview = {
   paid_users: number;
   /** Rupees from live payments that were not refunded. */
   revenue_inr: number;
+  /** Live Microsoft Marketplace subscriptions activated on an account. */
+  marketplace_active: number;
   signups_by_day: CountPoint[];
   users_by_ai_mode: CountPoint[];
   runs_by_day: CountPoint[];

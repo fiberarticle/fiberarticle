@@ -393,3 +393,59 @@ async def _create_schema(conn) -> None:
         """
     )
     await conn.execute("DROP TABLE IF EXISTS fx_rates")
+    # Which Microsoft Marketplace purchase a payments row belongs to (the
+    # SaaS subscription id). Razorpay and admin rows leave it empty.
+    await conn.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS ref TEXT")
+    # Microsoft Marketplace subscriptions, as Microsoft last described them.
+    # One row per SaaS subscription; user_id is the Fiberarticle account it
+    # was activated on (empty until the buyer finishes on the landing page,
+    # and emptied again if that account is deleted, so the purchase can be
+    # activated on a new account). Kept like payments: business records.
+    #   status: PendingFulfillmentStart | Subscribed | Suspended | Unsubscribed
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS marketplace_subscriptions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            offer_id TEXT NOT NULL,
+            plan_id TEXT NOT NULL,
+            quantity INT,
+            status TEXT NOT NULL,
+            name TEXT,
+            purchaser_email TEXT,
+            purchaser_tenant_id TEXT,
+            beneficiary_email TEXT,
+            beneficiary_tenant_id TEXT,
+            term_start TIMESTAMPTZ,
+            term_end TIMESTAMPTZ,
+            term_unit TEXT,
+            auto_renew BOOLEAN,
+            is_free_trial BOOLEAN NOT NULL DEFAULT false,
+            is_test BOOLEAN NOT NULL DEFAULT false,
+            raw JSONB NOT NULL,
+            activated_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    await conn.execute(
+        "CREATE INDEX IF NOT EXISTS marketplace_subscriptions_user_idx"
+        " ON marketplace_subscriptions (user_id)"
+    )
+    # Every webhook call Microsoft makes, by operation id. Microsoft retries
+    # a call until it gets a 200, so the same operation can arrive more than
+    # once; this is what makes handling it twice a no-op.
+    await conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS marketplace_events (
+            operation_id TEXT PRIMARY KEY,
+            subscription_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            status TEXT,
+            payload JSONB NOT NULL,
+            received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            processed_at TIMESTAMPTZ
+        )
+        """
+    )

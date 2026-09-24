@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 
 import billing
 from db import execute, fetch_all, fetch_one, get_pool
+from llm.client import azure_openai_base
 from models import CAPS, LlmMode
 from security import AdminUser
 
@@ -112,6 +113,10 @@ class Overview(BaseModel):
     # from live payments that were not refunded.
     paid_users: int
     revenue_inr: int
+    # Live Microsoft Marketplace subscriptions activated on an account.
+    # Microsoft collects that money and pays it out separately, so it is not
+    # part of revenue_inr.
+    marketplace_active: int
     signups_by_day: list[CountPoint]
     users_by_ai_mode: list[CountPoint]
     runs_by_day: list[CountPoint]
@@ -241,7 +246,9 @@ async def overview(admin_id: str = AdminUser) -> Overview:
           (SELECT count(*) FROM "user"
             WHERE access = 'full' AND COALESCE(role,'user') <> 'admin')        AS paid_users,
           (SELECT COALESCE(sum(amount), 0) / 100 FROM payments
-            WHERE status = 'paid' AND provider = 'razorpay' AND livemode)      AS revenue_inr
+            WHERE status = 'paid' AND provider = 'razorpay' AND livemode)      AS revenue_inr,
+          (SELECT count(*) FROM marketplace_subscriptions
+            WHERE status = 'Subscribed' AND user_id IS NOT NULL)               AS marketplace_active
         """
     )
 
@@ -310,6 +317,7 @@ async def overview(admin_id: str = AdminUser) -> Overview:
         runs_failed=int(totals["runs_failed"]),
         paid_users=int(totals["paid_users"]),
         revenue_inr=int(totals["revenue_inr"]),
+        marketplace_active=int(totals["marketplace_active"]),
         signups_by_day=[CountPoint(**r) for r in signups],
         users_by_ai_mode=[CountPoint(**r) for r in by_mode],
         runs_by_day=[CountPoint(**r) for r in runs_daily],
@@ -533,6 +541,13 @@ async def delete_user(user_id: str, admin_id: str = AdminUser) -> Ok:
         async with conn.transaction():
             for table in USER_OWNED_TABLES:
                 await conn.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
+            # Microsoft Marketplace purchases outlive the account, like the
+            # payments ledger; freed, so they can be activated on a new one.
+            await conn.execute(
+                "UPDATE marketplace_subscriptions SET user_id = NULL, updated_at = now()"
+                " WHERE user_id = %s",
+                (user_id,),
+            )
             await conn.execute('DELETE FROM "session" WHERE "userId" = %s', (user_id,))
             await conn.execute('DELETE FROM "account" WHERE "userId" = %s', (user_id,))
             await conn.execute('DELETE FROM "user" WHERE id = %s', (user_id,))
@@ -555,6 +570,22 @@ async def update_ai(user_id: str, body: AiPatch, admin_id: str = AdminUser) -> O
     await _require_user(user_id)
     if body.mode not in CAPS:
         raise HTTPException(status_code=400, detail="Unknown AI mode")
+    if body.mode == "byok" and body.provider in ("azure", "custom") and not body.base_url:
+        # The admin page has no endpoint field for these, so a save that
+        # leaves the provider as it was keeps the endpoint the person set.
+        existing = await fetch_one(
+            "SELECT provider, base_url FROM llm_config WHERE user_id = %s", user_id
+        )
+        if existing and existing["provider"] == body.provider:
+            body.base_url = existing["base_url"]
+    if body.mode == "byok" and body.provider == "azure":
+        # Same rule as the person's own settings: Microsoft's hosts only.
+        body.base_url = azure_openai_base(body.base_url)
+        if not body.base_url:
+            raise HTTPException(
+                status_code=400,
+                detail="Azure OpenAI needs the resource endpoint, for example https://my-resource.openai.azure.com",
+            )
 
     await execute(
         """

@@ -53,18 +53,35 @@ class LedgerRow(BaseModel):
     method: str | None
     livemode: bool
     note: str | None
+    # The Microsoft Marketplace subscription a "microsoft" row belongs to.
+    ref: str | None = None
     paid_at: datetime | None
     created_at: datetime
 
 
+class MarketplaceSummary(BaseModel):
+    id: str
+    name: str | None
+    plan_id: str
+    status: str
+    term_start: datetime | None
+    term_end: datetime | None
+    auto_renew: bool | None
+    is_test: bool
+    activated_at: datetime | None
+
+
 class BillingStatus(BaseModel):
     access: Literal["full", "locked"]
-    # admin: role admin, always full | payment: bought it | grant: given by an
-    # admin | none: locked
-    via: Literal["admin", "payment", "grant", "none"]
+    # admin: role admin, always full | payment: bought it | microsoft: a live
+    # Microsoft Marketplace subscription | grant: given by an admin | none:
+    # locked
+    via: Literal["admin", "payment", "microsoft", "grant", "none"]
     price: Price
     payments_open: bool
     history: list[LedgerRow]
+    # Microsoft Marketplace subscriptions activated on this account.
+    marketplace: list[MarketplaceSummary] = []
 
 
 class OrderOut(BaseModel):
@@ -102,6 +119,7 @@ async def _status(claims: dict) -> BillingStatus:
     billing.forget_access(user_id)
     access = await billing.access_of(user_id)
     history = await billing.payments_of(user_id)
+    subscriptions = await billing.marketplace_subscriptions_of(user_id)
 
     if is_admin:
         via = "admin"
@@ -109,6 +127,8 @@ async def _status(claims: dict) -> BillingStatus:
         via = "none"
     elif any(r["status"] == "paid" for r in history):
         via = "payment"
+    elif any(s["status"] == "Subscribed" for s in subscriptions):
+        via = "microsoft"
     else:
         via = "grant"
 
@@ -118,6 +138,7 @@ async def _status(claims: dict) -> BillingStatus:
         price=_price(),
         payments_open=billing.payments_open(),
         history=[LedgerRow(**r) for r in history],
+        marketplace=[MarketplaceSummary(**s) for s in subscriptions],
     )
 
 

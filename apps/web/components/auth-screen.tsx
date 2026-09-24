@@ -9,7 +9,9 @@ import type { FormEvent } from "react";
 
 import { AuthLottie } from "@/components/auth-lottie";
 import { GoogleIcon } from "@/components/google-icon";
+import { MicrosoftIcon } from "@/components/microsoft-icon";
 import { authClient } from "@/lib/auth-client";
+import { safeNext, socialSignInError } from "@/lib/sign-in";
 
 import styles from "./auth-screen.module.css";
 
@@ -83,14 +85,19 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Which social sign-in buttons to show; set by the page from server env. */
+export type SocialProviders = { google: boolean; microsoft: boolean };
+
 export function AuthScreen({
   initialMode,
+  providers,
 }: {
   initialMode: "signup" | "login";
+  providers: SocialProviders;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeNext(searchParams.get("next"));
 
   const [isLoginMode, setIsLoginMode] = useState(initialMode === "login");
   const [firstName, setFirstName] = useState("");
@@ -103,7 +110,13 @@ export function AuthScreen({
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
+  // A Google or Microsoft sign-in that failed comes back here with ?error=.
+  const [formError, setFormError] = useState(
+    () => socialSignInError(searchParams.get("error")) ?? ""
+  );
+  const [socialPending, setSocialPending] = useState<
+    "google" | "microsoft" | null
+  >(null);
 
   const validateEmail = (value: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -198,10 +211,31 @@ export function AuthScreen({
     }
   };
 
-  const onGoogle = async () => {
+  const onSocial = async (provider: "google" | "microsoft") => {
+    if (socialPending) return;
     setFormError("");
-    await authClient.signIn.social({ provider: "google", callbackURL: next });
+    setSocialPending(provider);
+    // A failure comes back to this same page, still carrying next.
+    const here = `${isLoginMode ? "/sign-in" : "/sign-up"}?next=${encodeURIComponent(next)}`;
+    try {
+      const { error } = await authClient.signIn.social({
+        provider,
+        callbackURL: next,
+        errorCallbackURL: here,
+      });
+      if (error) {
+        setFormError(
+          error.message || "Sign-in could not start. Try again in a moment."
+        );
+        setSocialPending(null);
+      }
+    } catch {
+      setFormError("Network error. Please try again.");
+      setSocialPending(null);
+    }
   };
+
+  const anySocial = providers.google || providers.microsoft;
 
   return (
     <AuthShell>
@@ -347,25 +381,47 @@ export function AuthScreen({
                     {isLoginMode ? "Login" : "Create a new account"}
                   </Button>
 
-                  <div className={styles.orRow} aria-hidden>
-                    <span className={styles.orLine} />
-                    <span>or</span>
-                    <span className={styles.orLine} />
-                  </div>
+                  {anySocial && (
+                    <div className={styles.orRow} aria-hidden>
+                      <span className={styles.orLine} />
+                      <span>or</span>
+                      <span className={styles.orLine} />
+                    </div>
+                  )}
 
-                  <Button
-                    type="button"
-                    variant="classic"
-                    color="gray"
-                    highContrast
-                    radius="large"
-                    size="3"
-                    className={styles.googleButton}
-                    onClick={onGoogle}
-                  >
-                    <GoogleIcon />
-                    Continue with Google
-                  </Button>
+                  {providers.google && (
+                    <Button
+                      type="button"
+                      variant="classic"
+                      color="gray"
+                      highContrast
+                      radius="large"
+                      size="3"
+                      className={styles.googleButton}
+                      loading={socialPending === "google"}
+                      onClick={() => onSocial("google")}
+                    >
+                      <GoogleIcon />
+                      Continue with Google
+                    </Button>
+                  )}
+
+                  {providers.microsoft && (
+                    <Button
+                      type="button"
+                      variant="classic"
+                      color="gray"
+                      highContrast
+                      radius="large"
+                      size="3"
+                      className={styles.googleButton}
+                      loading={socialPending === "microsoft"}
+                      onClick={() => onSocial("microsoft")}
+                    >
+                      <MicrosoftIcon />
+                      Continue with Microsoft
+                    </Button>
+                  )}
                 </Flex>
               </Theme>
 

@@ -12,6 +12,7 @@ import { Callout } from "@/components/ui/callout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRupees } from "@/lib/access";
 import { apiFetch, ApiError } from "@/lib/api";
+import { AZURE_PORTAL_URL, marketplaceLockReason } from "@/lib/marketplace";
 import type { BillingStatus } from "@/lib/types";
 import { useUnlock } from "@/lib/unlock";
 
@@ -65,6 +66,8 @@ export function PlanPanel() {
   const full = status.access === "full";
   const paid = status.history.find((r) => r.status === "paid");
   const granted = status.history.find((r) => r.status === "granted");
+  const microsoft = status.marketplace.find((s) => s.status === "Subscribed");
+  const lockReason = full ? null : marketplaceLockReason(status.marketplace);
   const price = status.price;
 
   return (
@@ -87,10 +90,32 @@ export function PlanPanel() {
             ? "Admin accounts always have full access."
             : status.via === "payment" && paid
               ? `Paid once on ${when(paid.paid_at)}. Nothing to renew: every feature stays open.`
-              : status.via === "grant" && granted
-                ? `Given by an admin on ${when(granted.paid_at ?? granted.created_at)}. Every feature is open.`
-                : "Every feature is locked until a one-time payment."}
+              : status.via === "microsoft" && microsoft
+                ? `Through your Microsoft Marketplace subscription${
+                    microsoft.term_end
+                      ? `, paid up to ${when(microsoft.term_end)}${
+                          microsoft.auto_renew ? " and renewing on its own" : ""
+                        }`
+                      : ""
+                  }. Every feature is open.`
+                : status.via === "grant" && granted
+                  ? `Given by an admin on ${when(granted.paid_at ?? granted.created_at)}. Every feature is open.`
+                  : (lockReason ?? "Every feature is locked until a one-time payment.")}
         </span>
+        {status.marketplace.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            Microsoft bills and manages the subscription: find it in the{" "}
+            <a
+              href={AZURE_PORTAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              Azure portal
+            </a>{" "}
+            under SaaS.
+          </span>
+        )}
       </div>
 
       {!full && (

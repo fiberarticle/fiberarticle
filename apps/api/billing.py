@@ -12,12 +12,21 @@ account (see quote()).
 
 Everything that changes who has access goes through this module:
 
-  mark_paid        a payment is captured (browser verify call or webhook)
-  mark_refunded    a payment is refunded from the Razorpay dashboard
-  set_access       an admin grants or removes access by hand
+  mark_paid          a payment is captured (browser verify call or webhook)
+  mark_refunded      a payment is refunded from the Razorpay dashboard
+  set_access         an admin grants or removes access by hand
+  marketplace_link   a Microsoft Marketplace purchase is activated on an
+                     account from the landing page
+  marketplace_sync   Microsoft reports a subscription changed (suspended,
+                     reinstated, cancelled), by webhook or on reconcile
 
 Each writes a row to the payments table and flips "user".access in the same
 transaction, so the ledger and the switch can never disagree.
+
+Microsoft Marketplace buyers pay Microsoft, not us: a 5-year subscription
+billed once, upfront. Their rows in the ledger (provider "microsoft") carry
+no amount, because Microsoft bills in the buyer's own currency and pays us
+out separately; they record when access was given and taken away.
 """
 
 import asyncio
@@ -32,8 +41,9 @@ from decimal import Decimal
 import httpx
 from fastapi import HTTPException
 
+import marketplace
 from config import get_settings
-from db import execute, fetch_all, fetch_one, get_pool
+from db import execute, fetch_all, fetch_one, get_pool, jsonb
 
 logger = logging.getLogger("fiberarticle.billing")
 
@@ -330,13 +340,18 @@ async def mark_failed(order_id: str, reason: str | None) -> None:
 
 
 async def _still_entitled(conn, user_id: str) -> bool:
-    """Whether the account keeps full access without the payment just
-    refunded: another payment that still stands, or an admin whose latest
-    word on this account was to give access."""
+    """Whether the account keeps full access without the payment or the
+    subscription that just ended: another payment that still stands, a
+    Microsoft Marketplace subscription that is still live, or an admin whose
+    latest word on this account was to give access."""
     cur = await conn.execute(
         """
         SELECT EXISTS (
                  SELECT 1 FROM payments WHERE user_id = %s AND status = 'paid'
+               )
+            OR EXISTS (
+                 SELECT 1 FROM marketplace_subscriptions
+                  WHERE user_id = %s AND status = %s
                )
             OR COALESCE((
                  SELECT status = 'granted' FROM payments
@@ -345,7 +360,7 @@ async def _still_entitled(conn, user_id: str) -> bool:
                   LIMIT 1
                ), false) AS entitled
         """,
-        (user_id, user_id),
+        (user_id, user_id, marketplace.SUBSCRIBED, user_id),
     )
     row = await cur.fetchone()
     return bool(row and row["entitled"])
@@ -451,12 +466,302 @@ async def payments_of(user_id: str) -> list[dict]:
     return await fetch_all(
         """
         SELECT id::text, provider, status, amount, plan_amount, fee_amount,
-               currency, order_id, payment_id, method, livemode, note, paid_at,
-               created_at
+               currency, order_id, payment_id, method, livemode, note, ref,
+               paid_at, created_at
           FROM payments
          WHERE user_id = %s AND status NOT IN ('created')
          ORDER BY created_at DESC
          LIMIT 50
+        """,
+        user_id,
+    )
+
+
+# ---------------------------------------------------------------- Microsoft Marketplace
+
+
+def _marketplace_note(row: dict) -> str:
+    return f"Microsoft Marketplace subscription, plan {row['plan_id']}"
+
+
+async def _save_marketplace_row(conn, row: dict) -> None:
+    """Store Microsoft's description of a subscription. Which account it is
+    activated on (user_id) is never touched here."""
+    await conn.execute(
+        """
+        INSERT INTO marketplace_subscriptions
+            (id, offer_id, plan_id, quantity, status, name,
+             purchaser_email, purchaser_tenant_id, beneficiary_email,
+             beneficiary_tenant_id, term_start, term_end, term_unit,
+             auto_renew, is_free_trial, is_test, raw)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (id) DO UPDATE SET
+            offer_id = EXCLUDED.offer_id,
+            plan_id = EXCLUDED.plan_id,
+            quantity = EXCLUDED.quantity,
+            status = EXCLUDED.status,
+            name = EXCLUDED.name,
+            purchaser_email = EXCLUDED.purchaser_email,
+            purchaser_tenant_id = EXCLUDED.purchaser_tenant_id,
+            beneficiary_email = EXCLUDED.beneficiary_email,
+            beneficiary_tenant_id = EXCLUDED.beneficiary_tenant_id,
+            term_start = EXCLUDED.term_start,
+            term_end = EXCLUDED.term_end,
+            term_unit = EXCLUDED.term_unit,
+            auto_renew = EXCLUDED.auto_renew,
+            is_free_trial = EXCLUDED.is_free_trial,
+            is_test = EXCLUDED.is_test,
+            raw = EXCLUDED.raw,
+            updated_at = now()
+        """,
+        (
+            row["id"],
+            row["offer_id"],
+            row["plan_id"],
+            row["quantity"],
+            row["status"],
+            row["name"],
+            row["purchaser_email"],
+            row["purchaser_tenant_id"],
+            row["beneficiary_email"],
+            row["beneficiary_tenant_id"],
+            row["term_start"],
+            row["term_end"],
+            row["term_unit"],
+            row["auto_renew"],
+            row["is_free_trial"],
+            row["is_test"],
+            jsonb(row["raw"]),
+        ),
+    )
+
+
+async def _marketplace_ledger(
+    conn, user_id: str, row: dict, status: str, operation_id: str | None
+) -> str:
+    """One payments row for a Microsoft Marketplace event on this account."""
+    cur = await conn.execute('SELECT email FROM "user" WHERE id = %s', (user_id,))
+    owner = await cur.fetchone()
+    cur = await conn.execute(
+        """
+        INSERT INTO payments
+            (user_id, email, sku, provider, status, amount, currency, livemode,
+             note, payment_id, ref, paid_at)
+        VALUES (%s, %s, %s, 'microsoft', %s, 0, 'INR', %s, %s, %s, %s,
+                CASE WHEN %s IN ('subscribed', 'reinstated') THEN now() END)
+     RETURNING id
+        """,
+        (
+            user_id,
+            (owner or {}).get("email"),
+            SKU,
+            status,
+            not row["is_test"],
+            _marketplace_note(row),
+            operation_id,
+            row["id"],
+            status,
+        ),
+    )
+    return str((await cur.fetchone())["id"])
+
+
+async def _marketplace_unlock(
+    conn, user_id: str, row: dict, status: str, operation_id: str | None
+) -> str | None:
+    """Open the features for a live subscription. Returns the ledger row id
+    when this is news (the first 'subscribed' row for this subscription, or a
+    reinstatement), None when it was already recorded."""
+    if status == "subscribed":
+        cur = await conn.execute(
+            """
+            SELECT 1 FROM payments
+             WHERE provider = 'microsoft' AND ref = %s AND user_id = %s
+               AND status = 'subscribed'
+             LIMIT 1
+            """,
+            (row["id"], user_id),
+        )
+        if await cur.fetchone():
+            await conn.execute(
+                """
+                UPDATE "user" SET access = 'full', "updatedAt" = now()
+                 WHERE id = %s AND access IS DISTINCT FROM 'full'
+                """,
+                (user_id,),
+            )
+            return None
+    ledger_id = await _marketplace_ledger(conn, user_id, row, status, operation_id)
+    await conn.execute(
+        'UPDATE "user" SET access = %s, "updatedAt" = now() WHERE id = %s',
+        ("full", user_id),
+    )
+    return ledger_id
+
+
+async def _marketplace_lock(
+    conn, user_id: str, row: dict, status: str, operation_id: str | None
+) -> None:
+    """The subscription is suspended or over. The row for it is already
+    saved with the new status, so _still_entitled no longer counts it."""
+    await _marketplace_ledger(conn, user_id, row, status, operation_id)
+    if not await _still_entitled(conn, user_id):
+        await conn.execute(
+            """
+            UPDATE "user" SET access = 'locked', "updatedAt" = now()
+             WHERE id = %s AND COALESCE(role, 'user') <> 'admin'
+            """,
+            (user_id,),
+        )
+
+
+async def marketplace_link(user_id: str, sub: dict) -> dict:
+    """
+    Tie a Microsoft Marketplace subscription to the account that finished on
+    the landing page, and open the features if Microsoft reports it live.
+
+    One subscription serves one account. Asking to link a subscription that
+    is already in use by another account is refused (409), however the
+    caller came by the purchase token.
+    """
+    row = marketplace.subscription_row(sub)
+    ledger_id = None
+    async with get_pool().connection() as conn:
+        async with conn.transaction():
+            cur = await conn.execute(
+                "SELECT user_id FROM marketplace_subscriptions WHERE id = %s FOR UPDATE",
+                (row["id"],),
+            )
+            existing = await cur.fetchone()
+            if existing and existing["user_id"] and existing["user_id"] != user_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "This Microsoft Marketplace subscription is already active on "
+                        "another Fiberarticle account. Sign in with that account, or "
+                        "write to admin@fiberarticle.com."
+                    ),
+                )
+            await _save_marketplace_row(conn, row)
+            await conn.execute(
+                """
+                UPDATE marketplace_subscriptions
+                   SET user_id = %s,
+                       activated_at = CASE WHEN status = %s
+                                           THEN COALESCE(activated_at, now())
+                                           ELSE activated_at END,
+                       updated_at = now()
+                 WHERE id = %s
+                """,
+                (user_id, marketplace.SUBSCRIBED, row["id"]),
+            )
+            # The account row is locked for the rest of the transaction so a
+            # webhook for the same subscription waits instead of racing.
+            await conn.execute('SELECT 1 FROM "user" WHERE id = %s FOR UPDATE', (user_id,))
+            if row["status"] == marketplace.SUBSCRIBED:
+                ledger_id = await _marketplace_unlock(conn, user_id, row, "subscribed", None)
+            cur = await conn.execute(
+                "SELECT * FROM marketplace_subscriptions WHERE id = %s", (row["id"],)
+            )
+            stored = await cur.fetchone()
+    forget_access(user_id)
+    if ledger_id:
+        _send_access_email_later(ledger_id)
+    return stored
+
+
+async def marketplace_sync(sub: dict, *, action: str, operation_id: str | None = None) -> None:
+    """
+    Store Microsoft's current view of a subscription and apply whatever its
+    status change means for the account it is activated on.
+
+    Used by the webhook and by the reconcile loop, so it acts on a change of
+    status only: hearing the same news twice changes nothing. A subscription
+    no account has activated yet is only stored; the landing page links it.
+    """
+    row = marketplace.subscription_row(sub)
+    user_id = None
+    ledger_id = None
+    async with get_pool().connection() as conn:
+        async with conn.transaction():
+            cur = await conn.execute(
+                "SELECT user_id, status FROM marketplace_subscriptions WHERE id = %s FOR UPDATE",
+                (row["id"],),
+            )
+            existing = await cur.fetchone()
+            await _save_marketplace_row(conn, row)
+            if existing is not None and existing["user_id"]:
+                user_id = existing["user_id"]
+                before, after = existing["status"], row["status"]
+                await conn.execute('SELECT 1 FROM "user" WHERE id = %s FOR UPDATE', (user_id,))
+                if before != after:
+                    if after == marketplace.SUBSCRIBED:
+                        if before == marketplace.PENDING:
+                            ledger_id = await _marketplace_unlock(
+                                conn, user_id, row, "subscribed", operation_id
+                            )
+                        else:
+                            await _marketplace_unlock(
+                                conn, user_id, row, "reinstated", operation_id
+                            )
+                    elif after in (marketplace.SUSPENDED, marketplace.UNSUBSCRIBED):
+                        await _marketplace_lock(
+                            conn,
+                            user_id,
+                            row,
+                            "suspended" if after == marketplace.SUSPENDED else "unsubscribed",
+                            operation_id,
+                        )
+                    logger.info(
+                        "marketplace subscription %s: %s -> %s (%s)",
+                        row["id"],
+                        before,
+                        after,
+                        action,
+                    )
+    if user_id:
+        forget_access(user_id)
+    if ledger_id:
+        _send_access_email_later(ledger_id)
+
+
+async def marketplace_release(user_id: str) -> None:
+    """
+    The account is being deleted: free its Microsoft Marketplace
+    subscriptions, so the buyer can activate them on a new account from the
+    Azure portal, and take back the access they gave. The web app deletes the
+    account itself right after; if that fails, the account must not keep
+    access a subscription now serving someone else gave it.
+    """
+    async with get_pool().connection() as conn:
+        async with conn.transaction():
+            await conn.execute('SELECT 1 FROM "user" WHERE id = %s FOR UPDATE', (user_id,))
+            cur = await conn.execute(
+                """
+                UPDATE marketplace_subscriptions SET user_id = NULL, updated_at = now()
+                 WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            if cur.rowcount and not await _still_entitled(conn, user_id):
+                await conn.execute(
+                    """
+                    UPDATE "user" SET access = 'locked', "updatedAt" = now()
+                     WHERE id = %s AND COALESCE(role, 'user') <> 'admin'
+                    """,
+                    (user_id,),
+                )
+    forget_access(user_id)
+
+
+async def marketplace_subscriptions_of(user_id: str) -> list[dict]:
+    return await fetch_all(
+        """
+        SELECT id, name, plan_id, status, term_start, term_end, auto_renew,
+               is_test, activated_at
+          FROM marketplace_subscriptions
+         WHERE user_id = %s
+         ORDER BY created_at DESC
         """,
         user_id,
     )

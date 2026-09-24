@@ -30,9 +30,46 @@ export function ledgerLabel(row: LedgerRow): LedgerLine {
       ? [paid, method, row.payment_id, row.livemode ? null : "test mode"]
           .filter(Boolean)
           .join(" · ")
-      : null;
+      : row.provider === "microsoft"
+        ? // Microsoft bills the buyer itself, so there is no amount here.
+          [
+            "Microsoft Marketplace",
+            row.ref ? `subscription ${row.ref}` : null,
+            row.livemode ? null : "test purchase",
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : null;
 
   switch (row.status) {
+    case "subscribed":
+      return {
+        title: "Full access through Microsoft Marketplace",
+        status: "Active",
+        tone: "success",
+        detail,
+      };
+    case "reinstated":
+      return {
+        title: "Microsoft reinstated the subscription",
+        status: "Reinstated",
+        tone: "success",
+        detail,
+      };
+    case "suspended":
+      return {
+        title: "Microsoft suspended the subscription",
+        status: "Suspended",
+        tone: "warning",
+        detail,
+      };
+    case "unsubscribed":
+      return {
+        title: "Microsoft Marketplace subscription ended",
+        status: "Ended",
+        tone: "outline",
+        detail,
+      };
     case "paid":
       return { title: "Paid for full access", status: "Paid", tone: "success", detail };
     case "refunded":

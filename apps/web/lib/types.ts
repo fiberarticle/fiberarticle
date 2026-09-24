@@ -286,9 +286,20 @@ export interface LanguageOption {
 /** One row of someone's purchase and access history (payments table). */
 export interface LedgerRow {
   id: string;
-  /** "razorpay" for a payment, "admin" for a grant or a removal by hand. */
-  provider: "razorpay" | "admin";
-  status: "created" | "paid" | "failed" | "refunded" | "granted" | "revoked";
+  /** "razorpay" for a payment, "admin" for a grant or a removal by hand,
+   * "microsoft" for a Microsoft Marketplace subscription event. */
+  provider: "razorpay" | "admin" | "microsoft";
+  status:
+    | "created"
+    | "paid"
+    | "failed"
+    | "refunded"
+    | "granted"
+    | "revoked"
+    | "subscribed"
+    | "reinstated"
+    | "suspended"
+    | "unsubscribed";
   /** Charged amount in paise (0 for admin rows): plan_amount + fee_amount. */
   amount: number;
   plan_amount: number;
@@ -299,14 +310,62 @@ export interface LedgerRow {
   method: string | null;
   livemode: boolean;
   note: string | null;
+  /** The Microsoft Marketplace subscription a "microsoft" row belongs to. */
+  ref: string | null;
   paid_at: string | null;
   created_at: string;
 }
 
+/** Microsoft's states for a SaaS subscription. */
+export type MarketplaceStatus =
+  | "PendingFulfillmentStart"
+  | "Subscribed"
+  | "Suspended"
+  | "Unsubscribed";
+
+/** A Microsoft Marketplace subscription activated on the account. */
+export interface MarketplaceSubscription {
+  id: string;
+  name: string | null;
+  plan_id: string;
+  status: MarketplaceStatus;
+  term_start: string | null;
+  term_end: string | null;
+  auto_renew: boolean | null;
+  is_test: boolean;
+  activated_at: string | null;
+}
+
+/** What the landing page learns from a Microsoft purchase token. */
+export interface MarketplacePurchase {
+  id: string;
+  name: string | null;
+  offer_id: string;
+  plan_id: string;
+  status: MarketplaceStatus;
+  purchaser_email: string | null;
+  beneficiary_email: string | null;
+  term_start: string | null;
+  term_end: string | null;
+  auto_renew: boolean | null;
+  is_free_trial: boolean;
+  is_test: boolean;
+  /** Which Fiberarticle account the subscription is active on. */
+  linked: "you" | "other" | "none";
+  /** The account already had full access some other way. */
+  account_has_full_access: boolean;
+}
+
+export interface MarketplaceActivation {
+  subscription: MarketplacePurchase;
+  access: "full" | "locked";
+}
+
 export interface BillingStatus {
   access: "full" | "locked";
-  /** How the account got its access: admin role, a payment, or a grant. */
-  via: "admin" | "payment" | "grant" | "none";
+  /** How the account got its access: admin role, a payment, a Microsoft
+   * Marketplace subscription, or a grant. */
+  via: "admin" | "payment" | "microsoft" | "grant" | "none";
   price: {
     /** Whole rupees. plan: the plan price. fee: Razorpay's fee, paid by the
      * buyer on top. total: what the buyer is charged. */
@@ -317,6 +376,8 @@ export interface BillingStatus {
   /** False until Razorpay keys are configured on the server. */
   payments_open: boolean;
   history: LedgerRow[];
+  /** Microsoft Marketplace subscriptions activated on this account. */
+  marketplace: MarketplaceSubscription[];
 }
 
 /** What the API returns when a checkout is started. */

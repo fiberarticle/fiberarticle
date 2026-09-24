@@ -26,13 +26,25 @@ export interface FullAccessReceipt {
   totalInr: number;
 }
 
+export interface FullAccessSubscription {
+  /** Microsoft's SaaS subscription id. */
+  id: string;
+  /** The plan bought, as named in the offer (fiberarticle-5-year). */
+  planId: string;
+  /** End of the term Microsoft billed for, when Microsoft reported it. */
+  termEnd: Date | null;
+}
+
 export interface FullAccessEmailProps {
   /** First name only: the greeting reads better than a full name. */
   firstName: string;
-  /** "payment" when they bought it, "grant" when an admin gave it. */
-  via: "payment" | "grant";
-  /** Present for a payment, absent for a grant. */
+  /** "payment" when they bought it, "grant" when an admin gave it,
+   * "microsoft" when a Microsoft Marketplace subscription was activated. */
+  via: "payment" | "grant" | "microsoft";
+  /** Present for a payment, absent otherwise. */
   receipt?: FullAccessReceipt;
+  /** Present for a Microsoft Marketplace subscription, absent otherwise. */
+  subscription?: FullAccessSubscription;
 }
 
 const FEATURES =
@@ -60,14 +72,19 @@ function rupees(value: number): string {
 
 /**
  * Sent once an account gets full access: after a payment (with the receipt
- * details) or when an admin gives access by hand. The web app sends it once
- * per payment record, when the API asks (app/api/internal/access-email).
+ * details), when a Microsoft Marketplace subscription is activated, or when
+ * an admin gives access by hand. The web app sends it once per payment
+ * record, when the API asks (app/api/internal/access-email).
  */
 export function fullAccessEmail({
   firstName,
   via,
   receipt,
+  subscription,
 }: FullAccessEmailProps): RenderedEmail {
+  if (via === "microsoft" && subscription !== undefined) {
+    return microsoftEmail(firstName, subscription);
+  }
   const url = appUrl();
   const host = url.replace(/^https?:\/\//, "");
   const paid = via === "payment" && receipt !== undefined;
@@ -150,6 +167,78 @@ export function fullAccessEmail({
             "",
           ]
         : ["There is nothing to pay and nothing to renew.", ""]),
+      `Open Fiberarticle: ${url}`,
+      "",
+      "Questions? Write to admin@fiberarticle.com.",
+    ].join("\n"),
+  };
+}
+
+/**
+ * The Microsoft Marketplace version. Microsoft bills the buyer and sends its
+ * own invoices, so this confirms the activation instead of being a receipt.
+ */
+function microsoftEmail(
+  firstName: string,
+  subscription: FullAccessSubscription
+): RenderedEmail {
+  const url = appUrl();
+  const host = url.replace(/^https?:\/\//, "");
+  const details: Array<[string, string]> = [
+    ["Product", "Fiberarticle full access"],
+    ["Bought through", "Microsoft Marketplace"],
+    ["Plan", subscription.planId],
+  ];
+  if (subscription.termEnd) {
+    details.push(["Paid up to", formatWhen(subscription.termEnd)]);
+  }
+  details.push(["Subscription ID", subscription.id]);
+  const billing =
+    "Microsoft bills this subscription and sends its own invoices. You can see or cancel it in the Azure portal, under SaaS.";
+
+  const rows = [
+    eyebrow("Microsoft Marketplace"),
+    headline("Fiberarticle is fully unlocked"),
+    paragraph(
+      `Hello ${esc(
+        firstName
+      )}, your Microsoft Marketplace subscription is active. Every feature is now open on your account: ${FEATURES}.`
+    ),
+    detailPanel("Subscription", details),
+    button(url, "Open Fiberarticle", "primary", 30),
+    rule(30, 22),
+    paragraph(billing, 0),
+    rule(22, 22),
+    footnote(
+      `Questions about this subscription? Write to ${inlineLink(
+        "mailto:admin@fiberarticle.com",
+        "admin@fiberarticle.com"
+      )} with your subscription ID. This email was sent for an account at ${inlineLink(
+        url,
+        host
+      )}.`
+    ),
+  ].join("\n");
+
+  const subject = "Your Fiberarticle subscription is active";
+
+  return {
+    subject,
+    html: renderShell({
+      title: subject,
+      preheader:
+        "Your Microsoft Marketplace subscription is active. Every feature is now open on your account.",
+      headerTag: "Subscription",
+      rows,
+    }),
+    text: [
+      `Hello ${firstName}, your Microsoft Marketplace subscription is active. Every feature is now open on your account: ${FEATURES}.`,
+      "",
+      "Subscription",
+      ...details.map(([label, value]) => `${label}: ${value}`),
+      "",
+      billing,
+      "",
       `Open Fiberarticle: ${url}`,
       "",
       "Questions? Write to admin@fiberarticle.com.",

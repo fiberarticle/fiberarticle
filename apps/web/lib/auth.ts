@@ -14,6 +14,62 @@ import {
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const microsoftClientId = process.env.MICROSOFT_CLIENT_ID;
+const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+
+/** Which "Continue with ..." buttons the sign-in pages show. */
+export const socialSignIn = {
+  google: Boolean(googleClientId && googleClientSecret),
+  microsoft: Boolean(microsoftClientId && microsoftClientSecret),
+};
+
+// Microsoft's fixed tenant for personal Microsoft accounts (Outlook, Hotmail,
+// Live). Microsoft confirms those addresses when the account is created.
+const MICROSOFT_CONSUMER_TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** The ID token claims read from a Microsoft sign-in. */
+type MicrosoftClaims = {
+  tid?: string;
+  email?: string;
+  preferred_username?: string;
+  name?: string;
+  xms_edov?: boolean | string | number;
+};
+
+/**
+ * Email and whether it counts as verified, for a Microsoft sign-in.
+ *
+ * Better Auth links a sign-in to an existing account with the same email
+ * only when the email is verified, so "verified" must mean the person really
+ * controls the address. A work account's email claim does not prove that on
+ * its own: the tenant's admin can type any address into it, including
+ * someone else's (the "nOAuth" problem). It counts only when:
+ *   - it is a personal Microsoft account, whose address Microsoft confirmed,
+ *   - Microsoft says the tenant owns the email's domain (xms_edov), or
+ *   - it equals the user's sign-in name (UPN), whose domain a tenant can use
+ *     only after proving it owns it. Guests (#EXT#) never match.
+ * Anything else still signs in, as an unverified account that confirms its
+ * address by code like an email sign-up does.
+ */
+function microsoftUser(claims: MicrosoftClaims) {
+  const upn = (claims.preferred_username ?? "").trim().toLowerCase();
+  const upnIsEmail = EMAIL_RE.test(upn) && !upn.includes("#ext#");
+  // Work accounts without a mailbox carry no email claim; their UPN is the
+  // address they sign in with.
+  const email = ((claims.email ?? "").trim() || (upnIsEmail ? upn : "")).toLowerCase();
+  const edov = claims.xms_edov;
+  const emailVerified =
+    Boolean(email) &&
+    (claims.tid === MICROSOFT_CONSUMER_TENANT ||
+      edov === true ||
+      edov === "true" ||
+      edov === 1 ||
+      edov === "1" ||
+      (upnIsEmail && email === upn));
+  const name = (claims.name ?? "").trim() || email.split("@")[0] || "";
+  return { email, emailVerified, name };
+}
 
 // Server-side password policy. The sign-up form mirrors this, but the API
 // must enforce it itself: any direct caller could otherwise bypass the
@@ -137,10 +193,12 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Social sign-ups arrive already verified, so this is the moment the
-        // account becomes usable for them. Email/password users are created
-        // unverified and get their welcome from afterEmailVerification
-        // instead, so neither path sends it twice.
+        // Social sign-ups with a confirmed email arrive already verified, so
+        // this is the moment the account becomes usable for them. Everyone
+        // else (email/password, and Microsoft work accounts whose address is
+        // not proven, see microsoftUser) is created unverified and gets the
+        // welcome from afterEmailVerification instead, so no path sends it
+        // twice.
         after: async (user) => {
           if (!user.emailVerified) return;
           await sendRenderedQuietly(
@@ -196,16 +254,36 @@ export const auth = betterAuth({
       );
     },
   },
-  ...(googleClientId && googleClientSecret
-    ? {
-        socialProviders: {
+  socialProviders: {
+    ...(googleClientId && googleClientSecret
+      ? {
           google: {
             clientId: googleClientId,
             clientSecret: googleClientSecret,
           },
-        },
-      }
-    : {}),
+        }
+      : {}),
+    // Microsoft Entra ID: work and school accounts from any organisation plus
+    // personal Microsoft accounts. Microsoft Marketplace requires this sign-in
+    // on the purchase landing page and in the app.
+    ...(microsoftClientId && microsoftClientSecret
+      ? {
+          microsoft: {
+            clientId: microsoftClientId,
+            clientSecret: microsoftClientSecret,
+            tenantId: "common",
+            // Lets someone signed in to several Microsoft accounts pick one.
+            prompt: "select_account" as const,
+            // Sign-in only: no Graph access, no refresh token, so the consent
+            // screen asks for as little as possible.
+            disableDefaultScope: true,
+            scope: ["openid", "profile", "email"],
+            disableProfilePhoto: true,
+            mapProfileToUser: (profile) => microsoftUser(profile),
+          },
+        }
+      : {}),
+  },
   plugins: [
     /**
      * The role travels inside the signed token.

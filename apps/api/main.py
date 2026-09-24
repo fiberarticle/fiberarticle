@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import marketplace as marketplace_service
 from config import get_settings
 from db import close_pool, open_pool
 from db import execute
@@ -16,6 +17,7 @@ from routers import (
     citations,
     documents,
     extractions,
+    marketplace,
     me,
     papers,
     runs,
@@ -70,7 +72,16 @@ async def lifespan(app: FastAPI):
         WHERE status = 'running'
         """
     )
+    # Microsoft Marketplace: re-read every subscription now and then, so a
+    # webhook call missed while the API or the database was down still lands.
+    reconcile = (
+        asyncio.create_task(marketplace_service.reconcile_loop())
+        if get_settings().marketplace_configured
+        else None
+    )
     yield
+    if reconcile is not None:
+        reconcile.cancel()
     await close_pool()
 
 
@@ -98,6 +109,7 @@ app.add_middleware(
 app.include_router(me.router)
 app.include_router(admin.router)
 app.include_router(billing.router)
+app.include_router(marketplace.router)
 app.include_router(runs.router)
 app.include_router(papers.router)
 app.include_router(documents.router)

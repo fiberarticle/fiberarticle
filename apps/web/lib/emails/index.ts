@@ -14,4 +14,7 @@ export { passwordResetEmail } from "./password-reset";
 export { passwordChangedEmail } from "./password-changed";
 export { pricingQuotationEmail } from "./pricing";
 export { fullAccessEmail } from "./full-access";
-export type { FullAccessReceipt } from "./full-access";
+export type {
+  FullAccessReceipt,
+  FullAccessSubscription,
+} from "./full-access";

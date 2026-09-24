@@ -4,9 +4,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+import billing
 import prefs as prefs_service
 from citations.catalog import style_title
 from db import execute, fetch_all, fetch_one
+from llm.client import azure_openai_base
 from models import CAPS, LlmConfigIn, LlmConfigOut, PreferencesIn, PreferencesOut
 from security import CurrentUser, encrypt_secret
 
@@ -121,6 +123,15 @@ async def export_data(user_id: str = CurrentUser) -> Response:
             await fetch_all("SELECT * FROM payments WHERE user_id = %s ORDER BY created_at", user_id),
             drop=("actor_id",),
         ),
+        # Microsoft Marketplace subscriptions activated on this account.
+        # Microsoft's raw record is left out; the columns carry what matters.
+        "marketplace_subscriptions": _rows_for_export(
+            await fetch_all(
+                "SELECT * FROM marketplace_subscriptions WHERE user_id = %s ORDER BY created_at",
+                user_id,
+            ),
+            drop=("raw",),
+        ),
     }
     return Response(
         content=json.dumps(data, ensure_ascii=False, indent=2, default=str),
@@ -150,6 +161,10 @@ async def delete_account_data(user_id: str = CurrentUser) -> None:
         "DELETE FROM llm_config WHERE user_id = %s",
     ):
         await execute(query, user_id)
+    # A Microsoft Marketplace subscription is Microsoft's purchase record, not
+    # the user's content: it stays, freed from the deleted account, so the
+    # buyer can activate it on a new account from the Azure portal.
+    await billing.marketplace_release(user_id)
 
 
 @router.put("/llm-config", response_model=LlmConfigOut)
@@ -161,6 +176,15 @@ async def put_llm_config(body: LlmConfigIn, user_id: str = CurrentUser) -> LlmCo
             raise HTTPException(422, "BYOK mode needs a model.")
         if body.provider == "custom" and not body.base_url:
             raise HTTPException(422, "Custom providers need a base URL.")
+        if body.provider == "azure":
+            # Stored as the v1 base URL, and only for Microsoft's own hosts,
+            # so the key never goes anywhere else.
+            body.base_url = azure_openai_base(body.base_url)
+            if not body.base_url:
+                raise HTTPException(
+                    422,
+                    "Enter your Azure OpenAI endpoint, for example https://my-resource.openai.azure.com",
+                )
     if body.mode == "local":
         if not body.base_url:
             raise HTTPException(422, "Local mode needs the endpoint base URL.")

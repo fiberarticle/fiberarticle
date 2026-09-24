@@ -9,6 +9,7 @@ import logging
 import random
 import re
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 import litellm
 
@@ -36,6 +37,22 @@ def _is_transient(exc: Exception) -> bool:
     if isinstance(status, int) and status in _TRANSIENT_STATUS:
         return True
     return type(exc).__name__ in _TRANSIENT_NAMES
+
+
+def _refuses_classic_params(exc: Exception) -> bool:
+    """Whether the provider refused max_tokens or a custom temperature, the way
+    OpenAI's reasoning models (gpt-5, o-series) do: "Unsupported parameter:
+    'max_tokens' is not supported with this model. Use 'max_completion_tokens'
+    instead." LiteLLM adapts the call itself when it recognises the model
+    name, but not for an Azure deployment or a custom endpoint named freely.
+    """
+    if getattr(exc, "status_code", None) != 400:
+        return False
+    text = str(exc)
+    return "max_completion_tokens" in text or (
+        "temperature" in text and "nsupported" in text
+    )
+
 
 # House style enforcement on every completion: no em/en dashes, no emojis.
 # The prompts already forbid them; this is the guarantee for models that
@@ -76,6 +93,9 @@ class ResolvedLlm:
     mode: str
     extra_headers: dict | None = None
     reasoning: bool = False
+    # Set once the model refused max_tokens or a custom temperature: from
+    # then on it gets max_completion_tokens and its default temperature.
+    reasoning_params: bool = False
 
     async def complete(
         self,
@@ -110,19 +130,35 @@ class ResolvedLlm:
     async def _call(
         self, messages: list[dict], max_tokens: int, temperature: float
     ) -> tuple[str, str | None]:
-        for attempt in range(_RETRY_ATTEMPTS):
+        attempt = -1
+        while attempt < _RETRY_ATTEMPTS - 1:
+            attempt += 1
+            limits = (
+                {"max_completion_tokens": max_tokens}
+                if self.reasoning_params
+                else {"max_tokens": max_tokens, "temperature": temperature}
+            )
             try:
                 response = await litellm.acompletion(
                     model=self.model,
                     messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
                     api_key=self.api_key,
                     api_base=self.api_base,
                     extra_headers=self.extra_headers or {},
                     timeout=240,
+                    # Models LiteLLM knows to refuse a parameter (a custom
+                    # temperature on gpt-5 or the o-series) get it translated
+                    # or dropped instead of the whole call failing.
+                    drop_params=True,
+                    **limits,
                 )
             except Exception as exc:
+                if not self.reasoning_params and _refuses_classic_params(exc):
+                    # Resend the way reasoning models take it. Not counted as
+                    # an attempt: nothing was wrong with the connection.
+                    self.reasoning_params = True
+                    attempt -= 1
+                    continue
                 if attempt == _RETRY_ATTEMPTS - 1 or not _is_transient(exc):
                     raise
                 # Jitter keeps concurrent sections from retrying in lockstep
@@ -149,6 +185,34 @@ _PROVIDER_PREFIXES = {
     "groq": "groq/{model}",
     "openrouter": "openrouter/{model}",
 }
+
+# Azure OpenAI and Microsoft Foundry resource hosts. Each serves the v1 API
+# at /openai/v1, which takes the resource key the same way OpenAI does.
+_AZURE_HOST_SUFFIXES = (
+    ".openai.azure.com",
+    ".services.ai.azure.com",
+    ".cognitiveservices.azure.com",
+)
+
+
+def azure_openai_base(endpoint: str | None) -> str | None:
+    """The v1 API base URL of an Azure OpenAI or Foundry resource, from
+    whatever the user pasted: the bare endpoint, the v1 URL, a project URL or
+    a full deployment URL copied from the portal. None when it is none of
+    these, so the key is only ever sent to Microsoft's own hosts."""
+    if not endpoint:
+        return None
+    try:
+        parsed = urlsplit(endpoint.strip())
+        host = (parsed.hostname or "").lower()
+        port = parsed.port
+    except ValueError:
+        return None
+    if parsed.scheme != "https" or port not in (None, 443):
+        return None
+    if not host.endswith(_AZURE_HOST_SUFFIXES):
+        return None
+    return f"https://{host}/openai/v1"
 
 
 async def resolve_llm(user_id: str) -> ResolvedLlm:
@@ -223,6 +287,19 @@ async def resolve_llm(user_id: str) -> ResolvedLlm:
             model=f"openai/{model}",
             api_key=api_key,
             api_base="https://opencode.ai/zen/v1",
+            mode=mode,
+        )
+    if provider == "azure":
+        # The model is the deployment name, as Azure routes by deployment.
+        azure_base = azure_openai_base(base_url)
+        if not azure_base:
+            raise LlmNotConfigured(
+                "Azure OpenAI needs your resource endpoint in Settings, for example https://my-resource.openai.azure.com"
+            )
+        return ResolvedLlm(
+            model=f"openai/{model}",
+            api_key=api_key,
+            api_base=azure_base,
             mode=mode,
         )
     if provider == "custom":

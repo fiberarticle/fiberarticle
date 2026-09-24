@@ -9,9 +9,9 @@ import { fullAccessEmail } from "@/lib/emails";
  *
  * POST /api/internal/access-email   body: { "payment_id": "<payments.id>" }
  *
- * Called by the API (apps/api/billing.py) after a payment is recorded or an
- * admin gives access, because the email templates and the Resend key live in
- * this app. Not for browsers: the caller must present INTERNAL_API_SECRET,
+ * Called by the API (apps/api/billing.py) after a payment is recorded, a
+ * Microsoft Marketplace subscription is activated, or an admin gives access,
+ * because the email templates and the Resend key live in this app. Not for browsers: the caller must present INTERNAL_API_SECRET,
  * and anyone else gets the same 404 as a route that does not exist.
  *
  * Sent at most once per record however often it is called: the row is
@@ -51,6 +51,13 @@ interface ClaimedRow {
   plan_amount: number;
   fee_amount: number;
   paid_at: Date | null;
+  /** The Microsoft Marketplace subscription of a "subscribed" row. */
+  ref: string | null;
+}
+
+interface SubscriptionRow {
+  plan_id: string;
+  term_end: Date | null;
 }
 
 export async function POST(request: Request) {
@@ -71,9 +78,9 @@ export async function POST(request: Request) {
        SET receipt_sent_at = now()
      WHERE id = ${id}::uuid
        AND receipt_sent_at IS NULL
-       AND status IN ('paid', 'granted')
+       AND status IN ('paid', 'granted', 'subscribed')
  RETURNING id::text, user_id, status, payment_id, method, amount,
-           plan_amount, fee_amount, paid_at`;
+           plan_amount, fee_amount, paid_at, ref`;
   const row = claimed[0];
   if (!row) return json({ ok: true, sent: false });
 
@@ -83,8 +90,28 @@ export async function POST(request: Request) {
   });
   if (!user) return json({ ok: true, sent: false });
 
+  // The API's own table, so read with SQL rather than through Prisma.
+  const subscription =
+    row.status === "subscribed" && row.ref
+      ? (
+          await prisma.$queryRaw<SubscriptionRow[]>`
+            SELECT plan_id, term_end FROM marketplace_subscriptions
+             WHERE id = ${row.ref}`
+        )[0]
+      : undefined;
+
   const email =
-    row.status === "paid"
+    row.status === "subscribed"
+      ? fullAccessEmail({
+          firstName: firstNameOf(user.name, user.email),
+          via: "microsoft",
+          subscription: {
+            id: row.ref ?? "",
+            planId: subscription?.plan_id ?? "Fiberarticle full access",
+            termEnd: subscription?.term_end ?? null,
+          },
+        })
+      : row.status === "paid"
       ? fullAccessEmail({
           firstName: firstNameOf(user.name, user.email),
           via: "payment",

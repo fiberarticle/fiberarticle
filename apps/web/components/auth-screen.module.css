@@ -632,3 +632,100 @@
     font-size: 0.9rem;
   }
 }
+
+/* Microsoft Marketplace landing page (app/marketplace): what was bought, in
+   a solid boxed list, and boxed messages for the states around it. */
+.purchasePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid #d8d2c6;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(33, 29, 24, 0.06),
+    0 14px 30px -22px rgba(0, 0, 0, 0.35);
+}
+
+.purchaseRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.purchaseKey {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.purchaseValue {
+  min-width: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.testTag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff4e0;
+  color: #8a4a03;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.message {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.messageInfo {
+  background: #eef4fb;
+  color: #1f4f82;
+}
+
+.messageWarn {
+  background: #fff4e0;
+  color: #8a4a03;
+}
+
+.messageError {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.messageSuccess {
+  background: #eaf6ec;
+  color: #2f7a3d;
+}
+
+.accountRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.finePrint {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.finePrint a {
+  color: #211d18;
+  text-decoration: underline;
+}

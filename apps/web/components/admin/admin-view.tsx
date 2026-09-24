@@ -231,7 +231,7 @@ export function AdminView({ meId }: { meId: string }) {
             />
           </section>
 
-          <section className="grid grid-cols-2 gap-3 sm:gap-4">
+          <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             <StatTile
               label="Have full access"
               value={overview.paid_users}
@@ -242,6 +242,12 @@ export function AdminView({ meId }: { meId: string }) {
               label="Money received"
               value={`₹${overview.revenue_inr.toLocaleString("en-IN")}`}
               hint="Live payments, refunds taken out"
+            />
+            <StatTile
+              label="Microsoft subscriptions"
+              value={overview.marketplace_active}
+              hint="Live on an account; Microsoft pays these out"
+              tone={overview.marketplace_active > 0 ? "good" : "plain"}
             />
           </section>
 

@@ -53,6 +53,7 @@ function isTab(value: string | null): value is SettingsTab {
 
 const byokProviders = [
   { value: "openai", label: "OpenAI" },
+  { value: "azure", label: "Azure OpenAI (Microsoft Foundry)" },
   { value: "anthropic", label: "Anthropic" },
   { value: "gemini", label: "Google Gemini (AI Studio)" },
   { value: "groq", label: "Groq" },
@@ -63,6 +64,7 @@ const byokProviders = [
 
 const defaultModels: Record<string, string> = {
   openai: "gpt-4o-mini",
+  azure: "",
   anthropic: "claude-sonnet-5",
   gemini: "gemini-2.5-flash",
   groq: "llama-3.3-70b-versatile",
@@ -70,6 +72,11 @@ const defaultModels: Record<string, string> = {
   zen: "",
   custom: "",
 };
+
+// Providers whose endpoint the user supplies. Azure's is the resource
+// endpoint; the API turns it into the v1 base URL.
+const needsBaseUrl = (provider: string) =>
+  provider === "custom" || provider === "azure";
 
 const modes: {
   value: LlmMode;
@@ -239,12 +246,18 @@ function LlmPanel() {
       });
   }, []);
 
+  // A saved key belongs to the provider it was saved with; switching to
+  // another provider asks for that provider's key instead of sending the
+  // old one to it.
+  const keySaved =
+    !!config?.has_key && (!config.provider || config.provider === provider);
+
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSaved(false);
 
-    if (mode === "byok" && !apiKey && !config?.has_key) {
+    if (mode === "byok" && !apiKey && !keySaved) {
       setError("Enter your provider API key.");
       return;
     }
@@ -256,6 +269,10 @@ function LlmPanel() {
     }
     if (mode === "byok" && provider === "custom" && (!baseUrl || !model)) {
       setError("Custom providers need both a base URL and a model name.");
+      return;
+    }
+    if (mode === "byok" && provider === "azure" && (!baseUrl || !model)) {
+      setError("Azure OpenAI needs your resource endpoint and a deployment name.");
       return;
     }
 
@@ -272,13 +289,15 @@ function LlmPanel() {
               : model || defaultModels[provider] || null,
           api_key: apiKey || null,
           base_url:
-            mode === "local" || (mode === "byok" && provider === "custom")
+            mode === "local" || (mode === "byok" && needsBaseUrl(provider))
               ? baseUrl || null
               : null,
           reasoning,
         }),
       });
       setConfig(updated);
+      // Azure endpoints come back as the v1 URL the API will call.
+      if (updated.base_url) setBaseUrl(updated.base_url);
       setApiKey("");
       setSaved(true);
     } catch (e) {
@@ -335,7 +354,14 @@ function LlmPanel() {
               value={provider}
               onValueChange={(value) => {
                 setProvider(value);
-                setModel(defaultModels[value] ?? "");
+                // The saved provider gets its saved model and endpoint back.
+                if (config?.provider === value) {
+                  setModel(config.model ?? "");
+                  setBaseUrl(config.base_url ?? "");
+                } else {
+                  setModel(defaultModels[value] ?? "");
+                  setBaseUrl("");
+                }
               }}
             >
               <Select.Trigger className="max-w-xs">
@@ -350,9 +376,33 @@ function LlmPanel() {
               </Select.Content>
             </Select.Root>
           </Field>
-          <Field label="Model">
+          {provider === "azure" && (
+            <Field
+              label="Endpoint"
+              hint="From your resource's Keys and Endpoint page in the Azure portal or Microsoft Foundry."
+            >
+              <Input
+                placeholder="https://my-resource.openai.azure.com"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                className="max-w-sm"
+              />
+            </Field>
+          )}
+          <Field
+            label={provider === "azure" ? "Deployment name" : "Model"}
+            hint={
+              provider === "azure"
+                ? "The name you gave the model deployment, not the model itself."
+                : undefined
+            }
+          >
             <Input
-              placeholder={defaultModels[provider] || "model-name"}
+              placeholder={
+                provider === "azure"
+                  ? "my-gpt-deployment"
+                  : defaultModels[provider] || "model-name"
+              }
               value={model}
               onChange={(e) => setModel(e.target.value)}
               className="max-w-sm"
@@ -362,7 +412,7 @@ function LlmPanel() {
             label={
               <>
                 API key
-                {config?.has_key && (
+                {keySaved && (
                   <Badge variant="success">
                     <BadgeCheck /> saved
                   </Badge>
@@ -374,7 +424,11 @@ function LlmPanel() {
             <Input
               type="password"
               placeholder={
-                config?.has_key ? "Leave blank to keep the saved key" : "sk-..."
+                keySaved
+                  ? "Leave blank to keep the saved key"
+                  : provider === "azure"
+                    ? "Key 1 or Key 2 of your resource"
+                    : "sk-..."
               }
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -670,7 +724,7 @@ function AccountPanel({
       <form onSubmit={onChangePassword} className="flex flex-col gap-3">
         <Field
           label="Change password"
-          hint="Accounts created with Google have no password to change."
+          hint="Accounts created with Google or Microsoft have no password to change."
         >
           <Input
             type="password"
@@ -736,7 +790,9 @@ function AccountPanel({
           Permanently deletes your account and all of your data: runs, papers,
           articles, chats, and extractions. Full access goes with the account,
           so a new account would need a new payment. Records of past payments
-          are kept for accounting. This cannot be undone. Type{" "}
+          are kept for accounting. A Microsoft Marketplace subscription stays
+          with Microsoft: cancel it in the Azure portal, or activate it on a
+          new account from there. This cannot be undone. Type{" "}
           <span className="font-semibold">DELETE</span> to confirm.
         </span>
         {deleteError && <Callout tone="error">{deleteError}</Callout>}

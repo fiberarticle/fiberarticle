@@ -10,6 +10,7 @@ const TEMPLATES = [
   ["password-changed", "Password changed, security notice"],
   ["full-access", "Full access after a payment, with the receipt"],
   ["full-access-grant", "Full access given by an admin"],
+  ["full-access-microsoft", "Full access from a Microsoft Marketplace subscription"],
 ] as const;
 
 export async function GET() {

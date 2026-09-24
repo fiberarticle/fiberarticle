@@ -63,6 +63,16 @@ const SAMPLES: Record<string, () => RenderedEmail> = {
     }),
   "full-access-grant": () =>
     fullAccessEmail({ firstName: "Abdul", via: "grant" }),
+  "full-access-microsoft": () =>
+    fullAccessEmail({
+      firstName: "Abdul",
+      via: "microsoft",
+      subscription: {
+        id: "37f9dea2-4345-438f-b0bd-03d40d28c7e0",
+        planId: "fiberarticle-5-year",
+        termEnd: new Date("2031-07-29T00:00:00.000Z"),
+      },
+    }),
 };
 
 export async function GET(

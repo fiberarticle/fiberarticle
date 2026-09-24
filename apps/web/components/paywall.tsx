@@ -20,6 +20,7 @@ import { Callout } from "@/components/ui/callout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRupees } from "@/lib/access";
 import { apiFetch, ApiError } from "@/lib/api";
+import { marketplaceLockReason } from "@/lib/marketplace";
 import type { BillingStatus } from "@/lib/types";
 import { useUnlock } from "@/lib/unlock";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,7 @@ export function Paywall({
 
   const price = status?.price;
   const firstName = userName.trim().split(/\s+/)[0];
+  const lockReason = marketplaceLockReason(status?.marketplace);
 
   if (phase === "done") {
     return (
@@ -170,6 +172,7 @@ export function Paywall({
         </div>
 
         {loadError && <Callout tone="error">{loadError}</Callout>}
+        {lockReason && <Callout tone="warning">{lockReason}</Callout>}
 
         <div className="grid gap-4 md:grid-cols-[1.15fr_1fr]">
           {/* What they get. */}

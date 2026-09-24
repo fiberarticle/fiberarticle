@@ -44,9 +44,37 @@ class Settings(BaseSettings):
     # templates and the Resend key live on the web side.
     internal_api_secret: str = ""
 
+    # Microsoft Marketplace ("Sell through Microsoft" SaaS offer). These are
+    # the single-tenant Entra app named in the offer's technical
+    # configuration: the API signs in with it to call the SaaS Fulfillment
+    # API, and Microsoft addresses every webhook call to it. With them blank
+    # the marketplace routes answer 503 and nothing else changes.
+    marketplace_tenant_id: str = ""
+    marketplace_client_id: str = ""
+    marketplace_client_secret: str = ""
+    # The offer id in Partner Center. When set, purchases of any other offer
+    # are refused, so a token for someone else's offer can never unlock this
+    # app.
+    marketplace_offer_id: str = ""
+    # Only changed to point at Microsoft's SaaS API emulator in development.
+    marketplace_api_base: str = "https://marketplaceapi.microsoft.com/api"
+    # Comma-separated app ids allowed to call the webhook. Microsoft's own
+    # marketplace service is the only production caller; the emulator used
+    # in development signs its calls as our own app, so a dev machine adds
+    # MARKETPLACE_CLIENT_ID here. Never add anything in production.
+    marketplace_webhook_extra_app_ids: str = ""
+
     @property
     def jwks_url(self) -> str:
         return f"{self.web_url}/api/auth/jwks"
+
+    @property
+    def marketplace_configured(self) -> bool:
+        return bool(
+            self.marketplace_tenant_id
+            and self.marketplace_client_id
+            and self.marketplace_client_secret
+        )
 
     @property
     def origins(self) -> list[str]:
