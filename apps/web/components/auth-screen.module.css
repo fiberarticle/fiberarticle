@@ -134,159 +134,31 @@
   align-items: flex-start;
 }
 
-.leftContent {
-  width: 100%;
-  margin-top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  /* Query container for the tagline: its font scales with THIS box (the
-     panel's content width), never with the viewport. */
-  container-type: inline-size;
-}
-
-.leftBrand {
-  margin: 0;
-  z-index: 10;
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.leftBrandLogo {
-  display: block;
-  /* Same container scale as the tagline, so logo, wordmark, and tagline
-     shrink together and keep their proportions on every panel width. */
-  width: clamp(36px, 8.2cqw, 66px);
-  height: clamp(36px, 8.2cqw, 66px);
-  object-fit: contain;
-}
-
-.leftBrandWord {
-  font-family: var(--font-bricolage), "Segoe UI", sans-serif;
-  font-style: normal;
-  font-weight: 700;
-  /* Container-scaled with the logo and tagline. vw line = fallback. */
-  font-size: clamp(1.1rem, 2.2vw, 2.55rem);
-  font-size: clamp(1.1rem, 5cqw, 2.55rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  /* Left-to-right gradient in the logo's f colors (brown into amber). */
-  background: linear-gradient(90deg, #b3782d 0%, #c2842b 62%, #fca91e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-
-.leftDescription {
-  margin: 0;
-  width: 100%;
-  color: rgba(255, 255, 255, 0.88);
-  font-family: var(--font-faster-one), "Faster One", cursive;
-  font-style: normal;
-  font-weight: 400;
-  /* The lines are nowrap, so the font must be sized against the panel the
-     text actually lives in, not the viewport (the old 3.05vw clamp tracked
-     the full window while the panel is only half of it, clipping the
-     longest line on many devices). cqw = 1% of .leftContent's width, so
-     "Performs literature reviews." always fits. The vw line is a fallback
-     for browsers without container-query units. */
-  font-size: clamp(0.85rem, 2.5vw, 3.1rem);
-  font-size: clamp(0.85rem, 5cqw, 3.1rem);
-  line-height: 1.5;
-  letter-spacing: 0;
-  text-align: left;
-  word-spacing: 0.08em;
-  z-index: 10;
-  position: relative;
-}
-
-/* One statement per line, never wrapped mid-phrase. */
-.descLine {
-  display: block;
-  white-space: nowrap;
-}
-
-/* Brand-color highlights on the key phrases. */
-.hlBlue {
-  color: #4f90e4;
-}
-
-.hlGreen {
-  color: #50c158;
-}
-
-.hlPink {
-  color: #ff7db1;
-}
-
-/* Decorative Lottie in the empty lower half of the brand panel. Above the
-   stripes/fade layers (z=2), below the brand text (z=10). On the stacked
-   mobile layout it flows under the tagline instead of floating. */
-/* Comfortable hero size; the side fades on .animSearch (not raw scale)
-   sell the endless-stream illusion, so the artwork never has to dominate
-   the composition to feel bigger than the panel. */
-.leftAnimation {
+/* The halftone logo, centred in the panel. Above the stripes/fade layers
+   (z=2) and the glow, square, as large as the panel comfortably allows. */
+.halftone {
   position: absolute;
   left: 50%;
-  bottom: 13%;
-  transform: translateX(-50%);
-  width: min(84%, 620px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 3;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(72%, 72svh);
+  aspect-ratio: 1;
+  display: block;
+  z-index: 10;
   pointer-events: none;
 }
 
-/* Vertical crop to the artwork band (y 20-96% of the 1000x600 canvas,
-   measured from rendered pixels) plus a horizontal fade: the papers
-   dissolve into the dark before the canvas edge, so the rectangular asset
-   boundary never shows and the stream reads as continuing offscreen. */
-.animSearch {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1000 / 456;
+/* Kept for screen readers and the page outline, hidden on screen. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 16%,
-    #000 84%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 16%,
-    #000 84%,
-    transparent 100%
-  );
-}
-
-/* Inline width/height 100% on the player div needs !important overrides:
-   restore the full canvas geometry inside the cropped window. */
-.animSearch > * {
-  position: absolute !important;
-  left: 0;
-  top: -26.3% !important;
-  width: 100% !important;
-  height: 131.6% !important;
-}
-
-@media (max-width: 767.98px) {
-  /* In the stacked layout the panel hugs its content, so the animation
-     joins the normal flow right under the tagline: full width, its own
-     height from the aspect ratio, still masked at the sides. */
-  .leftAnimation {
-    position: static;
-    transform: none;
-    width: 100%;
-    margin-top: 10px;
-    order: 2;
-  }
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .rightPanel {
@@ -556,22 +428,22 @@
   }
 
   .leftPanel {
-    /* The panel hugs its content (brand, tagline, animation) instead of
+    /* The panel hugs its content (the halftone logo) instead of
        reserving 42vh; the form starts right below without a dead gap. */
     min-height: 0;
     justify-content: flex-start;
     padding: 28px 24px 26px;
   }
 
-  .leftContent {
-    margin-top: 6px;
-    gap: 12px;
-  }
-
-  .leftDescription {
-    /* cqw sizing from the base rule keeps scaling here; only the leading
-       changes on phones. (The old fixed 1.4rem clipped under ~480px.) */
-    line-height: 1.6;
+  /* Stacked layout: the logo joins the flow as a small band above the
+     form instead of filling the panel. */
+  .halftone {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 160px;
+    align-self: center;
   }
 
   .rightPanel {
