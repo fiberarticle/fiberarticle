@@ -7,8 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
-import { AuthLottie } from "@/components/auth-lottie";
 import { GoogleIcon } from "@/components/google-icon";
+import { HalftoneLogo } from "@/components/halftone-logo";
 import { MicrosoftIcon } from "@/components/microsoft-icon";
 import { authClient } from "@/lib/auth-client";
 import { safeNext, socialSignInError } from "@/lib/sign-in";
@@ -45,36 +45,10 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <div className={styles.orangeBlob} />
           <div className={styles.whiteGlow} />
 
-          {/* Decorative animation filling the empty lower half of the
-              brand panel. aria-hidden + pointer-events none: pure visual. */}
-          <div className={styles.leftAnimation} aria-hidden>
-            <div className={styles.animSearch}>
-              <AuthLottie src="/Searching.lottie" />
-            </div>
-          </div>
-          <div className={styles.leftContent}>
-            <h1 className={styles.leftBrand}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/Fiberarticle_Logo_Without_Background.svg"
-                alt=""
-                className={styles.leftBrandLogo}
-              />
-              <span className={styles.leftBrandWord}>Fiberarticle</span>
-            </h1>
-            <p className={styles.leftDescription}>
-              <span className={styles.descLine}>An Agentic AI that,</span>
-              <span className={`${styles.descLine} ${styles.hlBlue}`}>
-                Researches.
-              </span>
-              <span className={`${styles.descLine} ${styles.hlGreen}`}>
-                Performs literature reviews.
-              </span>
-              <span className={`${styles.descLine} ${styles.hlPink}`}>
-                Writes article papers.
-              </span>
-            </p>
-          </div>
+          {/* The panel carries one thing: the logo, big, as a halftone of
+              dots. The name stays in the page outline for screen readers. */}
+          <h1 className={styles.srOnly}>Fiberarticle</h1>
+          <HalftoneLogo className={styles.halftone} />
         </div>
 
         <div className={styles.rightPanel}>
