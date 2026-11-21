@@ -425,24 +425,43 @@
     height: 400px;
     filter: blur(14px);
     clip-path: ellipse(82% 70% at 34% 70%);
+    /* Softened on phones so the dotted logo stays clear. */
+    opacity: 0.5;
   }
 
+  /* Phones: the brand panel is a fixed 240px band above the form. The
+     stripes and the top fade stop at the band too: left full height, the
+     stripes' backdrop blur mixed the sand form into the band's bottom edge
+     as a grey haze. */
   .leftPanel {
-    /* The panel hugs its content (the halftone logo) instead of
-       reserving 42vh; the form starts right below without a dead gap. */
     min-height: 0;
-    justify-content: flex-start;
-    padding: 28px 24px 26px;
+    height: 240px;
+    justify-content: center;
+    padding: 0;
   }
 
-  /* Stacked layout: the logo joins the flow as a small band above the
-     form instead of filling the panel. */
+  .stripeLayer {
+    bottom: auto;
+    height: 240px;
+  }
+
+  .topFade {
+    height: 240px;
+  }
+
+  /* The blob and the white glow flooded the short band. */
+  .orangeBlob,
+  .whiteGlow {
+    display: none;
+  }
+
+  /* Stacked layout: the logo sits in the middle of the band. */
   .halftone {
     position: relative;
     left: auto;
     top: auto;
     transform: none;
-    width: 160px;
+    width: 196px;
     align-self: center;
   }
 
