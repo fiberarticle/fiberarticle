@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     # templates and the Resend key live on the web side.
     internal_api_secret: str = ""
 
+    # PostHog (US Cloud): product events, error tracking, AI monitoring and
+    # logs, see telemetry.py. The project token (phc_...) is public by design,
+    # the same one the browser uses. Blank turns all of it off.
+    posthog_api_key: str = ""
+    posthog_host: str = "https://us.i.posthog.com"
+
     # Microsoft Marketplace ("Sell through Microsoft" SaaS offer). These are
     # the single-tenant Entra app named in the offer's technical
     # configuration: the API signs in with it to call the SaaS Fulfillment
