@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Scroll,
   SlidersHorizontal,
+  Type,
   UserRound,
   X,
 } from "lucide-react";
@@ -27,6 +28,13 @@ import { PlanPanel } from "@/components/plan-panel";
 import { StylePicker } from "@/components/style-picker";
 import { apiFetch, ApiError, apiUrl, getApiToken } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import {
+  applyFont,
+  DEFAULT_FONT,
+  FONT_OPTIONS,
+  readFont,
+  type InterfaceFont,
+} from "@/lib/font-pref";
 import { cn } from "@/lib/utils";
 import type {
   LanguageOption,
@@ -211,8 +219,56 @@ function PreferencesPanel() {
         </Select.Root>
       </div>
 
+      <div className="h-px bg-border" />
+
+      <InterfaceFontRow />
+
       {error && <Callout tone="error">{error}</Callout>}
       {saved && <Callout tone="success">Preferences saved.</Callout>}
+    </div>
+  );
+}
+
+/** Interface font picker. Saved in this browser, like the theme. */
+function InterfaceFontRow() {
+  const [font, setFont] = React.useState<InterfaceFont>(DEFAULT_FONT);
+
+  React.useEffect(() => {
+    setFont(readFont());
+  }, []);
+
+  function onChange(value: string) {
+    const next = value as InterfaceFont;
+    setFont(next);
+    applyFont(next);
+  }
+
+  const optionLabel = (o: (typeof FONT_OPTIONS)[number]) =>
+    o.value === DEFAULT_FONT ? `Default · ${o.label}` : o.label;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <span className="flex items-start gap-3">
+        <Type className="mt-0.5 size-5 text-muted-foreground" />
+        <span className="flex flex-col">
+          <span className="text-sm font-semibold">Interface font</span>
+          <span className="max-w-xs text-xs leading-relaxed text-muted-foreground">
+            The font used across the app. Saved in this browser.
+          </span>
+        </span>
+      </span>
+      <Select.Root value={font} onValueChange={onChange}>
+        <Select.Trigger className="w-56">
+          <Select.Value />
+        </Select.Trigger>
+        <Select.Content>
+          {FONT_OPTIONS.map((o) => (
+            <Select.Item key={o.value} value={o.value}>
+              <span style={{ fontFamily: o.preview }}>{optionLabel(o)}</span>
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select.Root>
     </div>
   );
 }
@@ -898,12 +954,14 @@ export function SettingsDialog({
                 {TABS.find((t) => t.id === tab)?.label}
               </DialogPrimitive.Title>
               <DialogPrimitive.Close asChild>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label="Close settings"
-                  className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <X className="size-4" />
-                </button>
+                  <X />
+                </Button>
               </DialogPrimitive.Close>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-5">
