@@ -1,6 +1,5 @@
 "use client";
 
-import "@radix-ui/themes/styles.css";
 import { Button, Theme } from "@radix-ui/themes";
 import Link from "next/link";
 import { useState } from "react";
