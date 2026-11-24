@@ -77,6 +77,11 @@ function Button({
     // Radix pulls ghost buttons outward with negative margins for optical
     // alignment; our layouts were built without that offset.
     v === "ghost" && "m-0",
+    // Silver, like the website's Sign up: the website is dark, and Radix's
+    // high contrast gray there is a light silver. On our light theme the same
+    // button turned near black, so these buttons always take Radix's own
+    // dark colour scale (Radix's .dark-theme class). Dark theme is unchanged.
+    (v === "secondary" || v === "outline") && "dark-theme",
     className
   );
 
