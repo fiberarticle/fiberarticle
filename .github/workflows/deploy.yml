@@ -40,6 +40,8 @@ jobs:
           # PostHog project token: public by design, it ships in the browser
           # bundle anyway.
           NEXT_PUBLIC_POSTHOG_KEY: phc_m5vJyjWvL6yPSF8jQwVURnKaNXStqjGTAThh92t5kYRW
+          # Google Analytics 4, "Fiberarticle webapp" stream. Public too.
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: G-FS2RB2QZ82
         run: npm run build
 
       # Next keeps static files and public/ outside the standalone folder,
