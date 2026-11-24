@@ -3,6 +3,7 @@
 import { Button, Flex, Theme } from "@radix-ui/themes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useState } from "react";
 
 import { AuthShell, type SocialProviders } from "@/components/auth-screen";
@@ -331,6 +332,7 @@ function ActivateStep({
   async function switchAccount() {
     setLeaving(true);
     await authClient.signOut();
+    posthog.reset();
     // A full load, so the page starts over at the sign-in step with nothing
     // of this account left in memory.
     window.location.assign(here);
