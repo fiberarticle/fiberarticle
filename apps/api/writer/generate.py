@@ -17,6 +17,7 @@ from db import execute, fetch_all, fetch_one, jsonb
 from llm.client import ResolvedLlm, resolve_llm
 from prefs import language_instruction
 from rag.embeddings import embed_query
+import telemetry
 
 logger = logging.getLogger("fiberarticle.writer")
 
@@ -192,6 +193,7 @@ async def _generate_title(llm: ResolvedLlm, topic: str) -> str:
 
 
 async def generate_document(document_id: str, run_id: str, user_id: str) -> None:
+    telemetry.bind(user_id, "article generation", trace_id=document_id)
     try:
         run = await fetch_one(
             "SELECT * FROM runs WHERE id = %s AND user_id = %s", run_id, user_id
@@ -417,6 +419,7 @@ async def run_document_agent(
 
     attachments: [{"title", "text"}] - files the user attached to this turn,
     provided to the model as reference material (not citable sources)."""
+    telemetry.bind(user_id, "article agent", session_id=document.get("id"))
     llm = await resolve_llm(user_id)
     language = await language_instruction(user_id)
     sections = document.get("sections") or []
@@ -517,6 +520,7 @@ async def run_edit_command(
 ) -> str:
     """Run one AI edit. With selected_text, revise only that passage and
     return the replacement; otherwise revise and return the whole section."""
+    telemetry.bind(user_id, f"article edit: {command}")
     llm = await resolve_llm(user_id)
     # Translation targets a specific language; do not also inject the
     # user's default prose-language preference.
