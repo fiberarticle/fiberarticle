@@ -42,6 +42,7 @@ import httpx
 from fastapi import HTTPException
 
 import marketplace
+import telemetry
 from config import get_settings
 from db import execute, fetch_all, fetch_one, get_pool, jsonb
 
@@ -323,6 +324,19 @@ async def mark_paid(order_id: str, payment: dict) -> dict | None:
     forget_access(paid["user_id"])
     if not duplicate:
         _send_access_email_later(str(paid["id"]))
+    # Amounts are stored in paise; the event carries whole rupees.
+    telemetry.capture(
+        str(paid["user_id"]),
+        "purchase completed",
+        {
+            "provider": "razorpay",
+            "amount_inr": paid["amount"] / 100,
+            "plan_inr": (paid.get("plan_amount") or 0) / 100,
+            "method": paid.get("method"),
+            "duplicate": duplicate,
+            "livemode": paid.get("livemode"),
+        },
+    )
     return paid
 
 
