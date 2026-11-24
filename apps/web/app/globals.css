@@ -1,4 +1,9 @@
+/* Radix Themes gets its own layer after Tailwind's base (so preflight's
+   button reset cannot flatten the classic buttons) and before utilities (so
+   a className on a Radix button still wins). */
+@layer theme, base, radix, components, utilities;
 @import "tailwindcss";
+@import "@radix-ui/themes/styles.css" layer(radix);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -179,6 +184,18 @@
   ::selection {
     background: color-mix(in oklab, var(--primary) 25%, transparent);
   }
+}
+
+/* Radix Themes root (on <body>): keep our font and text colour instead of
+   Radix's system font and gray-12, and the pointer cursor on buttons. Same
+   idea as the website's .radix-themes override. */
+.radix-themes {
+  --default-font-family: var(--font-sans);
+  --heading-font-family: var(--font-sans);
+  --cursor-button: pointer;
+}
+body.radix-themes {
+  color: var(--foreground);
 }
 
 .fa-serif {
