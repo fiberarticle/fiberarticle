@@ -12,6 +12,7 @@ import logging
 from db import execute
 from llm.client import resolve_llm
 from prefs import language_instruction
+import telemetry
 
 logger = logging.getLogger("fiberarticle.titles")
 
@@ -27,6 +28,7 @@ _MAX_TITLE_CHARS = 120
 
 async def _generate(kind: str, row_id: str, user_id: str, text: str) -> None:
     table, column = _TARGETS[kind]
+    telemetry.bind(user_id, f"{kind} title")
     try:
         llm = await resolve_llm(user_id)
         language = await language_instruction(user_id)
