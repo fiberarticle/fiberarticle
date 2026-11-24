@@ -1,6 +1,5 @@
 "use client";
 
-import "@radix-ui/themes/styles.css";
 import { Button, Flex, Theme } from "@radix-ui/themes";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
