@@ -829,14 +829,16 @@ function AiBar({
         <Button type="submit" size="sm" disabled={!prompt.trim()}>
           <ArrowUp />
         </Button>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           onClick={onClose}
           aria-label="Close AI bar"
-          className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <X className="size-4" />
-        </button>
+          <X />
+        </Button>
       </form>
       <div className="mt-1.5 flex flex-col border-t border-border pt-1.5">
         <div className="flex flex-wrap gap-0.5">
@@ -1091,14 +1093,16 @@ function AiDocPanel({
           <FiberAiIcon className="size-6" />
           Fiberarticle AI
         </span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label="Close AI panel"
           onClick={onClose}
-          className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <X className="size-4" />
-        </button>
+          <X />
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -1343,12 +1347,14 @@ function PreviewDialog({
               layout.
             </span>
             <DialogPrimitive.Close asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Close preview"
-                className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground"
               >
-                <X className="size-4" />
-              </button>
+                <X />
+              </Button>
             </DialogPrimitive.Close>
           </div>
           <div className="relative min-h-0 flex-1 bg-[#525659]">
@@ -1408,7 +1414,7 @@ function FileFormatIcon({ label, color }: { label: string; color: string }) {
         fontSize="8.6"
         fontWeight="700"
         fill="#ffffff"
-        style={{ fontFamily: "var(--font-bricolage), sans-serif", letterSpacing: 0.3 }}
+        style={{ fontFamily: "var(--font-sans)", letterSpacing: 0.3 }}
       >
         {label}
       </text>
@@ -2376,13 +2382,15 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
         )}
 
         {!generating && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={addSection}
-            className="flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 font-sans text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="w-fit font-sans text-muted-foreground hover:text-foreground"
           >
-            <Plus className="size-4" /> Add section
-          </button>
+            <Plus /> Add section
+          </Button>
         )}
 
         {/* Reference list on its own A4 sheet, rendered in the effective
@@ -2444,14 +2452,16 @@ export function DocumentEditor({ documentId }: { documentId: string }) {
           className="fixed z-50 -translate-x-1/2"
           style={{ left: pill.x, top: pill.y }}
         >
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => openSectionAi(pill.selection)}
-            className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-popover py-1 pl-1 pr-3 text-sm shadow-lg transition-colors hover:bg-accent"
+            className="shadow-lg"
           >
             <FiberAiIcon className="size-6" /> Ask AI
-          </button>
+          </Button>
         </div>
       )}
 
