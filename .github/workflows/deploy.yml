@@ -37,6 +37,9 @@ jobs:
         working-directory: apps/web
         env:
           NEXT_PUBLIC_API_URL: https://app.fiberarticle.com
+          # PostHog project token: public by design, it ships in the browser
+          # bundle anyway.
+          NEXT_PUBLIC_POSTHOG_KEY: phc_m5vJyjWvL6yPSF8jQwVURnKaNXStqjGTAThh92t5kYRW
         run: npm run build
 
       # Next keeps static files and public/ outside the standalone folder,
