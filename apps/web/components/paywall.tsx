@@ -151,14 +151,16 @@ export function Paywall({
     <div className="flex min-h-[calc(100svh-9.5rem)] items-center justify-center md:min-h-[calc(100vh-8rem)]">
       <section className="flex w-full max-w-4xl flex-col gap-6 md:-mt-6">
         {onBack && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onBack}
-            className="-mb-2 inline-flex w-fit cursor-pointer items-center gap-1.5 self-start text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="-mb-2 w-fit self-start text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft />
             Back to the dashboard
-          </button>
+          </Button>
         )}
         <div className="flex flex-col items-center gap-2 text-center">
           <FiberMark size={64} />
