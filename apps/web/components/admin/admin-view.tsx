@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -181,12 +181,11 @@ export function AdminView({ meId }: { meId: string }) {
         <div className="flex items-center gap-2">
           {/* A real link, not a button that pushes: opening the send screen
               in a second tab beside the people list is a normal thing to do. */}
-          <Link
-            href="/admin/emails"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <Mail /> Send emails
-          </Link>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/emails">
+              <Mail /> Send emails
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
