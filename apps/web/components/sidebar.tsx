@@ -687,14 +687,16 @@ export function Sidebar({
       {/* Phone top bar: hamburger opens the drawer, quick New Task on the
           right. Sits on the window background above the raised panel. */}
       <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-sidebar px-2.5 md:hidden">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label="Open menu"
           onClick={() => setMobileOpen(true)}
-          className="flex size-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground [&_svg]:size-5"
         >
-          <Menu className="size-5" />
-        </button>
+          <Menu />
+        </Button>
         <Wordmark href="/dashboard" />
         <Link href="/dashboard" aria-label="New Task">
           <Button size="icon-sm">
@@ -728,14 +730,16 @@ export function Sidebar({
           <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 py-4">
             <div className="flex items-center justify-between pl-1">
               <Wordmark href="/dashboard" />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Close menu"
                 onClick={() => setMobileOpen(false)}
-                className="flex size-9 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground"
               >
-                <X className="size-4" />
-              </button>
+                <X />
+              </Button>
             </div>
             <Link href="/dashboard">
               <Button className="w-full justify-start">
