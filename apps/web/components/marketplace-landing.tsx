@@ -1,6 +1,5 @@
 "use client";
 
-import "@radix-ui/themes/styles.css";
 import { Button, Flex, Theme } from "@radix-ui/themes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
