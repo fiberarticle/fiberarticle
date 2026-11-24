@@ -697,7 +697,7 @@ export function Sidebar({
         </button>
         <Wordmark href="/dashboard" />
         <Link href="/dashboard" aria-label="New Task">
-          <Button variant="secondary" size="icon-sm">
+          <Button size="icon-sm">
             <SquarePen />
           </Button>
         </Link>
@@ -738,7 +738,7 @@ export function Sidebar({
               </button>
             </div>
             <Link href="/dashboard">
-              <Button variant="secondary" className="w-full justify-start">
+              <Button className="w-full justify-start">
                 <SquarePen />
                 New Task
               </Button>
@@ -803,14 +803,14 @@ export function Sidebar({
             {collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="secondary" size="icon-sm" aria-label="New Task">
+                  <Button size="icon-sm" aria-label="New Task">
                     <SquarePen />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">New Task</TooltipContent>
               </Tooltip>
             ) : (
-              <Button variant="secondary" className="w-full justify-start">
+              <Button className="w-full justify-start">
                 <SquarePen />
                 New Task
               </Button>
