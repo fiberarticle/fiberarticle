@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Scimago journal-quartile styling with a medal metaphor:
- * Q1 gold, Q2 silver, Q3 bronze, Q4 neutral. Shared by the badge and by
+ * Q1 gold, Q2 silver, Q3 bronze, Q4 stone. Shared by the badge and by
  * the Q1-Q4 filter chips so the metals read consistently everywhere.
  */
 export const QUARTILE_METAL: Record<
@@ -35,9 +35,12 @@ export const QUARTILE_METAL: Record<
       "border-[#c98d54]/60 text-[#a9713d] hover:bg-[linear-gradient(135deg,#f3cfae_0%,#dd9f66_45%,#bd7841_100%)] hover:text-[#5e3714]",
   },
   Q4: {
-    badge: "border-border bg-muted text-muted-foreground",
-    chipActive: "border-ring bg-muted font-semibold text-foreground",
-    chipIdle: "border-border text-muted-foreground hover:bg-accent",
+    badge:
+      "border-[#bfb3a1] bg-[linear-gradient(135deg,#f3eee6_0%,#ddd3c4_45%,#bcae99_100%)] text-[#4a4136] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+    chipActive:
+      "border-[#bfb3a1] bg-[linear-gradient(135deg,#f3eee6_0%,#ddd3c4_45%,#bcae99_100%)] text-[#4a4136] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+    chipIdle:
+      "border-[#bfb3a1]/70 text-[#8a7d6a] hover:bg-[linear-gradient(135deg,#f3eee6_0%,#ddd3c4_45%,#bcae99_100%)] hover:text-[#4a4136]",
   },
 };
 
