@@ -40,7 +40,7 @@ import {
 } from "@/components/prompt-kit/source";
 import { ReportView } from "@/components/report-view";
 import { ReviewWorkspace } from "@/components/review-workspace";
-import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -465,29 +465,26 @@ export function RunView({ runId }: { runId: string }) {
           </Badge>
           {run.status === "failed" && (
             <>
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={onResumeRun}
                 disabled={resuming || retrying}
-                className={cn(
-                  badgeVariants({ variant: "success" }),
-                  "cursor-pointer transition-colors hover:bg-[color-mix(in_oklab,var(--success)_22%,transparent)] disabled:opacity-60"
-                )}
               >
                 <Play /> {resuming ? "Resuming" : "Resume"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Retry from the start"
                 title="Retry from the start"
                 onClick={onRetryRun}
                 disabled={resuming || retrying}
-                className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-60"
+                className="text-muted-foreground hover:text-foreground"
               >
-                <RotateCcw
-                  className={cn("size-4", retrying && "animate-spin")}
-                />
-              </button>
+                <RotateCcw className={cn(retrying && "animate-spin")} />
+              </Button>
             </>
           )}
           <span className="text-xs text-muted-foreground">
@@ -502,17 +499,15 @@ export function RunView({ runId }: { runId: string }) {
             </span>
           )}
           {isActive && (
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
               onClick={onCancelRun}
               disabled={cancelling}
-              className={cn(
-                badgeVariants({ variant: "destructive" }),
-                "cursor-pointer transition-colors hover:bg-[color-mix(in_oklab,var(--destructive)_22%,transparent)] disabled:opacity-60"
-              )}
             >
               <X /> {cancelling ? "Cancelling" : "Cancel"}
-            </button>
+            </Button>
           )}
         </div>
         {isActive && activeStage && (
@@ -712,14 +707,16 @@ export function RunView({ runId }: { runId: string }) {
               <FileText className="size-4 text-muted-foreground" />
               Research report
             </span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label="Close report"
               onClick={() => setReportOpen(false)}
-              className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <X className="size-4" />
-            </button>
+              <X />
+            </Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <ReportView markdown={run.report} papers={run.papers} />
