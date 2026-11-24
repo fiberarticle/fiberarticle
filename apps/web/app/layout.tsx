@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Newsreader } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Theme } from "@radix-ui/themes";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -30,15 +31,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${bricolage.variable} ${newsreader.variable}`}
+      {/* Radix Themes root sits on <body> itself (asChild), so dialogs and
+          sheets portalled into body still get the Radix tokens. Appearance
+          is left to inherit the next-themes .dark class on <html>. */}
+      <Theme
+        asChild
+        accentColor="brown"
+        grayColor="sand"
+        radius="large"
+        hasBackground={false}
       >
-        {/* Light for everyone until they pick another theme in the sidebar
-            toggle. "System" stays available there as a choice. */}
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
+        <body
+          className={`${bricolage.variable} ${newsreader.variable}`}
+        >
+          {/* Light for everyone until they pick another theme in the sidebar
+              toggle. "System" stays available there as a choice. */}
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            {children}
+          </ThemeProvider>
+        </body>
+      </Theme>
     </html>
   );
 }
