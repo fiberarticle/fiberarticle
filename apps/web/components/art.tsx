@@ -6,19 +6,91 @@
  * pulse) - defined in globals.css and disabled under prefers-reduced-motion.
  */
 
-import { LibraryBig } from "lucide-react";
+import {
+  ClipboardCheck,
+  LibraryBig,
+  MessagesSquare,
+  PenLine,
+  Table2,
+  type LucideIcon,
+} from "lucide-react";
+
+/**
+ * Chalk style feature art: a thick icon drawing over a scribbled patch of the
+ * same colour, both run through a grain filter so they look drawn with chalk
+ * or crayon. Pure SVG (no image files), and the patch mixes with the page
+ * background so it works in light and dark mode.
+ */
+function ChalkArt({
+  id,
+  icon: Icon,
+  color,
+  label,
+  className,
+}: {
+  /** Unique per art kind; same-kind copies on one page share one filter. */
+  id: string;
+  icon: LucideIcon;
+  color: string;
+  label: string;
+  className?: string;
+}) {
+  const filterId = `fa-chalk-${id}`;
+  return (
+    <svg viewBox="0 0 200 140" className={className} role="img" aria-label={label}>
+      <defs>
+        <filter id={filterId} x="-10%" y="-10%" width="120%" height="120%">
+          {/* Noise drives both the rough edges and the speckled grain. */}
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.42"
+            numOctaves="2"
+            seed="7"
+            result="noise"
+          />
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="noise"
+            scale="6"
+            xChannelSelector="R"
+            yChannelSelector="G"
+            result="rough"
+          />
+          <feColorMatrix
+            in="noise"
+            type="matrix"
+            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3 0 0 0 -0.75"
+            result="grain"
+          />
+          <feComposite in="rough" in2="grain" operator="in" />
+        </filter>
+      </defs>
+      <g filter={`url(#${filterId})`}>
+        {/* Scribbled patch: a few crayon strokes, kept light and set a
+            little to the right so the drawing stays the main thing. */}
+        <path
+          d="M66 48 L146 44 M60 68 L154 64 M66 88 L150 86 M76 106 L140 104"
+          fill="none"
+          stroke={`color-mix(in oklab, ${color} 16%, var(--background))`}
+          strokeWidth="18"
+          strokeLinecap="round"
+        />
+        <Icon x={56} y={26} size={88} color={color} strokeWidth={2.2} />
+      </g>
+    </svg>
+  );
+}
 
 /** A shelf of books: the Researcher page. */
 export function ResearcherArt({ className }: { className?: string }) {
   return (
-    <div className={className} role="img" aria-label="Shelf of books">
-      <div className="flex h-28 items-center justify-center">
-        <LibraryBig
-          className="size-20 text-muted-foreground"
-          strokeWidth={1.3}
-        />
-      </div>
-    </div>
+    <ChalkArt
+      id="researcher"
+      icon={LibraryBig}
+      color="#fca91e"
+      label="Shelf of books"
+      className={className}
+    />
   );
 }
 
@@ -31,70 +103,29 @@ function strokeProps(width = 1.6) {
   };
 }
 
-/** Stacked papers under a magnifying lens: the literature review. */
+/** A checked clipboard: the literature review. */
 export function ReviewArt({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 140"
+    <ChalkArt
+      id="review"
+      icon={ClipboardCheck}
+      color="#50c158"
+      label="Checked clipboard"
       className={className}
-      role="img"
-      aria-label="Stack of papers under a magnifying lens"
-    >
-      <g stroke="var(--border)" {...strokeProps()}>
-        <rect x="30" y="52" width="86" height="64" rx="6" fill="var(--card)" />
-        <rect x="38" y="42" width="86" height="64" rx="6" fill="var(--card)" />
-      </g>
-      <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <rect x="46" y="32" width="86" height="64" rx="6" fill="var(--card)" />
-        <line x1="58" y1="48" x2="118" y2="48" />
-        <line x1="58" y1="58" x2="112" y2="58" />
-        <line x1="58" y1="68" x2="118" y2="68" />
-        <line x1="58" y1="78" x2="96" y2="78" />
-      </g>
-      <g>
-        <g stroke="var(--leaf)" {...strokeProps(2.2)}>
-          <circle
-            cx="138"
-            cy="78"
-            r="24"
-            fill="color-mix(in oklab, var(--leaf) 7%, transparent)"
-          />
-          <line x1="155" y1="95" x2="172" y2="112" />
-        </g>
-        <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-          <path className="fa-art-draw" pathLength={60} d="M128 78 l7 7 l14 -14" />
-        </g>
-      </g>
-    </svg>
+    />
   );
 }
 
-/** Quill writing on a manuscript: the AI writer / articles. */
+/** A pen writing: the AI writer / articles. */
 export function WriterArt({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 140"
+    <ChalkArt
+      id="writer"
+      icon={PenLine}
+      color="#ff7db1"
+      label="Pen writing"
       className={className}
-      role="img"
-      aria-label="Quill writing on a manuscript"
-    >
-      <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <rect x="40" y="30" width="96" height="84" rx="8" fill="var(--card)" />
-        <line x1="54" y1="50" x2="122" y2="50" />
-        <line x1="54" y1="62" x2="116" y2="62" />
-        <line x1="54" y1="74" x2="122" y2="74" />
-        <line className="fa-art-draw" pathLength={60} x1="54" y1="86" x2="88" y2="86" />
-      </g>
-      <g>
-        <g stroke="var(--leaf)" {...strokeProps(2)}>
-          <path
-            d="M96 96 C 120 60, 148 40, 168 28 C 160 52, 140 84, 112 104 Z"
-            fill="color-mix(in oklab, var(--leaf) 8%, transparent)"
-          />
-          <line x1="96" y1="96" x2="86" y2="108" />
-        </g>
-      </g>
-    </svg>
+    />
   );
 }
 
@@ -132,98 +163,29 @@ export function CompassArt({ className }: { className?: string }) {
   );
 }
 
-/** Question card answered by a reply card with a check: Ask. */
+/** Two chat bubbles: Ask, the paper Assistant. */
 export function AskArt({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 140"
+    <ChalkArt
+      id="ask"
+      icon={MessagesSquare}
+      color="#4f90e4"
+      label="Question and answer"
       className={className}
-      role="img"
-      aria-label="Question card with an answered reply"
-    >
-      <g stroke="var(--border)" {...strokeProps()}>
-        <rect x="40" y="52" width="72" height="54" rx="8" fill="var(--card)" />
-      </g>
-      <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <rect x="32" y="42" width="72" height="54" rx="8" fill="var(--card)" />
-        <path d="M58 60 c0 -7 12 -7 12 0 c0 5 -6 4 -6 10" />
-        <line x1="64" y1="78" x2="64" y2="79" />
-        <line x1="82" y1="62" x2="94" y2="62" />
-        <line x1="82" y1="72" x2="92" y2="72" />
-      </g>
-      <g>
-        <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-          <rect
-            x="118"
-            y="38"
-            width="52"
-            height="42"
-            rx="9"
-            fill="color-mix(in oklab, var(--leaf) 8%, transparent)"
-          />
-          <path d="M130 80 l-4 9 l13 -9" fill="var(--background)" />
-          <line
-            className="fa-art-draw"
-            pathLength={60}
-            x1="128"
-            y1="50"
-            x2="160"
-            y2="50"
-          />
-          <line
-            className="fa-art-draw"
-            pathLength={60}
-            x1="128"
-            y1="58"
-            x2="154"
-            y2="58"
-          />
-          <path
-            className="fa-art-draw"
-            pathLength={60}
-            d="M128 68 l5 5 l10 -10"
-          />
-        </g>
-      </g>
-    </svg>
+    />
   );
 }
 
-/** Document flowing into a structured grid: Extract. */
+/** A data table: Extract. */
 export function ExtractArt({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 200 140"
+    <ChalkArt
+      id="extract"
+      icon={Table2}
+      color="#9a6b45"
+      label="Data table"
       className={className}
-      role="img"
-      aria-label="Document distilled into a data table"
-    >
-      <g stroke="var(--muted-foreground)" {...strokeProps()}>
-        <rect x="30" y="36" width="56" height="72" rx="6" fill="var(--card)" />
-        <line x1="40" y1="52" x2="76" y2="52" />
-        <line x1="40" y1="62" x2="72" y2="62" />
-        <line x1="40" y1="72" x2="76" y2="72" />
-        <line x1="40" y1="82" x2="64" y2="82" />
-      </g>
-      <g stroke="var(--leaf)" {...strokeProps(1.8)}>
-        <path className="fa-art-draw" pathLength={60} d="M92 72 h20 m-6 -6 l6 6 l-6 6" />
-      </g>
-      <g>
-        <g stroke="var(--leaf)" {...strokeProps(1.7)}>
-          <rect
-            x="122"
-            y="46"
-            width="52"
-            height="52"
-            rx="6"
-            fill="color-mix(in oklab, var(--leaf) 6%, transparent)"
-          />
-          <line x1="122" y1="63" x2="174" y2="63" />
-          <line x1="122" y1="80" x2="174" y2="80" />
-          <line x1="148" y1="46" x2="148" y2="98" />
-        </g>
-      </g>
-    </svg>
+    />
   );
 }
 
