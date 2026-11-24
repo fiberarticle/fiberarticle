@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { hasFullAccess } from "@/lib/access";
 import { AccessWatcher } from "@/components/access-watcher";
 import { LockGate } from "@/components/lock-gate";
+import { PostHogIdentify } from "@/components/posthog-identify";
 import { Sidebar } from "@/components/sidebar";
 import { SettingsDialog } from "@/components/settings-dialog";
 
@@ -50,6 +51,13 @@ export default async function AppLayout({
         />
       </Suspense>
       {!locked && <AccessWatcher />}
+      <PostHogIdentify
+        userId={session.user.id}
+        email={session.user.email}
+        name={session.user.name}
+        access={locked ? "locked" : "full"}
+        role={user.role ?? "user"}
+      />
       {/* No max-width here: every page centers itself, and pages with a
           side panel (run report) need the full panel width to share. */}
       <main className="mt-14 min-w-0 flex-1 overflow-y-auto overflow-x-hidden rounded-t-[28px] border-t border-border bg-background shadow-[-6px_0_24px_rgba(0,0,0,0.05)] md:mt-0 md:rounded-t-none md:rounded-tl-[44px] md:border-l">
