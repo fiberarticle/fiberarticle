@@ -43,3 +43,29 @@ if (token) {
     },
   });
 }
+
+/*
+ * Google Analytics 4, "Fiberarticle webapp" stream (the website has its own
+ * stream in the same property). The standard gtag.js snippet, added from
+ * code; page changes inside the app are counted by GA4's enhanced
+ * measurement, which listens to browser history changes. Off when no
+ * measurement ID is set (local development).
+ */
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+if (gaMeasurementId) {
+  const w = window as unknown as { dataLayer: unknown[]; gtag: (...args: unknown[]) => void };
+  w.dataLayer = w.dataLayer || [];
+  w.gtag = function gtag() {
+    // gtag.js reads the arguments object itself, not an array.
+    // eslint-disable-next-line prefer-rest-params
+    w.dataLayer.push(arguments);
+  };
+  w.gtag("js", new Date());
+  w.gtag("config", gaMeasurementId);
+
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`;
+  document.head.appendChild(script);
+}
