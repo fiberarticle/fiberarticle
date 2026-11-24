@@ -1,45 +1,63 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2 } from "lucide-react";
+import {
+  Button as RadixButton,
+  IconButton as RadixIconButton,
+} from "@radix-ui/themes";
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        // Radix Themes "classic" accent button
-        default:
-          "border border-[var(--classic-accent-border)] bg-[linear-gradient(to_bottom,var(--classic-accent-from),var(--classic-accent-to))] text-primary-foreground shadow-[inset_0_1px_0_var(--classic-highlight),inset_0_-1px_0_var(--classic-shade),0_1px_2px_rgba(0,0,0,0.25)] hover:brightness-105 active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]",
-        // Radix Themes "classic" gray button
-        secondary:
-          "border border-[var(--classic-gray-border)] bg-[linear-gradient(to_bottom,var(--classic-gray-from),var(--classic-gray-to))] text-[var(--classic-gray-text)] shadow-[inset_0_1px_0_var(--classic-highlight),inset_0_-1px_0_var(--classic-shade),0_1px_2px_rgba(0,0,0,0.18)] hover:brightness-103 active:translate-y-px active:shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]",
-        outline:
-          "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        destructive:
-          "border border-[rgba(0,0,0,0.4)] bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--destructive)_92%,white),var(--destructive))] text-destructive-foreground shadow-[inset_0_1px_0_var(--classic-highlight),inset_0_-1px_0_var(--classic-shade),0_1px_2px_rgba(0,0,0,0.25)] hover:brightness-105 active:translate-y-px",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 [&_svg]:size-4",
-        sm: "h-8 rounded-lg px-3 text-xs [&_svg]:size-3.5",
-        lg: "h-10 rounded-xl px-6 [&_svg]:size-4",
-        icon: "size-9 [&_svg]:size-4",
-        "icon-sm": "size-8 rounded-lg [&_svg]:size-4",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
+/*
+ * The app's button is the real Radix Themes button, the same component the
+ * website uses (variant="classic"). The root <Theme> sits on <body> (see
+ * app/layout.tsx), so every button, including ones inside portalled dialogs
+ * and sheets, picks up the Radix tokens. The props below keep the old API so
+ * call sites did not have to change.
+ */
+type Variant =
+  | "default"
+  | "secondary"
+  | "outline"
+  | "ghost"
+  | "destructive"
+  | "link";
+type Size = "default" | "sm" | "lg" | "icon" | "icon-sm";
+
+// Our variant -> Radix variant + colour. Every filled or bordered button is
+// the classic one: brown for the main action, silver (gray, high contrast)
+// like the website's Sign up for everything secondary, red for destructive.
+const VARIANTS = {
+  default: { variant: "classic", color: "brown", highContrast: false },
+  secondary: { variant: "classic", color: "gray", highContrast: true },
+  outline: { variant: "classic", color: "gray", highContrast: true },
+  destructive: { variant: "classic", color: "red", highContrast: false },
+  ghost: { variant: "ghost", color: "gray", highContrast: true },
+} as const;
+
+// Our size -> Radix size (Radix heights: 1=24, 2=32, 3=40, 4=48px). Size 2
+// is the website navbar's Sign up size; 3 looked too big inside the app.
+const SIZES = {
+  default: "2",
+  sm: "2",
+  lg: "3",
+  icon: "2",
+  "icon-sm": "2",
+} as const;
+
+// Radix does not size icons; lucide draws at 24px unless told otherwise.
+const ICON_SIZE: Record<Size, string> = {
+  default: "[&_svg]:size-4",
+  sm: "[&_svg]:size-3.5",
+  lg: "[&_svg]:size-4",
+  icon: "[&_svg]:size-4",
+  "icon-sm": "[&_svg]:size-4",
+};
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
+  variant?: Variant | null;
+  size?: Size | null;
   loading?: boolean;
+  /** Render the child (for example a Next.js <Link>) as the button. */
+  asChild?: boolean;
 }
 
 function Button({
@@ -51,16 +69,58 @@ function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  const v = variant ?? "default";
+  const s = size ?? "default";
+  const classes = cn(
+    "cursor-pointer [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    ICON_SIZE[s],
+    // Radix pulls ghost buttons outward with negative margins for optical
+    // alignment; our layouts were built without that offset.
+    v === "ghost" && "m-0",
+    className
+  );
+
+  // Text-style link: Radix has no button variant for it, so it stays a plain
+  // button styled as a link.
+  if (v === "link") {
+    return (
+      <button
+        className={cn(
+          "inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50",
+          classes
+        )}
+        disabled={disabled || loading}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  const look = VARIANTS[v];
+  const shared = {
+    variant: look.variant,
+    color: look.color,
+    highContrast: look.highContrast,
+    size: SIZES[s],
+    radius: "large",
+    loading,
+    disabled,
+    className: classes,
+  } as const;
+
+  if (s === "icon" || s === "icon-sm") {
+    return (
+      <RadixIconButton {...shared} {...props}>
+        {children}
+      </RadixIconButton>
+    );
+  }
   return (
-    <button
-      className={cn(buttonVariants({ variant, size, className }))}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading && <Loader2 className="animate-spin" />}
+    <RadixButton {...shared} {...props}>
       {children}
-    </button>
+    </RadixButton>
   );
 }
 
-export { Button, buttonVariants };
+export { Button };
