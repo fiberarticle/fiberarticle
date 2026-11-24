@@ -2,10 +2,7 @@
 
 <img src=".github/assets/readme/wordmark.png" width="294" alt="Fiberarticle">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme/tagline-dark.png">
-  <img src=".github/assets/readme/tagline-light.png" width="820" alt="An Agentic AI that researches, performs literature reviews, and writes publication-ready manuscripts.">
-</picture>
+<img src=".github/assets/readme/tagline.png" width="820" alt="An Agentic AI that researches, performs literature reviews, and writes publication-ready manuscripts.">
 
 [Try Fiberarticle](https://app.fiberarticle.com) &nbsp;|&nbsp; [Website](https://fiberarticle.com) &nbsp;|&nbsp; [Pricing](https://fiberarticle.com/pricing/) &nbsp;|&nbsp; [Blogs](https://fiberarticle.com/blogs/)
 
