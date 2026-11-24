@@ -21,6 +21,7 @@ from models import (
     ConversationUpdate,
 )
 from security import PaidUser
+import telemetry
 
 logger = logging.getLogger("fiberarticle.chats")
 
@@ -251,6 +252,7 @@ async def send_message_stream(
         llm = await resolve_llm(user_id)
     except LlmNotConfigured as exc:
         raise HTTPException(409, str(exc))
+    telemetry.bind(user_id, "assistant chat", session_id=conversation_id)
 
     history = await fetch_all(
         "SELECT role, content FROM chat_messages WHERE conversation_id = %s ORDER BY id DESC LIMIT %s",
@@ -383,6 +385,7 @@ async def send_message(
         llm = await resolve_llm(user_id)
     except LlmNotConfigured as exc:
         raise HTTPException(409, str(exc))
+    telemetry.bind(user_id, "assistant chat", session_id=conversation_id)
 
     history = await fetch_all(
         "SELECT role, content FROM chat_messages WHERE conversation_id = %s ORDER BY id DESC LIMIT %s",
