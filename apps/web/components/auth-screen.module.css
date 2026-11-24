@@ -8,7 +8,7 @@
   justify-content: stretch;
   overflow: hidden;
   background: #f8f5f0;
-  font-family: var(--font-bricolage), "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .card {
