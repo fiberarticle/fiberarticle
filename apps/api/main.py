@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import marketplace as marketplace_service
+import telemetry
 from config import get_settings
 from db import close_pool, open_pool
 from db import execute
@@ -24,6 +25,9 @@ from routers import (
 )
 
 logging.basicConfig(level=logging.INFO)
+# After basicConfig: PostHog adds its own log handlers to the root logger,
+# and basicConfig does nothing once the root logger has a handler.
+telemetry.setup()
 
 logger = logging.getLogger("fiberarticle.main")
 
@@ -83,6 +87,7 @@ async def lifespan(app: FastAPI):
     if reconcile is not None:
         reconcile.cancel()
     await close_pool()
+    telemetry.shutdown()
 
 
 app = FastAPI(
@@ -105,6 +110,13 @@ app.add_middleware(
     # from the frontend, which then falls back to a generic name.
     expose_headers=["Content-Disposition"],
 )
+
+# Reports exceptions that escape a route to PostHog error tracking, tagged
+# with the signed-in user the browser names in its PostHog tracing headers.
+if telemetry.client() is not None:
+    from posthog.integrations.asgi import PosthogASGIMiddleware
+
+    app.add_middleware(PosthogASGIMiddleware, client=telemetry.client())
 
 app.include_router(me.router)
 app.include_router(admin.router)
