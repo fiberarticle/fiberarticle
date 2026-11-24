@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import {
   ClipboardCheck,
   ChevronRight,
@@ -583,6 +584,8 @@ export function Sidebar({
 
   async function onSignOut() {
     await authClient.signOut();
+    // The next person on this browser must not inherit this user's identity.
+    posthog.reset();
     router.push("/sign-in");
     router.refresh();
   }
