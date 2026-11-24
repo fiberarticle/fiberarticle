@@ -8,10 +8,13 @@ import asyncio
 import logging
 import random
 import re
+import time
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 import litellm
+
+import telemetry
 
 logger = logging.getLogger("fiberarticle.llm")
 
@@ -96,6 +99,8 @@ class ResolvedLlm:
     # Set once the model refused max_tokens or a custom temperature: from
     # then on it gets max_completion_tokens and its default temperature.
     reasoning_params: bool = False
+    # Whose call this is, for PostHog AI monitoring. Set by resolve_llm().
+    user_id: str | None = None
 
     async def complete(
         self,
@@ -138,6 +143,7 @@ class ResolvedLlm:
                 if self.reasoning_params
                 else {"max_tokens": max_tokens, "temperature": temperature}
             )
+            started = time.monotonic()
             try:
                 response = await litellm.acompletion(
                     model=self.model,
@@ -153,6 +159,7 @@ class ResolvedLlm:
                     **limits,
                 )
             except Exception as exc:
+                telemetry.ai_generation(self, messages, limits, started, error=exc)
                 if not self.reasoning_params and _refuses_classic_params(exc):
                     # Resend the way reasoning models take it. Not counted as
                     # an attempt: nothing was wrong with the connection.
@@ -173,6 +180,7 @@ class ResolvedLlm:
                 )
                 await asyncio.sleep(delay)
                 continue
+            telemetry.ai_generation(self, messages, limits, started, response=response)
             choice = response.choices[0]
             return (choice.message.content or "").strip(), choice.finish_reason
         raise RuntimeError("The model could not be reached after several retries.")
@@ -216,6 +224,12 @@ def azure_openai_base(endpoint: str | None) -> str | None:
 
 
 async def resolve_llm(user_id: str) -> ResolvedLlm:
+    llm = await _resolve_llm(user_id)
+    llm.user_id = user_id
+    return llm
+
+
+async def _resolve_llm(user_id: str) -> ResolvedLlm:
     row = await fetch_one("SELECT * FROM llm_config WHERE user_id = %s", user_id)
     if row is None:
         # Zero-setup default: accounts without a saved config use managed
