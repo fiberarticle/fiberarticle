@@ -2,12 +2,14 @@
 
 import asyncio
 import logging
+import time
 
 from agent.events import emit
 from agent.graph import build_graph
 from db import execute, jsonb
 from llm.client import LlmNotConfigured, resolve_llm
 from models import CAPS
+import telemetry
 
 logger = logging.getLogger("fiberarticle.runner")
 
@@ -72,6 +74,15 @@ async def _execute(
     entry_stage: str = "plan",
     resume_state: dict | None = None,
 ) -> None:
+    # Every LLM call and error of this run is filed under the run in PostHog.
+    telemetry.bind(user_id, f"{mode} run", trace_id=run_id)
+    telemetry.capture(
+        user_id,
+        "run started",
+        {"run_id": run_id, "mode": mode, "resumed": entry_stage != "plan"},
+    )
+    started = time.monotonic()
+    outcome = "failed"
     try:
         llm = await resolve_llm(user_id)
         caps = CAPS[llm.mode]
@@ -114,8 +125,10 @@ async def _execute(
         # A finished run needs no resume point; free the storage.
         await execute("UPDATE runs SET snapshot = NULL WHERE id = %s", run_id)
         await _set_status(run_id, "completed")
+        outcome = "completed"
     except asyncio.CancelledError:
         # User pressed Stop: keep everything found so far, mark cancelled.
+        outcome = "cancelled"
         await _set_status(run_id, "cancelled")
         try:
             await emit(
@@ -144,6 +157,16 @@ async def _execute(
             pass
     finally:
         _active_tasks.pop(run_id, None)
+        telemetry.capture(
+            user_id,
+            "run finished",
+            {
+                "run_id": run_id,
+                "mode": mode,
+                "outcome": outcome,
+                "minutes": round((time.monotonic() - started) / 60, 1),
+            },
+        )
 
 
 def start_run(
