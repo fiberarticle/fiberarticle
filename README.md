@@ -39,6 +39,10 @@ You stay in charge. You read the output, edit it with AI help, pick your journal
 
 Fiberarticle has four AI agents and one extraction tool. Pick an agent, type what you need and press send.
 
+<img src=".github/assets/readme/dashboard.png" alt="The Fiberarticle dashboard with the four agents to pick from and a box to type your topic" width="100%">
+
+<p align="center"><sub>The dashboard. Pick an agent, type your topic and press send.</sub></p>
+
 | Agent | You give it | You get back |
 | --- | --- | --- |
 | **Researcher** | A topic, a question or a hypothesis | A research report with numbered citations and the full list of sources |
@@ -119,6 +123,8 @@ Fiberarticle is a **one-time payment, not a subscription**. Pay once and every a
 - **Individuals in India:** a one-time price of ₹19,999 plus payment gateway charges, paid securely through Razorpay with UPI, cards or net banking.
 - **Universities and organisations:** buy a 5-year plan through [Microsoft Marketplace](https://marketplace.microsoft.com/en-us/product/saas/fiberarticle.fiberarticle?tab=Overview) using your existing Microsoft billing.
 - **Want us to do it for you?** [Contact us](https://fiberarticle.com/contact/) and tell us what you need.
+
+<img src=".github/assets/readme/pricing.png" alt="The Fiberarticle pricing page: pay once at 19,999 rupees and use it yourself, or contact us and we do the work for you" width="100%">
 
 Before paying, you can sign up and look around the dashboard. See the [pricing page](https://fiberarticle.com/pricing/) for full details.
 
