@@ -21,6 +21,7 @@ from models import (
     ExtractionUpdate,
 )
 from security import PaidUser
+import telemetry
 
 router = APIRouter(prefix="/v1/extractions", tags=["extractions"])
 
@@ -129,6 +130,7 @@ async def _extract_for_paper(
 
 
 async def _run_extraction(extraction_id: str, user_id: str) -> None:
+    telemetry.bind(user_id, "data extraction", trace_id=extraction_id)
     try:
         extraction = await fetch_one(
             "SELECT * FROM extractions WHERE id = %s", extraction_id
