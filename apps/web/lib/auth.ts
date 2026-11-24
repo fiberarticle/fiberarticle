@@ -4,6 +4,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { bearer, emailOTP, jwt } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
 import { sendRendered, sendRenderedQuietly } from "@/lib/email";
+import { captureServerEvent } from "@/lib/posthog-server";
 import {
   deviceFrom,
   passwordChangedEmail,
@@ -200,6 +201,12 @@ export const auth = betterAuth({
         // welcome from afterEmailVerification instead, so no path sends it
         // twice.
         after: async (user) => {
+          // Every new account, whichever way it signed up, for the sign-up
+          // funnel in PostHog. Same id the browser identifies with later.
+          await captureServerEvent(user.id, "signed up", {
+            $set: { email: user.email, name: user.name },
+            email_verified: user.emailVerified,
+          });
           if (!user.emailVerified) return;
           await sendRenderedQuietly(
             user.email,
